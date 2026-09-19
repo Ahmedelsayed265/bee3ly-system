@@ -1,0 +1,280 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "IBM Plex Sans Arabic", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-brand: #d85a30;
+  --color-brand-foreground: #ffffff;
+  --color-trust: #0f6e56;
+  --color-alert: #ef9f27;
+  --color-honey: #ef9f27;
+  --color-teal: #0f6e56;
+  --color-ink: #2c2c2a;
+  --color-lavender: #f3ede6;
+  --color-surface: #ffffff;
+  --color-page: #faf7f2;
+  --color-auth-bg: #faf7f2;
+  --color-input: #ffffff;
+  --color-muted: #6b6860;
+  --color-border: #e5dfd6;
+  --color-danger: #d64545;
+  --color-pink: #d85a30;
+  --radius-pill: 9999px;
+}
+
+.dark {
+  --color-ink: #faf7f2;
+  --color-lavender: #2a2420;
+  --color-surface: #1c1916;
+  --color-page: #141210;
+  --color-auth-bg: #171411;
+  --color-input: #221e1a;
+  --color-muted: #a8a29a;
+  --color-border: #3a342e;
+  --color-brand: #d85a30;
+  --color-brand-foreground: #ffffff;
+  --color-trust: #2dd4a8;
+  --color-alert: #ef9f27;
+  --color-honey: #ef9f27;
+  --color-teal: #2dd4a8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-page);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Keep browser autofill colors aligned with theme (esp. dark mode) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-ink) !important;
+  caret-color: var(--color-ink);
+  box-shadow: 0 0 0 1000px var(--color-input) inset !important;
+  transition: background-color 99999s ease-in-out 0s;
+  border-color: var(--color-border) !important;
+}
+
+/* Thin chic scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-brand) 70%, transparent);
+}
+
+.auth-scroll {
+  scrollbar-gutter: stable;
+}
+/* —— Auth marketing panel —— */
+.marketing-panel {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(216, 90, 48, 0.22), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(15, 110, 86, 0.18), transparent 50%),
+    linear-gradient(165deg, #2c2c2a 0%, #1a1917 48%, #241c18 100%);
+}
+
+.marketing-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(250, 247, 242, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(250, 247, 242, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, black, transparent);
+  pointer-events: none;
+}
+
+.marketing-orb {
+  position: absolute;
+  border-radius: 40% 60% 55% 45%;
+  filter: blur(40px);
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.marketing-orb--a {
+  width: 280px;
+  height: 280px;
+  top: -60px;
+  inset-inline-end: -40px;
+  background: #d85a30;
+  animation: marketing-drift 14s ease-in-out infinite alternate;
+}
+
+.marketing-orb--b {
+  width: 220px;
+  height: 220px;
+  bottom: 8%;
+  inset-inline-start: -50px;
+  background: #0f6e56;
+  opacity: 0.28;
+  animation: marketing-drift 18s ease-in-out infinite alternate-reverse;
+}
+
+.marketing-hex {
+  animation: marketing-hex-pulse 4.5s ease-in-out infinite;
+}
+
+.marketing-float-a {
+  animation: marketing-rise 7s ease-in-out infinite;
+}
+
+.marketing-float-b {
+  animation: marketing-rise 7s ease-in-out infinite 0.4s;
+}
+
+.marketing-float-c {
+  animation: marketing-rise 7s ease-in-out infinite 0.8s;
+}
+
+.marketing-order {
+  animation: marketing-settle 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-bar {
+  animation: marketing-fill 2.2s ease-out 0.6s both;
+}
+
+.marketing-tick {
+  animation: marketing-fade-up 0.7s ease both;
+}
+
+@keyframes marketing-drift {
+  from {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate(-24px, 18px) rotate(8deg);
+  }
+}
+
+@keyframes marketing-hex-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes marketing-rise {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes marketing-settle {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes marketing-fill {
+  from {
+    width: 0%;
+  }
+}
+
+@keyframes marketing-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-orb,
+  .marketing-hex,
+  .marketing-float-a,
+  .marketing-float-b,
+  .marketing-float-c,
+  .marketing-order,
+  .marketing-bar,
+  .marketing-tick {
+    animation: none !important;
+  }
+}
+
+@keyframes home-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-mascot-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.home-fade {
+  animation: home-fade-up 0.55s ease-out both;
+}
+
+.home-mascot {
+  animation: home-mascot-float 3.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-fade,
+  .home-mascot {
+    animation: none !important;
+  }
+}
+

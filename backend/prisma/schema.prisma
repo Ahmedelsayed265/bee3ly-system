@@ -1,0 +1,343 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BusinessType {
+  RESTAURANT
+  CAFE
+  FASHION
+  PERFUME
+  BEAUTY
+  ECOMMERCE
+  REAL_ESTATE
+  OTHER
+}
+
+enum BusinessGoal {
+  MORE_MESSAGES
+  MORE_LEADS
+  MORE_ORDERS
+  BOOK_APPOINTMENTS
+  INCREASE_SALES
+}
+
+enum SocialPlatform {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum ConversationChannel {
+  FACEBOOK
+  INSTAGRAM
+  SIMULATION
+}
+
+enum MessageRole {
+  CUSTOMER
+  AI
+  HUMAN
+  SYSTEM
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  ORDER
+  LEAD
+  HANDOFF
+  CAMPAIGN
+  AI_RECOMMENDATION
+  SYSTEM
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  memberships         TeamMember[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Business {
+  id                   String         @id @default(uuid())
+  name                 String
+  type                 BusinessType   @default(OTHER)
+  plan                 PlanTier       @default(FREE)
+  description          String?
+  averagePriceEgp      Int?
+  operatingArea        String?
+  contactChannels      String[]       @default([])
+  primaryGoal          BusinessGoal?
+  deliveryInfo         String?
+  workingHours         String?
+  paymentInfo          String?
+  faqs                 String?
+  onboardingCompletedAt DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  members         TeamMember[]
+  products        Product[]
+  customers       Customer[]
+  conversations   Conversation[]
+  leads           Lead[]
+  orders          Order[]
+  socialAccounts  SocialAccount[]
+  aiAgent         AIAgent?
+  notifications   Notification[]
+
+  @@map("businesses")
+}
+
+model TeamMember {
+  id         String   @id @default(uuid())
+  businessId String
+  userId     String
+  role       String   @default("OWNER")
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  businessId  String
+  name        String
+  description String?
+  priceEgp    Int
+  sizes       String[] @default([])
+  colors      String[] @default([])
+  inStock     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business   Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@index([businessId])
+  @@map("products")
+}
+
+model Customer {
+  id             String   @id @default(uuid())
+  businessId     String
+  name           String?
+  phone          String?
+  externalId     String?
+  platform       SocialPlatform?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  leads         Lead[]
+  orders        Order[]
+
+  @@index([businessId])
+  @@index([businessId, phone])
+  @@map("customers")
+}
+
+model Conversation {
+  id              String              @id @default(uuid())
+  businessId      String
+  customerId      String
+  channel         ConversationChannel @default(SIMULATION)
+  status          String              @default("OPEN")
+  needsHuman      Boolean             @default(false)
+  lastMessageAt   DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  messages Message[]
+  leads    Lead[]
+
+  @@index([businessId, lastMessageAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String      @id @default(uuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  intent         String?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Lead {
+  id             String     @id @default(uuid())
+  businessId     String
+  customerId     String
+  conversationId String?
+  status         LeadStatus @default(NEW)
+  intent         String?
+  notes          String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@map("leads")
+}
+
+model Order {
+  id             String      @id @default(uuid())
+  businessId     String
+  customerId     String
+  conversationId String?
+  orderNumber    Int
+  status         OrderStatus @default(PENDING)
+  totalEgp       Int
+  customerName   String?
+  customerPhone  String?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  business Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items    OrderItem[]
+
+  @@unique([businessId, orderNumber])
+  @@index([businessId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(uuid())
+  orderId   String
+  productId String?
+  name      String
+  size      String?
+  color     String?
+  quantity  Int    @default(1)
+  priceEgp  Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model SocialAccount {
+  id             String         @id @default(uuid())
+  businessId     String
+  platform       SocialPlatform
+  externalId     String
+  displayName    String?
+  accessTokenEnc String?
+  refreshTokenEnc String?
+  tokenExpiresAt DateTime?
+  connectedAt    DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, platform])
+  @@index([externalId])
+  @@map("social_accounts")
+}
+
+model AIAgent {
+  id             String   @id @default(uuid())
+  businessId     String   @unique
+  primaryGoal    String   @default("GET_ORDERS")
+  secondaryGoals String[] @default(["ANSWER_QUESTIONS", "QUALIFY", "HUMAN_HANDOFF"])
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("ai_agents")
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  businessId String
+  type       NotificationType
+  title      String
+  body       String
+  data       Json?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@map("notifications")
+}

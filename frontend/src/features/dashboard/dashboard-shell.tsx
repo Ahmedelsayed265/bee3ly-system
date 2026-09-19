@@ -1,0 +1,19 @@
+import { DashboardSidebar } from '@/features/dashboard/sidebar'
+import { DashboardTopBar } from '@/features/dashboard/top-bar'
+import { Outlet } from 'react-router-dom'
+
+export function DashboardShell() {
+  return (
+    <div className="flex h-svh overflow-hidden bg-page text-ink">
+      <DashboardSidebar className="hidden md:flex" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <DashboardTopBar />
+        <main className="w-full flex-1 overflow-y-auto">
+          <div className="w-full px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}

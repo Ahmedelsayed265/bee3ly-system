@@ -1,0 +1,33 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AiModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AuthModule } from './auth/auth.module';
+import { BusinessesModule } from './businesses/businesses.module';
+import { CommonModule } from './common/common.module';
+import { ConversationsModule } from './conversations/conversations.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { OrdersModule } from './orders/orders.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { ProductsModule } from './products/products.module';
+import { SocialModule } from './social/social.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    PrismaModule,
+    CommonModule,
+    AuthModule,
+    BusinessesModule,
+    ProductsModule,
+    ConversationsModule,
+    OrdersModule,
+    NotificationsModule,
+    AiModule,
+    SocialModule,
+    AnalyticsModule,
+  ],
+})
+export class AppModule {}

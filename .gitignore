@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.local-pg/
+*.log
+.DS_Store
+coverage/
+frontend/dist/
+backend/dist/
+backend/.local-pg/
