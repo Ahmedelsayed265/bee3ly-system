@@ -15,31 +15,33 @@ export function AuthShell({
   return (
     <main className="auth-scroll relative flex min-h-dvh flex-col overflow-y-auto overflow-x-hidden bg-auth-bg px-5 py-5 sm:px-10 sm:py-6">
       <div
-        className="pointer-events-none absolute -start-28 top-[-40px] h-64 w-64 rounded-[40%] bg-brand/15 blur-3xl dark:bg-brand/10"
+        className="pointer-events-none absolute -start-28 top-[-40px] h-64 w-64 rounded-[40%] bg-brand/[0.06] blur-3xl dark:bg-brand/10"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -end-20 bottom-0 h-72 w-72 rounded-[45%] bg-trust/15 blur-3xl"
+        className="pointer-events-none absolute -end-20 bottom-0 h-72 w-72 rounded-[45%] bg-lavender/40 blur-3xl dark:bg-trust/10"
         aria-hidden
       />
 
-      <div className="relative z-10 mb-4 flex shrink-0 items-center justify-end">
+      <div className="absolute z-10 mb-4 flex shrink-0 items-center justify-end">
         <PrefsControls />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center py-4">
-        <div className="mb-8 text-center">
-          <h2 className="font-display text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">
-            {title}
-          </h2>
-          <p className="mt-2 text-[14px] text-muted">{subtitle}</p>
+      <div className="relative z-10 mx-auto flex w-full max-w-128 flex-1 flex-col justify-center py-4">
+        <div className="rounded-2xl border border-border/60 bg-white px-6 py-8 shadow-[0_18px_50px_-28px_rgba(15,23,42,0.18)] dark:border-border dark:bg-surface sm:px-8 sm:py-9">
+          <div className="mb-8 text-center">
+            <h2 className="font-display text-[26px] font-bold leading-tight tracking-tight text-ink sm:text-[30px]">
+              {title}
+            </h2>
+            <p className="mt-2 text-[14px] text-muted">{subtitle}</p>
+          </div>
+
+          {children}
+
+          {footer ? (
+            <p className="mt-6 text-center text-sm text-muted">{footer}</p>
+          ) : null}
         </div>
-
-        {children}
-
-        {footer ? (
-          <p className="mt-6 text-center text-sm text-muted">{footer}</p>
-        ) : null}
       </div>
     </main>
   )

@@ -4,6 +4,7 @@ import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { BusinessesModule } from './businesses/businesses.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
 import { CommonModule } from './common/common.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -28,6 +29,7 @@ import { SocialModule } from './social/social.module';
     AiModule,
     SocialModule,
     AnalyticsModule,
+    CampaignsModule,
   ],
 })
 export class AppModule {}

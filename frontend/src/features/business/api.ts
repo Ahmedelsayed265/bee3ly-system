@@ -140,9 +140,13 @@ export async function fetchConversations() {
       id: string
       channel: string
       needsHuman: boolean
+      mode?: string
+      conversionStage?: string
       lastMessageAt: string
       customer: { name: string | null; phone: string | null }
-      messages: Array<{ content: string; role: string }>
+      messages: Array<{ content: string; role: string; intent?: string | null }>
+      leads?: Array<{ status: string; intent: string | null }>
+      campaign?: { id: string; name: string } | null
     }>
   }>('/conversations')
   return data.conversations
@@ -154,7 +158,12 @@ export async function fetchConversation(id: string) {
       id: string
       channel: string
       needsHuman: boolean
+      mode?: string
+      conversionStage?: string
+      handoffReason?: string | null
+      aiSummary?: string | null
       customer: { name: string | null; phone: string | null }
+      campaign?: { id: string; name: string } | null
       messages: Array<{
         id: string
         role: string
@@ -162,19 +171,29 @@ export async function fetchConversation(id: string) {
         intent: string | null
         createdAt: string
       }>
+      leads?: Array<{ id: string; status: string; intent: string | null }>
     }
+    orders?: Array<{
+      id: string
+      orderNumber: number
+      status: string
+      totalEgp: number
+    }>
   }>(`/conversations/${id}`)
-  return data.conversation
+  return data
 }
 
 export async function simulateMessage(content: string, conversationId?: string) {
   const { data } = await api.post<{
     conversationId: string
-    reply: string
+    reply: string | null
     intent: string
     toolsUsed: string[]
     order: unknown
     mode: string
+    paused?: boolean
+    needsHuman?: boolean
+    notice?: string
   }>('/ai/simulate-message', { content, conversationId })
   return data
 }
@@ -223,8 +242,24 @@ export async function fetchOverview() {
       leads: number
       conversations: number
       unreadNotifications: number
+      aiHandled?: number
+      humanHandoffs?: number
+      conversions?: number
+      conversionRate?: number | null
     }
     salesByDay: Array<{ day: string; value: number }>
+    campaigns?: Array<{
+      id: string
+      name: string
+      status: string
+      objective: string
+      budget: number
+      conversations: number
+      leads: number
+      orders: number
+      revenueEgp: number
+    }>
+    enoughData?: boolean
   }>('/analytics/overview')
   return data
 }
@@ -233,18 +268,51 @@ export async function fetchSocial() {
   const { data } = await api.get<{
     accounts: Array<{
       id: string
+      provider?: string
       platform: string
       displayName: string | null
+      status?: string
+      webhookSubscribedAt?: string | null
       connectedAt: string
     }>
     metaConfigured: boolean
     oauthUrl: string | null
+    connectLabel?: string
   }>('/social')
+  return data
+}
+
+export async function startMetaConnect() {
+  const { data } = await api.post<{ oauthUrl: string }>('/social/meta/connect')
+  return data
+}
+
+export async function fetchMetaPending(pendingId: string) {
+  const { data } = await api.get<{
+    pendingId: string
+    pages: Array<{ id: string; name: string; hasInstagram: boolean }>
+  }>(`/social/meta/pending/${pendingId}`)
+  return data
+}
+
+export async function selectMetaPage(pendingId: string, pageId: string) {
+  const { data } = await api.post<{
+    facebook: { id: string; displayName: string | null; status: string }
+    instagram: { id: string; displayName: string | null; status: string } | null
+    notice: string
+  }>('/social/meta/select-page', { pendingId, pageId })
   return data
 }
 
 export async function connectSocialDemo(platform: 'FACEBOOK' | 'INSTAGRAM') {
   const { data } = await api.post('/social/connect-demo', { platform })
+  return data
+}
+
+export async function disconnectSocial(platform: 'FACEBOOK' | 'INSTAGRAM') {
+  const { data } = await api.delete('/social/disconnect', {
+    data: { platform },
+  })
   return data
 }
 
@@ -255,6 +323,9 @@ export async function fetchAiAgent() {
       primaryGoal: string
       secondaryGoals: string[]
       isActive: boolean
+      tone?: string
+      instructions?: string | null
+      handoffEnabled?: boolean
     }
   }>('/ai/agent')
   return data.agent
@@ -264,7 +335,82 @@ export async function updateAiAgent(input: {
   primaryGoal?: string
   secondaryGoals?: string[]
   isActive?: boolean
+  tone?: string
+  instructions?: string | null
+  handoffEnabled?: boolean
 }) {
   const { data } = await api.patch('/ai/agent', input)
   return data.agent
+}
+
+export async function setConversationMode(
+  conversationId: string,
+  mode: 'AI' | 'HUMAN',
+) {
+  const { data } = await api.patch(`/ai/conversations/${conversationId}/mode`, {
+    mode,
+  })
+  return data
+}
+
+export async function sendHumanMessage(conversationId: string, content: string) {
+  const { data } = await api.post(
+    `/conversations/${conversationId}/human-message`,
+    { content },
+  )
+  return data
+}
+
+export async function updateLeadStatus(id: string, status: string) {
+  const { data } = await api.patch(`/leads/${id}/status`, { status })
+  return data
+}
+
+export type Campaign = {
+  id: string
+  name: string
+  objective: string
+  status: string
+  offer: string
+  audienceDescription: string
+  budget: number
+  currency: string
+  valueProposition: string | null
+  suggestedMessaging: string | null
+  suggestedCta: string | null
+  suggestedCreative: string | null
+  channel: string | null
+  createdAt: string
+}
+
+export async function fetchCampaigns() {
+  const { data } = await api.get<{ campaigns: Campaign[] }>('/campaigns')
+  return data.campaigns
+}
+
+export async function createCampaign(input: {
+  offer: string
+  objective: string
+  audienceDescription: string
+  budget: number
+  valueProposition?: string
+  channel?: string
+}) {
+  const { data } = await api.post<{ campaign: Campaign; recommendation: unknown }>(
+    '/campaigns',
+    input,
+  )
+  return data
+}
+
+export async function launchCampaign(
+  id: string,
+  status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED',
+) {
+  const { data } = await api.patch<{
+    campaign: Campaign
+    published: boolean
+    notice: string
+  }>(`/campaigns/${id}/launch`, { status })
+  return data
 }

@@ -6,6 +6,9 @@ import { LocaleProvider } from '@/features/i18n/locale-context'
 import { ThemeProvider } from '@/features/theme/theme-context'
 import { DashboardShell } from '@/features/dashboard/dashboard-shell'
 import { AiAgentPage } from '@/pages/ai-agent-page'
+import { AnalyticsPage } from '@/pages/analytics-page'
+import { BillingPage } from '@/pages/billing-page'
+import { CampaignsPage } from '@/pages/campaigns-page'
 import { DashboardPage } from '@/pages/dashboard-page'
 import { ForgotPasswordPage } from '@/pages/forgot-password-page'
 import { InboxPage } from '@/pages/inbox-page'
@@ -13,12 +16,10 @@ import { LeadsPage } from '@/pages/leads-page'
 import { LoginPage } from '@/pages/login-page'
 import { OnboardingPage } from '@/pages/onboarding-page'
 import { OrdersPage } from '@/pages/orders-page'
-import { PlaceholderPage } from '@/pages/placeholder-page'
 import { ProductsPage } from '@/pages/products-page'
+import { ProfilePage } from '@/pages/profile-page'
 import { RegisterPage } from '@/pages/register-page'
 import { ResetPasswordPage } from '@/pages/reset-password-page'
-import { BillingPage } from '@/pages/billing-page'
-import { ProfilePage } from '@/pages/profile-page'
 import { SettingsPage } from '@/pages/settings-page'
 import { WelcomePage } from '@/pages/welcome-page'
 
@@ -63,14 +64,8 @@ export default function App() {
                     <Route path="profile" element={<ProfilePage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="settings" element={<SettingsPage />} />
-                    <Route
-                      path="campaigns"
-                      element={<PlaceholderPage titleKey="navCampaigns" />}
-                    />
-                    <Route
-                      path="analytics"
-                      element={<PlaceholderPage titleKey="navAnalytics" />}
-                    />
+                    <Route path="campaigns" element={<CampaignsPage />} />
+                    <Route path="analytics" element={<AnalyticsPage />} />
                   </Route>
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

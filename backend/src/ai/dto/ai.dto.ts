@@ -1,4 +1,11 @@
-import { IsArray, IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class SimulateMessageDto {
   @IsString()
@@ -23,4 +30,21 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  tone?: string;
+
+  @IsOptional()
+  @IsString()
+  instructions?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  handoffEnabled?: boolean;
+}
+
+export class ConversationModeDto {
+  @IsIn(['AI', 'HUMAN'])
+  mode!: 'AI' | 'HUMAN';
 }

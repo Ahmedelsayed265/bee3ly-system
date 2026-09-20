@@ -1,7 +1,27 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { IsIn, IsString, MinLength } from 'class-validator';
 import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConversationsService } from './conversations.service';
+
+class LeadStatusDto {
+  @IsIn(['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'])
+  status!: string;
+}
+
+class HumanMessageDto {
+  @IsString()
+  @MinLength(1)
+  content!: string;
+}
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -18,8 +38,26 @@ export class ConversationsController {
     return this.conversations.getOne(user.id, id);
   }
 
+  @Post('conversations/:id/human-message')
+  humanMessage(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: HumanMessageDto,
+  ) {
+    return this.conversations.sendHumanMessage(user.id, id, dto.content);
+  }
+
   @Get('leads')
   listLeads(@CurrentUser() user: AuthUser) {
     return this.conversations.listLeads(user.id);
+  }
+
+  @Patch('leads/:id/status')
+  updateLead(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: LeadStatusDto,
+  ) {
+    return this.conversations.updateLeadStatus(user.id, id, dto.status);
   }
 }

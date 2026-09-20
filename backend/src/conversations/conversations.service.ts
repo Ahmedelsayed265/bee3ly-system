@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConversationChannel } from '@prisma/client';
+import { ConversationChannel, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -16,7 +16,12 @@ export class ConversationsService {
       where: { businessId },
       include: {
         customer: true,
+        campaign: { select: { id: true, name: true } },
         messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        leads: {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -32,21 +37,77 @@ export class ConversationsService {
       where: { id, businessId },
       include: {
         customer: true,
+        campaign: true,
         messages: { orderBy: { createdAt: 'asc' } },
+        leads: { orderBy: { createdAt: 'desc' }, take: 3 },
       },
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
-    return { conversation };
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        businessId,
+        OR: [
+          { conversationId: id },
+          { customerId: conversation.customerId },
+        ],
+      },
+      include: { items: true },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    });
+
+    return { conversation, orders };
   }
 
   async listLeads(userId: string) {
     const businessId = await this.access.requireBusinessId(userId);
     const leads = await this.prisma.lead.findMany({
       where: { businessId },
-      include: { customer: true },
+      include: {
+        customer: true,
+        campaign: { select: { id: true, name: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return { leads };
+  }
+
+  async updateLeadStatus(userId: string, leadId: string, status: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const lead = await this.prisma.lead.findFirst({
+      where: { id: leadId, businessId },
+    });
+    if (!lead) throw new NotFoundException('Lead not found');
+    const updated = await this.prisma.lead.update({
+      where: { id: leadId },
+      data: { status: status as never },
+    });
+    return { lead: updated };
+  }
+
+  async sendHumanMessage(userId: string, conversationId: string, content: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, businessId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    const message = await this.prisma.message.create({
+      data: {
+        conversationId,
+        role: MessageRole.HUMAN,
+        content,
+      },
+    });
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        lastMessageAt: new Date(),
+        mode: 'HUMAN',
+      },
+    });
+    return { message };
   }
 
   async ensureSimulationConversation(businessId: string) {

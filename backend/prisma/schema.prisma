@@ -35,6 +35,8 @@ enum ConversationChannel {
   FACEBOOK
   INSTAGRAM
   SIMULATION
+  WHATSAPP
+  TIKTOK
 }
 
 enum MessageRole {
@@ -71,6 +73,49 @@ enum PlanTier {
   FREE
   STARTER
   GROWTH
+}
+
+enum CampaignObjective {
+  MORE_ORDERS
+  MORE_LEADS
+  MORE_BOOKINGS
+  MORE_MESSAGES
+}
+
+enum CampaignStatus {
+  DRAFT
+  READY
+  ASSISTED_LAUNCH
+  SIMULATED
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ConversionStage {
+  NEW
+  DISCOVERY
+  QUALIFICATION
+  CONSIDERATION
+  PURCHASE_INTENT
+  DATA_COLLECTION
+  CONVERTED
+  HUMAN_HANDOFF
+}
+
+enum ActorType {
+  AI
+  HUMAN
+  SYSTEM
+}
+
+enum SocialConnectionStatus {
+  DISCONNECTED
+  CONNECTING
+  CONNECTED
+  REAUTH_REQUIRED
+  ERROR
+  SIMULATION
 }
 
 model User {
@@ -116,32 +161,33 @@ model PasswordResetToken {
 }
 
 model Business {
-  id                   String         @id @default(uuid())
-  name                 String
-  type                 BusinessType   @default(OTHER)
-  plan                 PlanTier       @default(FREE)
-  description          String?
-  averagePriceEgp      Int?
-  operatingArea        String?
-  contactChannels      String[]       @default([])
-  primaryGoal          BusinessGoal?
-  deliveryInfo         String?
-  workingHours         String?
-  paymentInfo          String?
-  faqs                 String?
+  id                    String         @id @default(uuid())
+  name                  String
+  type                  BusinessType   @default(OTHER)
+  plan                  PlanTier       @default(FREE)
+  description           String?
+  averagePriceEgp       Int?
+  operatingArea         String?
+  contactChannels       String[]       @default([])
+  primaryGoal           BusinessGoal?
+  deliveryInfo          String?
+  workingHours          String?
+  paymentInfo           String?
+  faqs                  String?
   onboardingCompletedAt DateTime?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
-  members         TeamMember[]
-  products        Product[]
-  customers       Customer[]
-  conversations   Conversation[]
-  leads           Lead[]
-  orders          Order[]
-  socialAccounts  SocialAccount[]
-  aiAgent         AIAgent?
-  notifications   Notification[]
+  members        TeamMember[]
+  products       Product[]
+  customers      Customer[]
+  conversations  Conversation[]
+  leads          Lead[]
+  orders         Order[]
+  socialAccounts SocialAccount[]
+  aiAgent        AIAgent?
+  notifications  Notification[]
+  campaigns      Campaign[]
 
   @@map("businesses")
 }
@@ -181,14 +227,14 @@ model Product {
 }
 
 model Customer {
-  id             String   @id @default(uuid())
-  businessId     String
-  name           String?
-  phone          String?
-  externalId     String?
-  platform       SocialPlatform?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id         String          @id @default(uuid())
+  businessId String
+  name       String?
+  phone      String?
+  externalId String?
+  platform   SocialPlatform?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   conversations Conversation[]
@@ -204,19 +250,26 @@ model Conversation {
   id              String              @id @default(uuid())
   businessId      String
   customerId      String
+  campaignId      String?
   channel         ConversationChannel @default(SIMULATION)
   status          String              @default("OPEN")
+  mode            String              @default("AI")
+  conversionStage ConversionStage     @default(NEW)
   needsHuman      Boolean             @default(false)
+  handoffReason   String?
+  aiSummary       String?
   lastMessageAt   DateTime            @default(now())
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   messages Message[]
   leads    Lead[]
 
   @@index([businessId, lastMessageAt])
+  @@index([campaignId])
   @@map("conversations")
 }
 
@@ -226,6 +279,7 @@ model Message {
   role           MessageRole
   content        String
   intent         String?
+  meta           Json?
   createdAt      DateTime    @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -239,17 +293,21 @@ model Lead {
   businessId     String
   customerId     String
   conversationId String?
+  campaignId     String?
   status         LeadStatus @default(NEW)
   intent         String?
   notes          String?
+  createdBy      ActorType  @default(AI)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
   business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  campaign     Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([businessId, status])
+  @@index([campaignId])
   @@map("leads")
 }
 
@@ -258,32 +316,36 @@ model Order {
   businessId     String
   customerId     String
   conversationId String?
+  campaignId     String?
   orderNumber    Int
   status         OrderStatus @default(PENDING)
   totalEgp       Int
   customerName   String?
   customerPhone  String?
   notes          String?
+  createdBy      ActorType   @default(AI)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   business Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   items    OrderItem[]
 
   @@unique([businessId, orderNumber])
   @@index([businessId, createdAt])
+  @@index([campaignId])
   @@map("orders")
 }
 
 model OrderItem {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   orderId   String
   productId String?
   name      String
   size      String?
   color     String?
-  quantity  Int    @default(1)
+  quantity  Int     @default(1)
   priceEgp  Int
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -294,22 +356,57 @@ model OrderItem {
 }
 
 model SocialAccount {
-  id             String         @id @default(uuid())
-  businessId     String
-  platform       SocialPlatform
-  externalId     String
-  displayName    String?
-  accessTokenEnc String?
-  refreshTokenEnc String?
-  tokenExpiresAt DateTime?
-  connectedAt    DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                  String                 @id @default(uuid())
+  businessId          String
+  provider            String                 @default("META")
+  platform            SocialPlatform
+  externalId          String
+  displayName         String?
+  accessTokenEnc      String?
+  refreshTokenEnc     String?
+  tokenExpiresAt      DateTime?
+  status              SocialConnectionStatus @default(DISCONNECTED)
+  webhookSubscribedAt DateTime?
+  parentExternalId    String?
+  capabilities        String[]               @default([])
+  metadata            Json?
+  connectedAt         DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@unique([businessId, platform])
   @@index([externalId])
+  @@index([provider, externalId])
   @@map("social_accounts")
+}
+
+model PendingMetaConnection {
+  id               String   @id @default(uuid())
+  businessId       String
+  userId           String
+  userAccessTokenEnc String
+  pagesJson        Json
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([businessId])
+  @@map("pending_meta_connections")
+}
+
+model WebhookEvent {
+  id              String   @id @default(uuid())
+  provider        String
+  externalEventId String
+  payload         Json
+  processedAt     DateTime?
+  status          String   @default("RECEIVED")
+  error           String?
+  createdAt       DateTime @default(now())
+
+  @@unique([provider, externalEventId])
+  @@index([createdAt])
+  @@map("webhook_events")
 }
 
 model AIAgent {
@@ -318,6 +415,9 @@ model AIAgent {
   primaryGoal    String   @default("GET_ORDERS")
   secondaryGoals String[] @default(["ANSWER_QUESTIONS", "QUALIFY", "HUMAN_HANDOFF"])
   isActive       Boolean  @default(true)
+  tone           String   @default("FRIENDLY")
+  instructions   String?
+  handoffEnabled Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -340,4 +440,33 @@ model Notification {
 
   @@index([businessId, createdAt])
   @@map("notifications")
+}
+
+model Campaign {
+  id                  String            @id @default(uuid())
+  businessId          String
+  name                String
+  objective           CampaignObjective
+  status              CampaignStatus    @default(DRAFT)
+  offer               String
+  audienceDescription String
+  budget              Int
+  currency            String            @default("EGP")
+  valueProposition    String?
+  suggestedMessaging  String?
+  suggestedCta        String?
+  suggestedCreative   String?
+  channel             String?
+  startDate           DateTime?
+  endDate             DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  leads         Lead[]
+  orders        Order[]
+
+  @@index([businessId, createdAt])
+  @@map("campaigns")
 }

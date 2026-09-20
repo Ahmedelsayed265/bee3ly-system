@@ -21,13 +21,6 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 const navItems = [
   { to: '/app', labelKey: 'navHome' as const, icon: Home, end: true },
   { to: '/app/inbox', labelKey: 'navInbox' as const, icon: MessageCircle },
-  { to: '/app/leads', labelKey: 'navLeads' as const, icon: Users },
-  { to: '/app/orders', labelKey: 'navOrders' as const, icon: ShoppingBag },
-  { to: '/app/products', labelKey: 'navProducts' as const, icon: Package },
-  { to: '/app/ai', labelKey: 'navAi' as const, icon: Brain },
-  { to: '/app/profile', labelKey: 'navProfile' as const, icon: UserRound },
-  { to: '/app/billing', labelKey: 'navBilling' as const, icon: CreditCard },
-  { to: '/app/settings', labelKey: 'navSettings' as const, icon: Settings },
   {
     to: '/app/campaigns',
     labelKey: 'navCampaigns' as const,
@@ -40,6 +33,13 @@ const navItems = [
     icon: BarChart3,
     soon: true,
   },
+  { to: '/app/leads', labelKey: 'navLeads' as const, icon: Users },
+  { to: '/app/orders', labelKey: 'navOrders' as const, icon: ShoppingBag },
+  { to: '/app/products', labelKey: 'navProducts' as const, icon: Package },
+  { to: '/app/ai', labelKey: 'navAi' as const, icon: Brain },
+  { to: '/app/profile', labelKey: 'navProfile' as const, icon: UserRound },
+  { to: '/app/billing', labelKey: 'navBilling' as const, icon: CreditCard },
+  { to: '/app/settings', labelKey: 'navSettings' as const, icon: Settings },
 ]
 
 function initials(name: string) {

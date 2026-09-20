@@ -135,12 +135,12 @@ export function LoginPage() {
 
         <div className="relative py-3 text-center">
           <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
-          <span className="relative bg-auth-bg px-3 text-[12px] text-muted">
+          <span className="relative bg-white px-3 text-[12px] text-muted dark:bg-surface">
             {t('orContinueWith')}
           </span>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 flex gap-2">
           <SocialButton provider="google" label={t('continueGoogle')} />
           <SocialButton provider="apple" label={t('continueApple')} />
         </div>

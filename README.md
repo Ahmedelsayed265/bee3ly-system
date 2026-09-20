@@ -213,11 +213,11 @@ Enums مهمة: `BusinessType`, `BusinessGoal`, `PlanTier`, `OrderStatus`, `Lead
 
 | Token | Hex |
 |-------|-----|
-| Primary | `#D85A30` |
-| Trust | `#0F6E56` |
-| Alert | `#EF9F27` |
-| Page | `#FAF7F2` |
-| Ink | `#2C2C2A` |
+| Primary | `#6366F1` |
+| Text | `#0F172A` |
+| Background | `#F8FAFC` |
+| Surface | `#FFFFFF` |
+| Accent soft | `#EDE9FE` |
 
 ---
 
@@ -248,6 +248,29 @@ npm run db:seed:demo
 ```
 
 بيملأ حساب `ahmedelsayed2102@icloud.com` بمنتجات ومحادثات وليدز وطلبات وإشعارات عشان الصفحات تبان مليانة.
+
+### AI / Meta / Channels
+
+**Bee3ly is the channel + business OS — not the AI brain.**
+
+- External engine: `AI_ENGINE_URL` (+ optional `AI_ENGINE_API_KEY`)
+- Temporary local rules for channel replies only if `AI_ENGINE_DEV_FALLBACK=true`
+- `OPENAI_API_KEY` remains a temporary inbox-simulation aid — not the product architecture
+
+**Meta channel foundation**
+
+- `META_APP_ID` / `META_APP_SECRET` / `META_WEBHOOK_VERIFY_TOKEN` / `META_REDIRECT_URI`
+- Flow: Connect → OAuth → **select Facebook Page** → store tokens → subscribe webhooks
+- Instagram attaches via the Page’s Instagram Business account when present
+- Connection statuses: `DISCONNECTED | CONNECTING | CONNECTED | REAUTH_REQUIRED | ERROR | SIMULATION`
+- Webhooks: verify + signature + idempotent `webhook_events` + inbound message pipeline → AI Engine adapter
+
+### مسار المنتج الحالي (MVP)
+
+```text
+Onboarding → Products → AI config → Campaign brief → Connect FB/IG (أو Simulation)
+→ Inbox message → AI tools → Order/Lead → Notification → Analytics
+```
 
 ---
 

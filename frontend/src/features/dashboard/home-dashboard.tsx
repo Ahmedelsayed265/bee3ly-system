@@ -103,8 +103,8 @@ function SalesChart({
       <svg viewBox={`0 0 ${width} ${height}`} className="relative mt-2 h-48 w-full">
         <defs>
           <linearGradient id="salesFillSoul" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#D85A30" stopOpacity="0.32" />
-            <stop offset="100%" stopColor="#D85A30" stopOpacity="0" />
+            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.32" />
+            <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
           </linearGradient>
         </defs>
         {area ? <path d={area} fill="url(#salesFillSoul)" /> : null}
@@ -112,7 +112,7 @@ function SalesChart({
           <path
             d={path}
             fill="none"
-            stroke="#D85A30"
+            stroke="#6366F1"
             strokeWidth="3"
             strokeLinecap="round"
           />
@@ -124,7 +124,7 @@ function SalesChart({
             cy={p.y}
             r="4"
             fill="#fff"
-            stroke="#D85A30"
+            stroke="#6366F1"
             strokeWidth="2.5"
           />
         ))}
@@ -136,13 +136,13 @@ function SalesChart({
               width="72"
               height="26"
               rx="8"
-              fill="#2C2C2A"
+              fill="#0F172A"
             />
             <text
               x={tip.x}
               y={tip.y - 18}
               textAnchor="middle"
-              fill="#FAF7F2"
+              fill="#F8FAFC"
               fontSize="11"
               fontWeight="700"
             >
@@ -165,40 +165,40 @@ function HeroMascot() {
     <div className="home-mascot relative mx-auto h-40 w-40 sm:h-44 sm:w-44">
       <div className="absolute inset-4 rounded-[2rem] bg-gradient-to-br from-brand/25 via-alert/20 to-trust/20 blur-xl" />
       <svg viewBox="0 0 160 160" className="relative h-full w-full drop-shadow-lg">
-        <ellipse cx="80" cy="142" rx="42" ry="8" fill="#D85A30" opacity="0.15" />
+        <ellipse cx="80" cy="142" rx="42" ry="8" fill="#6366F1" opacity="0.15" />
         {/* body */}
-        <rect x="48" y="58" width="64" height="58" rx="18" fill="#D85A30" />
-        <rect x="54" y="64" width="52" height="36" rx="12" fill="#FAF7F2" />
+        <rect x="48" y="58" width="64" height="58" rx="18" fill="#6366F1" />
+        <rect x="54" y="64" width="52" height="36" rx="12" fill="#F8FAFC" />
         {/* screen chart */}
         <path
           d="M64 88 L74 78 L86 84 L98 70"
           fill="none"
-          stroke="#0F6E56"
+          stroke="#4F46E5"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <circle cx="98" cy="70" r="3.5" fill="#EF9F27" />
+        <circle cx="98" cy="70" r="3.5" fill="#818CF8" />
         {/* head */}
-        <rect x="56" y="28" width="48" height="36" rx="14" fill="#2C2C2A" />
-        <circle cx="70" cy="46" r="5" fill="#FAF7F2" />
-        <circle cx="90" cy="46" r="5" fill="#FAF7F2" />
-        <circle cx="71.5" cy="46.5" r="2" fill="#D85A30" />
-        <circle cx="91.5" cy="46.5" r="2" fill="#D85A30" />
-        <rect x="72" y="54" width="16" height="3" rx="1.5" fill="#EF9F27" />
+        <rect x="56" y="28" width="48" height="36" rx="14" fill="#0F172A" />
+        <circle cx="70" cy="46" r="5" fill="#F8FAFC" />
+        <circle cx="90" cy="46" r="5" fill="#F8FAFC" />
+        <circle cx="71.5" cy="46.5" r="2" fill="#6366F1" />
+        <circle cx="91.5" cy="46.5" r="2" fill="#6366F1" />
+        <rect x="72" y="54" width="16" height="3" rx="1.5" fill="#818CF8" />
         {/* antenna */}
-        <line x1="80" y1="28" x2="80" y2="16" stroke="#2C2C2A" strokeWidth="3" />
-        <circle cx="80" cy="14" r="5" fill="#EF9F27" />
+        <line x1="80" y1="28" x2="80" y2="16" stroke="#0F172A" strokeWidth="3" />
+        <circle cx="80" cy="14" r="5" fill="#818CF8" />
         {/* arms */}
-        <rect x="30" y="72" width="18" height="14" rx="7" fill="#D85A30" />
-        <rect x="112" y="72" width="18" height="14" rx="7" fill="#D85A30" />
+        <rect x="30" y="72" width="18" height="14" rx="7" fill="#6366F1" />
+        <rect x="112" y="72" width="18" height="14" rx="7" fill="#6366F1" />
         {/* phone in hand */}
-        <rect x="118" y="52" width="22" height="34" rx="5" fill="#2C2C2A" />
-        <rect x="121" y="56" width="16" height="22" rx="3" fill="#0F6E56" />
+        <rect x="118" y="52" width="22" height="34" rx="5" fill="#0F172A" />
+        <rect x="121" y="56" width="16" height="22" rx="3" fill="#4F46E5" />
         <path
           d="M124 72 L128 66 L132 69 L136 62"
           fill="none"
-          stroke="#EF9F27"
+          stroke="#818CF8"
           strokeWidth="1.5"
           strokeLinecap="round"
         />
@@ -252,20 +252,20 @@ export function HomeDashboard() {
       value: String(metrics?.leads ?? 0),
       delta: '+34.7%',
       icon: Users,
-      tone: 'bg-alert/25 text-[#8a5a00]',
+      tone: 'bg-alert/25 text-brand',
     },
     {
       label: t('metricRoas'),
       value: '3.8x',
       delta: '+12.3%',
       icon: TrendingUp,
-      tone: 'bg-[#2C2C2A]/10 text-ink',
+      tone: 'bg-ink/10 text-ink',
     },
   ]
 
   const latestOrders = (ordersQuery.data ?? []).slice(0, 4)
   const latestChats = (convQuery.data ?? []).slice(0, 4)
-  const campaignSwatches = ['#D85A30', '#0F6E56', '#EF9F27']
+  const campaignSwatches = ['#6366F1', '#4F46E5', '#818CF8']
 
   const quickActions = [
     { to: '/app/products', label: t('actionAddProduct'), icon: PackagePlus },
@@ -277,7 +277,7 @@ export function HomeDashboard() {
   return (
     <div className="home-dashboard w-full space-y-6">
       {/* Hero */}
-      <section className="home-fade relative overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-surface via-surface to-lavender/80 px-5 py-6 shadow-[0_16px_50px_-28px_rgba(216,90,48,0.45)] sm:px-8">
+      <section className="home-fade relative overflow-hidden rounded-[2rem] border border-border/50 bg-gradient-to-br from-surface via-surface to-lavender/80 px-5 py-6 shadow-[0_16px_50px_-28px_rgba(99,102,241,0.45)] sm:px-8">
         <div className="pointer-events-none absolute -end-16 -top-20 h-56 w-56 rounded-full bg-brand/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 start-1/3 h-40 w-40 rounded-full bg-trust/10 blur-3xl" />
         <div className="relative grid items-center gap-6 lg:grid-cols-[1.2fr_auto]">
@@ -312,7 +312,7 @@ export function HomeDashboard() {
           return (
             <div
               key={card.label}
-              className="home-fade group rounded-[1.5rem] border border-border/60 bg-surface p-4 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.4)] transition-transform duration-300 hover:-translate-y-0.5"
+              className="home-fade group rounded-[1.5rem] border border-border/60 bg-surface p-4 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.35)] transition-transform duration-300 hover:-translate-y-0.5"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               <div className="flex items-start justify-between gap-3">
@@ -349,7 +349,7 @@ export function HomeDashboard() {
         <SalesChart points={overviewQuery.data?.salesByDay ?? []} />
 
         <div className="flex flex-col gap-4">
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-trust/20 bg-gradient-to-br from-trust/15 via-surface to-surface p-5 shadow-[0_12px_40px_-24px_rgba(15,110,86,0.45)]">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-trust/20 bg-gradient-to-br from-trust/15 via-surface to-surface p-5 shadow-[0_12px_40px_-24px_rgba(79,70,229,0.45)]">
             <div className="mb-3 flex items-center gap-2">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-trust text-white">
                 <Bot className="h-4 w-4" />
@@ -366,7 +366,7 @@ export function HomeDashboard() {
             </Button>
           </div>
 
-          <div className="relative overflow-hidden rounded-[1.75rem] border border-brand/20 bg-gradient-to-br from-brand/10 via-surface to-surface p-5 shadow-[0_12px_40px_-24px_rgba(216,90,48,0.4)]">
+          <div className="relative overflow-hidden rounded-[1.75rem] border border-brand/20 bg-gradient-to-br from-brand/10 via-surface to-surface p-5 shadow-[0_12px_40px_-24px_rgba(99,102,241,0.4)]">
             <div className="mb-3 flex items-center gap-2">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-brand text-white">
                 <Lightbulb className="h-4 w-4" />

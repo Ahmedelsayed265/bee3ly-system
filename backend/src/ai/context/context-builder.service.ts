@@ -1,0 +1,130 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import type { BusinessContext, ConversionStageName } from '../types';
+
+@Injectable()
+export class ContextBuilderService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async build(params: {
+    businessId: string;
+    conversationId: string;
+    customerId: string;
+    latestCustomerMessage: string;
+  }): Promise<BusinessContext> {
+    const [business, agent, products, conversation, customer] =
+      await Promise.all([
+        this.prisma.business.findUniqueOrThrow({
+          where: { id: params.businessId },
+        }),
+        this.prisma.aIAgent.findUnique({
+          where: { businessId: params.businessId },
+        }),
+        this.prisma.product.findMany({
+          where: { businessId: params.businessId },
+          orderBy: { createdAt: 'asc' },
+          take: 20,
+        }),
+        this.prisma.conversation.findUniqueOrThrow({
+          where: { id: params.conversationId },
+          include: {
+            campaign: true,
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 16,
+            },
+          },
+        }),
+        this.prisma.customer.findUniqueOrThrow({
+          where: { id: params.customerId },
+        }),
+      ]);
+
+    const historyAsc = [...conversation.messages].reverse();
+
+    return {
+      businessId: params.businessId,
+      conversationId: params.conversationId,
+      customerId: params.customerId,
+      campaignId: conversation.campaignId,
+      mode: conversation.mode,
+      conversionStage: conversation.conversionStage as ConversionStageName,
+      channel: conversation.channel,
+      business: {
+        name: business.name,
+        type: business.type,
+        description: business.description,
+        operatingArea: business.operatingArea,
+        workingHours: business.workingHours,
+        deliveryInfo: business.deliveryInfo,
+        paymentInfo: business.paymentInfo,
+        faqs: business.faqs,
+        primaryGoal: business.primaryGoal,
+      },
+      agent: {
+        isActive: agent?.isActive ?? true,
+        primaryGoal: agent?.primaryGoal ?? 'GET_ORDERS',
+        tone: agent?.tone ?? 'FRIENDLY',
+        instructions: agent?.instructions ?? null,
+        handoffEnabled: agent?.handoffEnabled ?? true,
+      },
+      products: products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        priceEgp: p.priceEgp,
+        sizes: p.sizes,
+        colors: p.colors,
+        inStock: p.inStock,
+      })),
+      customer: {
+        name: customer.name,
+        phone: customer.phone,
+      },
+      campaign: conversation.campaign
+        ? {
+            id: conversation.campaign.id,
+            name: conversation.campaign.name,
+            objective: conversation.campaign.objective,
+            offer: conversation.campaign.offer,
+            audienceDescription: conversation.campaign.audienceDescription,
+          }
+        : null,
+      history: historyAsc.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      latestCustomerMessage: params.latestCustomerMessage,
+    };
+  }
+
+  toPromptBlock(ctx: BusinessContext): string {
+    const productLines = ctx.products
+      .map(
+        (p) =>
+          `- ${p.name} | ${p.priceEgp} EGP | stock:${p.inStock ? 'yes' : 'no'} | sizes:${p.sizes.join(',') || '-'} | colors:${p.colors.join(',') || '-'}`,
+      )
+      .join('\n');
+
+    return [
+      `Business: ${ctx.business.name} (${ctx.business.type})`,
+      ctx.business.description ? `About: ${ctx.business.description}` : '',
+      ctx.business.operatingArea ? `Area: ${ctx.business.operatingArea}` : '',
+      ctx.business.workingHours ? `Hours: ${ctx.business.workingHours}` : '',
+      ctx.business.deliveryInfo ? `Delivery: ${ctx.business.deliveryInfo}` : '',
+      ctx.business.paymentInfo ? `Payment: ${ctx.business.paymentInfo}` : '',
+      ctx.business.faqs ? `FAQs:\n${ctx.business.faqs}` : '',
+      `Agent goal: ${ctx.agent.primaryGoal}`,
+      `Tone: ${ctx.agent.tone}`,
+      ctx.agent.instructions ? `Extra instructions: ${ctx.agent.instructions}` : '',
+      `Customer known: name=${ctx.customer.name ?? '-'} phone=${ctx.customer.phone ?? '-'}`,
+      `Stage: ${ctx.conversionStage}`,
+      ctx.campaign
+        ? `Campaign: ${ctx.campaign.name} / ${ctx.campaign.objective} / offer: ${ctx.campaign.offer}`
+        : '',
+      `Products:\n${productLines || '- none'}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+}

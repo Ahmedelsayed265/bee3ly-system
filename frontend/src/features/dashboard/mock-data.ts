@@ -45,17 +45,17 @@ export const recentOrders = [
   {
     id: '#1042',
     product: 'تيشيرت أسود',
-    tone: '#2C2C2A',
+    tone: '#0F172A',
   },
   {
     id: '#1041',
     product: 'عطر فاخر',
-    tone: '#D85A30',
+    tone: '#6366F1',
   },
   {
     id: '#1040',
     product: 'سنيكرز أسود',
-    tone: '#0F6E56',
+    tone: '#4F46E5',
   },
 ]
 

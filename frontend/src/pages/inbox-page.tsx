@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import {
   fetchConversation,
   fetchConversations,
+  sendHumanMessage,
+  setConversationMode,
   simulateMessage,
 } from '@/features/business/api'
 import { useLocale } from '@/features/i18n/locale-context'
@@ -31,20 +33,41 @@ export function InboxPage() {
     enabled: Boolean(selectedId),
   })
 
+  const conversation = detailQuery.data?.conversation
+  const isHumanMode =
+    conversation?.mode === 'HUMAN' || conversation?.needsHuman
+
+  const invalidateAll = async (conversationId?: string) => {
+    await qc.invalidateQueries({ queryKey: ['conversations'] })
+    if (conversationId) {
+      await qc.invalidateQueries({ queryKey: ['conversation', conversationId] })
+    }
+    await qc.invalidateQueries({ queryKey: ['orders'] })
+    await qc.invalidateQueries({ queryKey: ['notifications'] })
+    await qc.invalidateQueries({ queryKey: ['overview'] })
+    await qc.invalidateQueries({ queryKey: ['leads'] })
+  }
+
   const sendMut = useMutation({
-    mutationFn: (content: string) =>
-      simulateMessage(content, selectedId ?? undefined),
+    mutationFn: async (content: string) => {
+      if (selectedId && isHumanMode) {
+        await sendHumanMessage(selectedId, content)
+        return { conversationId: selectedId }
+      }
+      return simulateMessage(content, selectedId ?? undefined)
+    },
     onSuccess: async (data) => {
       setSelectedId(data.conversationId)
       setDraft('')
-      await qc.invalidateQueries({ queryKey: ['conversations'] })
-      await qc.invalidateQueries({
-        queryKey: ['conversation', data.conversationId],
-      })
-      await qc.invalidateQueries({ queryKey: ['orders'] })
-      await qc.invalidateQueries({ queryKey: ['notifications'] })
-      await qc.invalidateQueries({ queryKey: ['overview'] })
-      await qc.invalidateQueries({ queryKey: ['leads'] })
+      await invalidateAll(data.conversationId)
+    },
+  })
+
+  const modeMut = useMutation({
+    mutationFn: (mode: 'AI' | 'HUMAN') =>
+      setConversationMode(selectedId!, mode),
+    onSuccess: async () => {
+      await invalidateAll(selectedId ?? undefined)
     },
   })
 
@@ -79,11 +102,20 @@ export function InboxPage() {
                   : 'hover:bg-lavender text-muted',
               )}
             >
-              <p className="truncate text-sm font-semibold text-ink">
-                {c.customer.name ?? t('unknownCustomer')}
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate text-sm font-semibold text-ink">
+                  {c.customer.name ?? t('unknownCustomer')}
+                </p>
+                <span className="text-[10px] font-semibold text-muted">
+                  {c.mode === 'HUMAN' || c.needsHuman ? 'HUMAN' : 'AI'}
+                </span>
+              </div>
               <p className="truncate text-[11px]">
                 {c.messages[0]?.content ?? c.channel}
+              </p>
+              <p className="mt-0.5 truncate text-[10px] text-muted">
+                {c.conversionStage ?? 'NEW'}
+                {c.leads?.[0]?.status ? ` · ${c.leads[0].status}` : ''}
               </p>
             </button>
           ))}
@@ -93,15 +125,57 @@ export function InboxPage() {
         </div>
 
         <div className="flex flex-col rounded-2xl border border-border bg-surface">
+          {conversation ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-ink">
+                  {conversation.customer.name ?? t('unknownCustomer')}
+                </p>
+                <p className="text-[11px] text-muted">
+                  {conversation.channel}
+                  {conversation.campaign
+                    ? ` · ${conversation.campaign.name}`
+                    : ''}
+                  {conversation.handoffReason
+                    ? ` · ${conversation.handoffReason}`
+                    : ''}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {isHumanMode ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => modeMut.mutate('AI')}
+                    disabled={modeMut.isPending}
+                  >
+                    {t('returnToAi')}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => modeMut.mutate('HUMAN')}
+                    disabled={modeMut.isPending}
+                  >
+                    {t('takeOver')}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {(detailQuery.data?.messages ?? []).map((m) => (
+            {(conversation?.messages ?? []).map((m) => (
               <div
                 key={m.id}
                 className={cn(
                   'max-w-[85%] rounded-2xl px-3 py-2 text-sm',
                   m.role === 'CUSTOMER'
                     ? 'ms-auto bg-brand text-white'
-                    : 'bg-lavender text-ink',
+                    : m.role === 'HUMAN'
+                      ? 'bg-trust/15 text-ink'
+                      : 'bg-lavender text-ink',
                 )}
               >
                 {m.content}
@@ -122,7 +196,9 @@ export function InboxPage() {
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={t('typeCustomerMessage')}
+              placeholder={
+                isHumanMode ? t('typeCustomerMessage') : t('typeCustomerMessage')
+              }
               className="h-11 flex-1 rounded-xl border border-border bg-page px-3 text-sm outline-none focus:border-brand/40"
             />
             <Button type="submit" disabled={sendMut.isPending || !draft.trim()}>

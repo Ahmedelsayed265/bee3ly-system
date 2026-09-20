@@ -4,7 +4,7 @@ type Bee3lyLogoProps = {
   className?: string
   markClassName?: string
   withWordmark?: boolean
-  /** brand = orange mark; light = cream mark; ink = dark mark; onDark = orange mark + light wordmark */
+  /** brand = primary mark; light = surface mark; ink = text mark; onDark = primary mark + light wordmark */
   tone?: 'brand' | 'light' | 'ink' | 'onDark'
 }
 
@@ -18,9 +18,9 @@ export function Bee3lyMark({
 }) {
   const resolved = tone === 'brand' || !tone ? 'brand' : tone
   const bg =
-    resolved === 'brand' ? '#D85A30' : resolved === 'light' ? '#FAF7F2' : '#2C2C2A'
+    resolved === 'brand' ? '#6366F1' : resolved === 'light' ? '#F8FAFC' : '#0F172A'
   const stroke =
-    resolved === 'brand' ? '#FFFFFF' : resolved === 'light' ? '#D85A30' : '#FAF7F2'
+    resolved === 'brand' ? '#FFFFFF' : resolved === 'light' ? '#6366F1' : '#F8FAFC'
 
   return (
     <svg
@@ -52,7 +52,9 @@ export function Bee3lyLogo({
   tone = 'brand',
 }: Bee3lyLogoProps) {
   const markTone = tone === 'onDark' ? 'brand' : tone
-  const wordColor = tone === 'onDark' || tone === 'light' ? 'text-[#FAF7F2]' : 'text-ink'
+  const wordColor = tone === 'onDark' || tone === 'light' ? 'text-[#F8FAFC]' : 'text-ink'
+  const accentColor =
+    tone === 'onDark' || tone === 'light' ? 'text-[#818CF8]' : 'text-brand'
 
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>

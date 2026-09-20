@@ -64,7 +64,7 @@ export function DashboardTopBar() {
 
   return (
     <header className="relative flex h-16 shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
-      <label className="relative mx-auto hidden w-full max-w-xl sm:block">
+      <label className="relative me-auto hidden w-full max-w-xl sm:block">
         <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           type="search"

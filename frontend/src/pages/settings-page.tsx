@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { InputField } from '@/components/ui/input-field'
 import { useAuth } from '@/features/auth/auth-context'
 import {
   connectSocialDemo,
+  disconnectSocial,
+  fetchMetaPending,
   fetchSocial,
+  selectMetaPage,
+  startMetaConnect,
   updateBusiness,
 } from '@/features/business/api'
 import { useLocale } from '@/features/i18n/locale-context'
@@ -16,18 +20,53 @@ import { cn } from '@/lib/utils'
 
 type Tab = 'social' | 'knowledge'
 
+function statusLabel(
+  status: string | undefined,
+  t: (k: MessageKey) => string,
+) {
+  switch (status) {
+    case 'CONNECTED':
+      return t('connectionConnected')
+    case 'SIMULATION':
+      return t('connectionSimulation')
+    case 'CONNECTING':
+      return t('connectionConnecting')
+    case 'REAUTH_REQUIRED':
+      return t('connectionReauth')
+    case 'ERROR':
+      return t('connectionError')
+    default:
+      return t('connectionDisconnected')
+  }
+}
+
 export function SettingsPage() {
   const { t } = useLocale()
   const { business, refreshMe } = useAuth()
   const qc = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('social')
   const socialQuery = useQuery({ queryKey: ['social'], queryFn: fetchSocial })
+
+  const pendingId = searchParams.get('metaPending')
+  const pendingQuery = useQuery({
+    queryKey: ['meta-pending', pendingId],
+    queryFn: () => fetchMetaPending(pendingId!),
+    enabled: Boolean(pendingId),
+  })
 
   const [faqs, setFaqs] = useState(business?.faqs ?? '')
   const [deliveryInfo, setDeliveryInfo] = useState(business?.deliveryInfo ?? '')
   const [workingHours, setWorkingHours] = useState(business?.workingHours ?? '')
   const [paymentInfo, setPaymentInfo] = useState(business?.paymentInfo ?? '')
   const [saved, setSaved] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('meta') === 'connected') {
+      setNotice(t('metaConnectedOk'))
+    }
+  }, [searchParams, t])
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -46,6 +85,30 @@ export function SettingsPage() {
   const connectMut = useMutation({
     mutationFn: connectSocialDemo,
     onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['social'] })
+    },
+  })
+
+  const disconnectMut = useMutation({
+    mutationFn: disconnectSocial,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['social'] })
+    },
+  })
+
+  const metaConnectMut = useMutation({
+    mutationFn: startMetaConnect,
+    onSuccess: (data) => {
+      window.location.href = data.oauthUrl
+    },
+  })
+
+  const selectPageMut = useMutation({
+    mutationFn: ({ pageId }: { pageId: string }) =>
+      selectMetaPage(pendingId!, pageId),
+    onSuccess: async (data) => {
+      setNotice(data.notice)
+      setSearchParams({})
       await qc.invalidateQueries({ queryKey: ['social'] })
     },
   })
@@ -97,37 +160,119 @@ export function SettingsPage() {
       {tab === 'social' ? (
         <section className="grid w-full gap-4 rounded-2xl border border-border bg-surface p-5 lg:grid-cols-[1fr_1.2fr]">
           <div className="space-y-3">
+            <p className="text-sm font-semibold text-ink">
+              {t('connectFacebookInstagram')}
+            </p>
             <p className="text-sm text-muted">{t('socialAccountsHint')}</p>
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                disabled={
+                  metaConnectMut.isPending || !socialQuery.data?.metaConfigured
+                }
+                onClick={() => metaConnectMut.mutate()}
+              >
+                {t('connectRealMeta')}
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => connectMut.mutate('FACEBOOK')}
               >
-                {t('connectFacebook')}
+                {t('connectFacebook')} · {t('connectionSimulation')}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => connectMut.mutate('INSTAGRAM')}
               >
-                {t('connectInstagram')}
+                {t('connectInstagram')} · {t('connectionSimulation')}
               </Button>
             </div>
             {!socialQuery.data?.metaConfigured ? (
               <p className="text-xs text-muted">{t('metaNotConfigured')}</p>
+            ) : (
+              <p className="text-xs text-muted">{t('metaConnectHint')}</p>
+            )}
+            {notice ? (
+              <p className="rounded-xl bg-trust/10 px-3 py-2 text-sm text-trust">
+                {notice}
+              </p>
+            ) : null}
+
+            {pendingId ? (
+              <div className="space-y-2 rounded-xl border border-brand/30 bg-brand/5 p-4">
+                <p className="text-sm font-semibold text-ink">
+                  {t('selectFacebookPage')}
+                </p>
+                <p className="text-xs text-muted">{t('selectFacebookPageHint')}</p>
+                {(pendingQuery.data?.pages ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    disabled={selectPageMut.isPending}
+                    onClick={() => selectPageMut.mutate({ pageId: p.id })}
+                    className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5 text-start text-sm hover:bg-lavender"
+                  >
+                    <span className="font-semibold text-ink">{p.name}</span>
+                    <span className="text-[11px] text-muted">
+                      {p.hasInstagram
+                        ? t('pageHasInstagram')
+                        : t('pageNoInstagram')}
+                    </span>
+                  </button>
+                ))}
+                {pendingQuery.isError ? (
+                  <p className="text-sm text-danger">{t('metaPendingExpired')}</p>
+                ) : null}
+              </div>
             ) : null}
           </div>
+
           <ul className="space-y-2 text-sm">
             {(socialQuery.data?.accounts ?? []).map((a) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between rounded-xl bg-page px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl bg-page px-4 py-3"
               >
                 <span>
                   {a.platform} · {a.displayName}
+                  {a.webhookSubscribedAt ? (
+                    <span className="ms-2 text-[10px] text-trust">
+                      webhook
+                    </span>
+                  ) : null}
                 </span>
-                <span className="text-xs font-semibold text-trust">✓</span>
+                <span className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                      a.status === 'CONNECTED'
+                        ? 'bg-trust/15 text-trust'
+                        : a.status === 'SIMULATION'
+                          ? 'bg-alert/20 text-ink'
+                          : a.status === 'CONNECTING'
+                            ? 'bg-brand/10 text-brand'
+                            : 'bg-lavender text-muted',
+                    )}
+                  >
+                    {statusLabel(a.status, t)}
+                  </span>
+                  {a.status !== 'DISCONNECTED' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-danger"
+                      onClick={() =>
+                        disconnectMut.mutate(
+                          a.platform as 'FACEBOOK' | 'INSTAGRAM',
+                        )
+                      }
+                    >
+                      {t('disconnectAccount')}
+                    </Button>
+                  ) : null}
+                </span>
               </li>
             ))}
             {(socialQuery.data?.accounts.length ?? 0) === 0 ? (
@@ -175,7 +320,9 @@ export function SettingsPage() {
             >
               {saveMut.isPending ? t('saving') : t('save')}
             </Button>
-            {saved ? <p className="text-sm text-trust">{t('profileSaved')}</p> : null}
+            {saved ? (
+              <p className="text-sm text-trust">{t('profileSaved')}</p>
+            ) : null}
           </div>
         </section>
       )}
