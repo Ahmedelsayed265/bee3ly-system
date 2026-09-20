@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { Lock } from 'lucide-react'
 import { InputField } from '@/components/ui/input-field'
@@ -20,7 +21,6 @@ export function ResetPasswordPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
-  const [error, setError] = useState<string | null>(null)
 
   const schema = useMemo(
     () =>
@@ -42,16 +42,16 @@ export function ResetPasswordPage() {
   })
 
   const onSubmit = form.handleSubmit(async (values) => {
-    setError(null)
     if (!token) {
-      setError(t('resetInvalidToken'))
+      toast.error(t('resetInvalidToken'))
       return
     }
     try {
       await resetPassword({ token, password: values.password })
+      toast.success(t('resetSuccess'))
       navigate('/login', { replace: true, state: { resetSuccess: true } })
     } catch {
-      setError(t('resetFailed'))
+      toast.error(t('resetFailed'))
     }
   })
 
@@ -111,8 +111,6 @@ export function ResetPasswordPage() {
           error={form.formState.errors.confirmPassword?.message}
           {...form.register('confirmPassword')}
         />
-
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         <SubmitButton
           label={t('resetSubmit')}

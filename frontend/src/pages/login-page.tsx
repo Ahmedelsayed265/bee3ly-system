@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { Lock, Mail } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -24,10 +25,16 @@ export function LoginPage() {
   const { t, locale } = useLocale()
   const navigate = useNavigate()
   const location = useLocation()
-  const [error, setError] = useState<string | null>(null)
   const resetSuccess = Boolean(
     (location.state as { resetSuccess?: boolean } | null)?.resetSuccess,
   )
+
+  useEffect(() => {
+    if (resetSuccess) {
+      toast.success(t('resetSuccess'))
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [resetSuccess, t, navigate, location.pathname])
 
   const schema = useMemo(
     () =>
@@ -49,12 +56,12 @@ export function LoginPage() {
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
-    setError(null)
     try {
       await login({ email: values.email, password: values.password })
+      toast.success(t('loginSuccess'))
       navigate('/app', { replace: true })
     } catch {
-      setError(t('invalidCredentials'))
+      toast.error(t('invalidCredentials'))
     }
   })
 
@@ -72,12 +79,6 @@ export function LoginPage() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4" key={locale}>
-        {resetSuccess ? (
-          <p className="rounded-[14px] border border-trust/30 bg-trust/10 px-3 py-2 text-sm text-trust">
-            {t('resetSuccess')}
-          </p>
-        ) : null}
-
         <InputField
           id="email"
           type="email"
@@ -124,8 +125,6 @@ export function LoginPage() {
             {t('forgotPassword')}
           </Link>
         </div>
-
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         <SubmitButton
           label={t('signIn')}

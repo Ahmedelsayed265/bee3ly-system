@@ -1,11 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@100;200;300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@font-face {
+  font-family: 'Marzouk';
+  src: url('/Marzouk_Font_Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Marzouk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Marzouk", ui-sans-serif, system-ui, sans-serif;
   --color-brand: #6366f1;
   --color-brand-foreground: #ffffff;
   --color-trust: #4f46e5;

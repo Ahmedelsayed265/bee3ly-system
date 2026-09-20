@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { HelpCircle, MessageCircle } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { InputField } from '@/components/ui/input-field'
@@ -41,9 +42,6 @@ export function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [profileMsg, setProfileMsg] = useState<string | null>(null)
-  const [passwordMsg, setPasswordMsg] = useState<string | null>(null)
-  const [passwordError, setPasswordError] = useState<string | null>(null)
 
   const profileMut = useMutation({
     mutationFn: async () => {
@@ -55,7 +53,10 @@ export function ProfilePage() {
     },
     onSuccess: async () => {
       await refreshMe()
-      setProfileMsg(t('profileSaved'))
+      toast.success(t('profileSaved'))
+    },
+    onError: () => {
+      toast.error(t('saveFailed'))
     },
   })
 
@@ -69,12 +70,10 @@ export function ProfilePage() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-      setPasswordError(null)
-      setPasswordMsg(t('passwordChanged'))
+      toast.success(t('passwordChanged'))
     },
     onError: () => {
-      setPasswordMsg(null)
-      setPasswordError(t('currentPasswordWrong'))
+      toast.error(t('currentPasswordWrong'))
     },
   })
 
@@ -124,9 +123,6 @@ export function ProfilePage() {
               }))}
             />
           </div>
-          {profileMsg ? (
-            <p className="text-sm text-trust">{profileMsg}</p>
-          ) : null}
           <Button
             onClick={() => profileMut.mutate()}
             disabled={profileMut.isPending || name.trim().length < 2}
@@ -164,21 +160,15 @@ export function ProfilePage() {
               autoComplete="new-password"
             />
           </div>
-          {passwordError ? (
-            <p className="text-sm text-danger">{passwordError}</p>
-          ) : null}
-          {passwordMsg ? (
-            <p className="text-sm text-trust">{passwordMsg}</p>
-          ) : null}
           <Button
             variant="outline"
             onClick={() => {
               if (newPassword.length < 8) {
-                setPasswordError(t('passwordMin'))
+                toast.error(t('passwordMin'))
                 return
               }
               if (newPassword !== confirmPassword) {
-                setPasswordError(t('passwordMismatch'))
+                toast.error(t('passwordMismatch'))
                 return
               }
               passwordMut.mutate()

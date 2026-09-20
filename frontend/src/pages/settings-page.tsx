@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { InputField } from '@/components/ui/input-field'
@@ -59,14 +60,13 @@ export function SettingsPage() {
   const [deliveryInfo, setDeliveryInfo] = useState(business?.deliveryInfo ?? '')
   const [workingHours, setWorkingHours] = useState(business?.workingHours ?? '')
   const [paymentInfo, setPaymentInfo] = useState(business?.paymentInfo ?? '')
-  const [saved, setSaved] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     if (searchParams.get('meta') === 'connected') {
-      setNotice(t('metaConnectedOk'))
+      toast.success(t('metaConnectedOk'))
+      setSearchParams({}, { replace: true })
     }
-  }, [searchParams, t])
+  }, [searchParams, setSearchParams, t])
 
   const saveMut = useMutation({
     mutationFn: () =>
@@ -78,7 +78,10 @@ export function SettingsPage() {
       }),
     onSuccess: async () => {
       await refreshMe()
-      setSaved(true)
+      toast.success(t('profileSaved'))
+    },
+    onError: () => {
+      toast.error(t('saveFailed'))
     },
   })
 
@@ -86,6 +89,10 @@ export function SettingsPage() {
     mutationFn: connectSocialDemo,
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['social'] })
+      toast.success(t('metaConnectedOk'))
+    },
+    onError: () => {
+      toast.error(t('connectionError'))
     },
   })
 
@@ -93,6 +100,10 @@ export function SettingsPage() {
     mutationFn: disconnectSocial,
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['social'] })
+      toast.success(t('connectionDisconnected'))
+    },
+    onError: () => {
+      toast.error(t('connectionError'))
     },
   })
 
@@ -101,15 +112,21 @@ export function SettingsPage() {
     onSuccess: (data) => {
       window.location.href = data.oauthUrl
     },
+    onError: () => {
+      toast.error(t('connectionError'))
+    },
   })
 
   const selectPageMut = useMutation({
     mutationFn: ({ pageId }: { pageId: string }) =>
       selectMetaPage(pendingId!, pageId),
     onSuccess: async (data) => {
-      setNotice(data.notice)
+      toast.success(data.notice || t('metaConnectedOk'))
       setSearchParams({})
       await qc.invalidateQueries({ queryKey: ['social'] })
+    },
+    onError: () => {
+      toast.error(t('metaPendingExpired'))
     },
   })
 
@@ -194,11 +211,6 @@ export function SettingsPage() {
             ) : (
               <p className="text-xs text-muted">{t('metaConnectHint')}</p>
             )}
-            {notice ? (
-              <p className="rounded-xl bg-trust/10 px-3 py-2 text-sm text-trust">
-                {notice}
-              </p>
-            ) : null}
 
             {pendingId ? (
               <div className="space-y-2 rounded-xl border border-brand/30 bg-brand/5 p-4">
@@ -320,9 +332,6 @@ export function SettingsPage() {
             >
               {saveMut.isPending ? t('saving') : t('save')}
             </Button>
-            {saved ? (
-              <p className="text-sm text-trust">{t('profileSaved')}</p>
-            ) : null}
           </div>
         </section>
       )}

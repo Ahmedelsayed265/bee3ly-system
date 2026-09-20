@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { Building2, Lock, Mail, User } from 'lucide-react'
 import { InputField } from '@/components/ui/input-field'
@@ -36,7 +37,6 @@ export function RegisterPage() {
   const { register: registerUser, isAuthenticated, isLoading } = useAuth()
   const { t, locale } = useLocale()
   const navigate = useNavigate()
-  const [error, setError] = useState<string | null>(null)
 
   const schema = useMemo(
     () =>
@@ -75,14 +75,14 @@ export function RegisterPage() {
   }
 
   const onSubmit = form.handleSubmit(async (values) => {
-    setError(null)
     try {
       await registerUser(values)
+      toast.success(t('registerSuccess'))
       navigate('/app/onboarding', { replace: true })
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status
-      setError(status === 409 ? t('emailTaken') : t('registerFailed'))
+      toast.error(status === 409 ? t('emailTaken') : t('registerFailed'))
     }
   })
 
@@ -160,8 +160,6 @@ export function RegisterPage() {
           error={form.formState.errors.password?.message}
           {...form.register('password')}
         />
-
-        {error ? <p className="text-sm text-danger">{error}</p> : null}
 
         <SubmitButton
           label={t('createAccount')}

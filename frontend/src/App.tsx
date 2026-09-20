@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/features/auth/auth-context'
 import { ProtectedRoute } from '@/features/auth/protected-route'
 import { LocaleProvider } from '@/features/i18n/locale-context'
@@ -39,6 +40,7 @@ export default function App() {
         <LocaleProvider>
           <BrowserRouter>
             <AuthProvider>
+              <Toaster richColors closeButton />
               <Routes>
                 <Route path="/" element={<WelcomePage />} />
                 <Route path="/login" element={<LoginPage />} />

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { z } from 'zod'
 import { Mail } from 'lucide-react'
 import { InputField } from '@/components/ui/input-field'
@@ -16,7 +17,6 @@ type FormValues = {
 
 export function ForgotPasswordPage() {
   const { t, locale } = useLocale()
-  const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const [devResetPath, setDevResetPath] = useState<string | null>(null)
 
@@ -34,16 +34,16 @@ export function ForgotPasswordPage() {
   })
 
   const onSubmit = form.handleSubmit(async (values) => {
-    setError(null)
     setDevResetPath(null)
     try {
       const result = await forgotPassword(values)
       setSent(true)
+      toast.success(t('forgotSent'))
       if (result.resetToken) {
         setDevResetPath(`/reset-password?token=${result.resetToken}`)
       }
     } catch {
-      setError(t('forgotFailed'))
+      toast.error(t('forgotFailed'))
     }
   })
 
@@ -91,8 +91,6 @@ export function ForgotPasswordPage() {
             error={form.formState.errors.email?.message}
             {...form.register('email')}
           />
-
-          {error ? <p className="text-sm text-danger">{error}</p> : null}
 
           <SubmitButton
             label={t('forgotSubmit')}
