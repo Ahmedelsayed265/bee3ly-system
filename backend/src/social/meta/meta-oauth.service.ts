@@ -39,9 +39,6 @@ export class MetaOauthService {
       'pages_show_list',
       'pages_messaging',
       'pages_manage_metadata',
-      'instagram_basic',
-      'instagram_manage_messages',
-      'business_management',
     ].join(',');
     return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}`;
   }

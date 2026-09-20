@@ -261,11 +261,12 @@ export const messages = {
     settingsIntro: 'ربط الحسابات الاجتماعية ومعرفة البيزنس.',
     socialAccounts: 'الحسابات الاجتماعية',
     socialAccountsHint:
-      'للتجربة محليًا استخدم الربط التجريبي. للإنتاج اضبط META_APP_ID.',
+      'اربط صفحة فيسبوك (وإنستجرام المرتبط بيها) عشان الرسائل توصل لـ bee3ly.',
     connectFacebook: 'ربط Facebook',
     connectInstagram: 'ربط Instagram',
     metaNotConfigured:
-      'Meta App مش متضبط بعد — الربط التجريبي يكفي لاختبار الـ MVP.',
+      'Meta App مش متضبط بعد — حط META_APP_ID و META_APP_SECRET في .env',
+    noSocialAccounts: 'مفيش حسابات مربوطة بعد.',
     businessKnowledge: 'معرفة البيزنس',
     markAllRead: 'تعليم الكل كمقروء',
     noNotifications: 'لا توجد إشعارات.',
@@ -677,11 +678,12 @@ export const messages = {
     settingsIntro: 'Connect social accounts and business knowledge.',
     socialAccounts: 'Social accounts',
     socialAccountsHint:
-      'Use demo connect locally. Set META_APP_ID for production OAuth.',
+      'Connect a Facebook Page (and its linked Instagram) so messages reach bee3ly.',
     connectFacebook: 'Connect Facebook',
     connectInstagram: 'Connect Instagram',
     metaNotConfigured:
-      'Meta App is not configured yet — demo connect is enough for MVP testing.',
+      'Meta App is not configured yet — set META_APP_ID and META_APP_SECRET in .env',
+    noSocialAccounts: 'No accounts connected yet.',
     businessKnowledge: 'Business knowledge',
     markAllRead: 'Mark all read',
     noNotifications: 'No notifications.',

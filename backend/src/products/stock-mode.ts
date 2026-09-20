@@ -1,8 +1,8 @@
 import type { BusinessType } from '@prisma/client'
 
-/** Physical units (t-shirts, bottles…) track a count. Listings (real estate) use available/unavailable. */
+/** Physical units (t-shirts, bottles…) track a count. Made-to-order / listings use available/unavailable. */
 export function usesQuantityStock(type: BusinessType | string): boolean {
-  return type !== 'REAL_ESTATE'
+  return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE'
 }
 
 export function resolveInStock(input: {

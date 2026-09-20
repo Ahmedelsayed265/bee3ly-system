@@ -10,9 +10,9 @@ export type AttributeTemplateField = {
   placeholderKey?: MessageKey
 }
 
-/** Physical catalog → quantity. Listings (real estate) → available/unavailable. */
+/** Physical catalog → quantity. Made-to-order / listings → available/unavailable. */
 export function usesQuantityStock(type: BusinessType | string): boolean {
-  return type !== 'REAL_ESTATE'
+  return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE'
 }
 
 /** Suggested detail fields per business type — merchants can still add custom keys. */
@@ -111,7 +111,7 @@ export function resolveAttributeEntries(
     .filter(([, value]) => {
       if (Array.isArray(value)) return value.length > 0
       if (typeof value === 'string') return value.trim().length > 0
-      return value !== null && value !== undefined && value !== ''
+      return typeof value === 'number' || typeof value === 'boolean'
     })
     .map(([key, value]) => ({
       key,

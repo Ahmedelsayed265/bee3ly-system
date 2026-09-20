@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { InputField } from '@/components/ui/input-field'
 import { useAuth } from '@/features/auth/auth-context'
 import {
-  connectSocialDemo,
   disconnectSocial,
   fetchMetaPending,
   fetchSocial,
@@ -85,17 +84,6 @@ export function SettingsPage() {
     },
   })
 
-  const connectMut = useMutation({
-    mutationFn: connectSocialDemo,
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['social'] })
-      toast.success(t('metaConnectedOk'))
-    },
-    onError: () => {
-      toast.error(t('connectionError'))
-    },
-  })
-
   const disconnectMut = useMutation({
     mutationFn: disconnectSocial,
     onSuccess: async () => {
@@ -134,6 +122,10 @@ export function SettingsPage() {
     { id: 'social', labelKey: 'socialAccounts' },
     { id: 'knowledge', labelKey: 'businessKnowledge' },
   ]
+
+  const realAccounts = (socialQuery.data?.accounts ?? []).filter(
+    (a) => a.status !== 'SIMULATION',
+  )
 
   return (
     <PageLayout
@@ -191,20 +183,6 @@ export function SettingsPage() {
               >
                 {t('connectRealMeta')}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => connectMut.mutate('FACEBOOK')}
-              >
-                {t('connectFacebook')} · {t('connectionSimulation')}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => connectMut.mutate('INSTAGRAM')}
-              >
-                {t('connectInstagram')} · {t('connectionSimulation')}
-              </Button>
             </div>
             {!socialQuery.data?.metaConfigured ? (
               <p className="text-xs text-muted">{t('metaNotConfigured')}</p>
@@ -242,7 +220,7 @@ export function SettingsPage() {
           </div>
 
           <ul className="space-y-2 text-sm">
-            {(socialQuery.data?.accounts ?? []).map((a) => (
+            {realAccounts.map((a) => (
               <li
                 key={a.id}
                 className="flex items-center justify-between gap-3 rounded-xl bg-page px-4 py-3"
@@ -261,11 +239,9 @@ export function SettingsPage() {
                       'rounded-full px-2 py-0.5 text-[10px] font-semibold',
                       a.status === 'CONNECTED'
                         ? 'bg-trust/15 text-trust'
-                        : a.status === 'SIMULATION'
-                          ? 'bg-alert/20 text-ink'
-                          : a.status === 'CONNECTING'
-                            ? 'bg-brand/10 text-brand'
-                            : 'bg-lavender text-muted',
+                        : a.status === 'CONNECTING'
+                          ? 'bg-brand/10 text-brand'
+                          : 'bg-lavender text-muted',
                     )}
                   >
                     {statusLabel(a.status, t)}
@@ -287,9 +263,9 @@ export function SettingsPage() {
                 </span>
               </li>
             ))}
-            {(socialQuery.data?.accounts.length ?? 0) === 0 ? (
+            {realAccounts.length === 0 ? (
               <li className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-                {t('socialAccountsHint')}
+                {t('noSocialAccounts')}
               </li>
             ) : null}
           </ul>
