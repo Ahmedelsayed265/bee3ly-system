@@ -67,7 +67,7 @@ export function Bee3lyLogo({
           )}
         >
           bee
-          <span className="text-brand">3</span>
+          <span className={accentColor}>3</span>
           ly
         </span>
       ) : null}
