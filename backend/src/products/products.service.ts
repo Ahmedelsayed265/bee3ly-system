@@ -1,7 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import {
+  asAttributes,
+  mergeLegacyIntoAttributes,
+  syncLegacyArrays,
+} from './product-attributes';
+import { resolveInStock } from './stock-mode';
 
 @Injectable()
 export class ProductsService {
@@ -9,6 +16,14 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
   ) {}
+
+  private async businessType(businessId: string) {
+    const business = await this.prisma.business.findUniqueOrThrow({
+      where: { id: businessId },
+      select: { type: true },
+    });
+    return business.type;
+  }
 
   async list(userId: string) {
     const businessId = await this.access.requireBusinessId(userId);
@@ -21,15 +36,30 @@ export class ProductsService {
 
   async create(userId: string, dto: CreateProductDto) {
     const businessId = await this.access.requireBusinessId(userId);
+    const type = await this.businessType(businessId);
+    const attributes = mergeLegacyIntoAttributes(
+      asAttributes(dto.attributes),
+      dto.sizes,
+      dto.colors,
+    );
+    const legacy = syncLegacyArrays(attributes);
+    const stock = resolveInStock({
+      type,
+      stockQuantity: dto.stockQuantity,
+      inStock: dto.inStock,
+    });
+
     const product = await this.prisma.product.create({
       data: {
         businessId,
         name: dto.name.trim(),
         description: dto.description?.trim(),
         priceEgp: dto.priceEgp,
-        sizes: dto.sizes ?? [],
-        colors: dto.colors ?? [],
-        inStock: dto.inStock ?? true,
+        attributes: attributes as Prisma.InputJsonValue,
+        sizes: legacy.sizes,
+        colors: legacy.colors,
+        stockQuantity: stock.stockQuantity,
+        inStock: stock.inStock,
       },
     });
     return { product };
@@ -37,10 +67,42 @@ export class ProductsService {
 
   async update(userId: string, id: string, dto: UpdateProductDto) {
     const businessId = await this.access.requireBusinessId(userId);
+    const type = await this.businessType(businessId);
     const existing = await this.prisma.product.findFirst({
       where: { id, businessId },
     });
     if (!existing) throw new NotFoundException('Product not found');
+
+    const shouldTouchAttributes =
+      dto.attributes !== undefined ||
+      dto.sizes !== undefined ||
+      dto.colors !== undefined;
+
+    let attributes = asAttributes(existing.attributes);
+    if (shouldTouchAttributes) {
+      attributes = mergeLegacyIntoAttributes(
+        dto.attributes !== undefined
+          ? asAttributes(dto.attributes)
+          : attributes,
+        dto.sizes,
+        dto.colors,
+      );
+    }
+    const legacy = syncLegacyArrays(attributes);
+
+    const shouldTouchStock =
+      dto.stockQuantity !== undefined || dto.inStock !== undefined;
+    const stock = shouldTouchStock
+      ? resolveInStock({
+          type,
+          stockQuantity:
+            dto.stockQuantity !== undefined
+              ? dto.stockQuantity
+              : existing.stockQuantity,
+          inStock:
+            dto.inStock !== undefined ? dto.inStock : existing.inStock,
+        })
+      : null;
 
     const product = await this.prisma.product.update({
       where: { id },
@@ -50,9 +112,19 @@ export class ProductsService {
           ? { description: dto.description.trim() }
           : {}),
         ...(dto.priceEgp !== undefined ? { priceEgp: dto.priceEgp } : {}),
-        ...(dto.sizes !== undefined ? { sizes: dto.sizes } : {}),
-        ...(dto.colors !== undefined ? { colors: dto.colors } : {}),
-        ...(dto.inStock !== undefined ? { inStock: dto.inStock } : {}),
+        ...(shouldTouchAttributes
+          ? {
+              attributes: attributes as Prisma.InputJsonValue,
+              sizes: legacy.sizes,
+              colors: legacy.colors,
+            }
+          : {}),
+        ...(stock
+          ? {
+              stockQuantity: stock.stockQuantity,
+              inStock: stock.inStock,
+            }
+          : {}),
       },
     });
     return { product };

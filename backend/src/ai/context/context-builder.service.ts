@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  asAttributes,
+  formatAttributesLine,
+  syncLegacyArrays,
+} from '../../products/product-attributes';
 import type { BusinessContext, ConversionStageName } from '../types';
 
 @Injectable()
@@ -68,15 +73,21 @@ export class ContextBuilderService {
         instructions: agent?.instructions ?? null,
         handoffEnabled: agent?.handoffEnabled ?? true,
       },
-      products: products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        priceEgp: p.priceEgp,
-        sizes: p.sizes,
-        colors: p.colors,
-        inStock: p.inStock,
-      })),
+      products: products.map((p) => {
+        const attributes = asAttributes(p.attributes);
+        const legacy = syncLegacyArrays(attributes);
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          priceEgp: p.priceEgp,
+          attributes,
+          sizes: legacy.sizes.length ? legacy.sizes : p.sizes,
+          colors: legacy.colors.length ? legacy.colors : p.colors,
+          stockQuantity: p.stockQuantity,
+          inStock: p.inStock,
+        };
+      }),
       customer: {
         name: customer.name,
         phone: customer.phone,
@@ -100,10 +111,21 @@ export class ContextBuilderService {
 
   toPromptBlock(ctx: BusinessContext): string {
     const productLines = ctx.products
-      .map(
-        (p) =>
-          `- ${p.name} | ${p.priceEgp} EGP | stock:${p.inStock ? 'yes' : 'no'} | sizes:${p.sizes.join(',') || '-'} | colors:${p.colors.join(',') || '-'}`,
-      )
+      .map((p) => {
+        const details =
+          formatAttributesLine(p.attributes) ||
+          [
+            p.sizes.length ? `sizes:${p.sizes.join(',')}` : '',
+            p.colors.length ? `colors:${p.colors.join(',')}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+        return `- ${p.name} | ${p.priceEgp} EGP | ${
+          p.stockQuantity != null
+            ? `qty:${p.stockQuantity}`
+            : `available:${p.inStock ? 'yes' : 'no'}`
+        }${details ? ` | ${details}` : ''}`;
+      })
       .join('\n');
 
     return [
@@ -122,7 +144,7 @@ export class ContextBuilderService {
       ctx.campaign
         ? `Campaign: ${ctx.campaign.name} / ${ctx.campaign.objective} / offer: ${ctx.campaign.offer}`
         : '',
-      `Products:\n${productLines || '- none'}`,
+      `Catalog:\n${productLines || '- none'}`,
     ]
       .filter(Boolean)
       .join('\n');

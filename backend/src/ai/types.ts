@@ -90,8 +90,10 @@ export type BusinessContext = {
     name: string;
     description: string | null;
     priceEgp: number;
+    attributes: Record<string, string | number | boolean | string[]>;
     sizes: string[];
     colors: string[];
+    stockQuantity: number | null;
     inStock: boolean;
   }>;
   customer: {

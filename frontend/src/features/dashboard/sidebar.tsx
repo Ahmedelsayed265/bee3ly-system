@@ -126,7 +126,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
               <span className="block truncate text-sm font-semibold leading-tight text-ink">
                 {user?.name}
               </span>
-              <span className="mt-0.5 block truncate text-[11px] leading-none text-muted">
+              <span className="mt-0.5 block truncate text-[11px] text-muted">
                 {t('roleOwner')}
               </span>
             </span>

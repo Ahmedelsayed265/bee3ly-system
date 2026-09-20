@@ -133,12 +133,22 @@ export class RulesEngine {
         name: string;
         priceEgp: number;
         description: string | null;
+        attributes?: Record<string, unknown>;
       };
+      const fromCtx = ctx.products.find((item) => item.name === product.name);
+      const details =
+        fromCtx && Object.keys(fromCtx.attributes).length
+          ? Object.entries(fromCtx.attributes)
+              .map(([k, v]) =>
+                Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${String(v)}`,
+              )
+              .join(' · ')
+          : '';
       return {
         reply:
           intent === 'PRODUCT_QUESTION'
-            ? `عن "${product.name}": ${product.description ?? 'منتج متاح'} — السعر ${product.priceEgp} ج.م. تحب تعرف التوفر أو تطلب؟`
-            : `أهلًا ❤️ "${product.name}" سعره ${product.priceEgp} ج.م. تحب تعرف المقاسات/الألوان أو تطلب؟`,
+            ? `عن "${product.name}": ${product.description ?? 'متاح'}${details ? ` — ${details}` : ''} — السعر ${product.priceEgp} ج.م. تحب تعرف التوفر أو تطلب؟`
+            : `أهلًا ❤️ "${product.name}" سعره ${product.priceEgp} ج.م.${details ? ` (${details})` : ''} تحب تفاصيل أكتر أو تطلب؟`,
         intent,
         toolsUsed,
         order,
@@ -157,8 +167,10 @@ export class RulesEngine {
         size,
       })) as {
         inStock: boolean;
+        stockQuantity?: number | null;
         sizes: string[];
         colors: string[];
+        details?: string;
         name: string;
       } | null;
       if (!stock) {
@@ -177,14 +189,21 @@ export class RulesEngine {
       const sizeNote = size
         ? stock.sizes.length === 0 || stock.sizes.includes(size)
           ? `أيوه، ${size} متوفر.`
-          : `المقاس ${size} مش متاح حاليًا.`
-        : stock.inStock
-          ? 'المنتج متوفر حاليًا.'
-          : 'المنتج غير متوفر حاليًا.';
-      const colors =
-        stock.colors.length > 0 ? ` متاح ${stock.colors.join(' و')}.` : '';
+          : `الخيار ${size} مش متاح حاليًا.`
+        : stock.stockQuantity != null
+          ? stock.stockQuantity > 0
+            ? `متوفر — الكمية الحالية ${stock.stockQuantity}.`
+            : 'خلصت الكمية حاليًا.'
+          : stock.inStock
+            ? 'متوفر حاليًا.'
+            : 'غير متوفر حاليًا.';
+      const extras = stock.details
+        ? ` التفاصيل: ${stock.details}.`
+        : stock.colors.length > 0
+          ? ` متاح ${stock.colors.join(' و')}.`
+          : '';
       return {
-        reply: `${sizeNote}${colors} تحب تطلب؟`,
+        reply: `${sizeNote}${extras} تحب تطلب؟`,
         intent,
         toolsUsed,
         order,

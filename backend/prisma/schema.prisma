@@ -213,8 +213,13 @@ model Product {
   name        String
   description String?
   priceEgp    Int
+  /// Flexible per-business details (sizes, flavors, area_m2, extras, …)
+  attributes  Json     @default("{}")
+  /// Legacy convenience mirrors of attributes.sizes / attributes.colors
   sizes       String[] @default([])
   colors      String[] @default([])
+  /// Unit count for inventory items (t-shirts, bottles). Null for availability-only (e.g. real estate).
+  stockQuantity Int?
   inStock     Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

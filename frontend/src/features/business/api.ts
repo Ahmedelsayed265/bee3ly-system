@@ -41,8 +41,10 @@ export type Product = {
   name: string
   description: string | null
   priceEgp: number
+  attributes?: Record<string, string | number | boolean | string[]>
   sizes: string[]
   colors: string[]
+  stockQuantity?: number | null
   inStock: boolean
 }
 
@@ -86,8 +88,10 @@ export async function createProduct(input: {
   name: string
   priceEgp: number
   description?: string
+  attributes?: Record<string, string | number | boolean | string[]>
   sizes?: string[]
   colors?: string[]
+  stockQuantity?: number
   inStock?: boolean
 }) {
   const { data } = await api.post<{ product: Product }>('/products', input)
@@ -100,8 +104,10 @@ export async function updateProduct(
     name: string
     priceEgp: number
     description: string
+    attributes: Record<string, string | number | boolean | string[]>
     sizes: string[]
     colors: string[]
+    stockQuantity: number
     inStock: boolean
   }>,
 ) {

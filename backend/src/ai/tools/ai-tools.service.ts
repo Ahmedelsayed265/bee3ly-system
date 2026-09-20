@@ -7,6 +7,13 @@ import {
 } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  asAttributes,
+  formatAttributesLine,
+  listAttributeOptions,
+  syncLegacyArrays,
+} from '../../products/product-attributes';
+import { isAvailable } from '../../products/stock-mode';
 import type { BusinessContext, ToolName } from '../types';
 
 @Injectable()
@@ -71,12 +78,19 @@ export class AiToolsService {
   private async checkStock(ctx: BusinessContext, args: Record<string, unknown>) {
     const product = (await this.getProduct(ctx, args)) as Product | null;
     if (!product) return null;
+    const attributes = asAttributes(product.attributes);
+    const legacy = syncLegacyArrays(attributes);
+    const available = isAvailable(product);
     return {
       id: product.id,
       name: product.name,
-      inStock: product.inStock,
-      sizes: product.sizes,
-      colors: product.colors,
+      description: product.description,
+      inStock: available,
+      stockQuantity: product.stockQuantity,
+      attributes,
+      details: formatAttributesLine(attributes),
+      sizes: legacy.sizes.length ? legacy.sizes : product.sizes,
+      colors: legacy.colors.length ? legacy.colors : product.colors,
       priceEgp: product.priceEgp,
     };
   }
@@ -112,9 +126,13 @@ export class AiToolsService {
     if (!product) {
       throw new BadRequestException('Product required for order');
     }
-    if (!product.inStock) {
+    if (!isAvailable(product)) {
       throw new BadRequestException('Product out of stock');
     }
+
+    const attributes = asAttributes(product.attributes);
+    const legacy = syncLegacyArrays(attributes);
+    const availableSizes = legacy.sizes.length ? legacy.sizes : product.sizes;
 
     const customerName = String(
       args.customerName ?? ctx.customer.name ?? '',
@@ -127,9 +145,32 @@ export class AiToolsService {
     }
 
     const quantity = Math.max(1, Number(args.quantity ?? 1));
+    if (
+      product.stockQuantity != null &&
+      quantity > product.stockQuantity
+    ) {
+      throw new BadRequestException(
+        `Only ${product.stockQuantity} units available`,
+      );
+    }
     const size = args.size ? String(args.size) : null;
-    if (size && product.sizes.length > 0 && !product.sizes.includes(size)) {
+    if (size && availableSizes.length > 0 && !availableSizes.includes(size)) {
       throw new BadRequestException(`Size ${size} not available`);
+    }
+
+    // Optional variant keys from attributes (flavor, color, option, …)
+    for (const key of ['color', 'flavor', 'option', 'variant'] as const) {
+      const chosen = args[key] ? String(args[key]) : null;
+      if (!chosen) continue;
+      const options = listAttributeOptions(
+        attributes,
+        key === 'color' ? 'colors' : key === 'flavor' ? 'flavors' : `${key}s`,
+      );
+      const alt = listAttributeOptions(attributes, key);
+      const pool = options.length ? options : alt;
+      if (pool.length > 0 && !pool.includes(chosen)) {
+        throw new BadRequestException(`${key} ${chosen} not available`);
+      }
     }
 
     const last = await this.prisma.order.findFirst({
@@ -168,6 +209,23 @@ export class AiToolsService {
       },
       include: { items: true },
     });
+
+    if (product.stockQuantity != null) {
+      const nextQty = Math.max(0, product.stockQuantity - quantity);
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          stockQuantity: nextQty,
+          inStock: nextQty > 0,
+        },
+      });
+    } else if (ctx.business.type === 'REAL_ESTATE') {
+      // Listing sold/reserved → mark unavailable
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: { inStock: false, stockQuantity: null },
+      });
+    }
 
     await this.prisma.lead.updateMany({
       where: {
