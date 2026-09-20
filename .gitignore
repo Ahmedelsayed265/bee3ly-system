@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.vercel
 .local-pg/
 *.log
 .DS_Store
