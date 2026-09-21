@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { Bot, UserRound, Zap } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   fetchConversation,
   fetchConversations,
   sendHumanMessage,
   setConversationMode,
-  simulateMessage,
 } from '@/features/business/api'
 import { useLocale } from '@/features/i18n/locale-context'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 export function InboxPage() {
   const { t } = useLocale()
   const qc = useQueryClient()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const listQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: fetchConversations,
@@ -40,6 +41,11 @@ export function InboxPage() {
   const conversation = detailQuery.data?.conversation
   const isHumanMode =
     conversation?.mode === 'HUMAN' || conversation?.needsHuman
+  const messages = conversation?.messages ?? []
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [selectedId, messages.length])
 
   const invalidateAll = async (conversationId?: string) => {
     await qc.invalidateQueries({ queryKey: ['conversations'] })
@@ -54,14 +60,13 @@ export function InboxPage() {
 
   const sendMut = useMutation({
     mutationFn: async (content: string) => {
-      if (selectedId && isHumanMode) {
-        await sendHumanMessage(selectedId, content)
-        return { conversationId: selectedId }
+      if (!selectedId || !isHumanMode) {
+        throw new Error('HUMAN_MODE_REQUIRED')
       }
-      return simulateMessage(content, selectedId ?? undefined)
+      await sendHumanMessage(selectedId, content)
+      return { conversationId: selectedId }
     },
     onSuccess: async (data) => {
-      setSelectedId(data.conversationId)
       setDraft('')
       await invalidateAll(data.conversationId)
     },
@@ -75,62 +80,56 @@ export function InboxPage() {
     },
   })
 
-  const startSim = () => {
-    setSelectedId(null)
-    sendMut.mutate(t('simStarterMessage'))
-  }
-
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">{t('navInbox')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('inboxIntro')}</p>
-        </div>
-        <Button size="sm" onClick={startSim} disabled={sendMut.isPending}>
-          {t('startSimulation')}
-        </Button>
+    <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
+      <div className="shrink-0">
+        <h1 className="text-2xl font-bold text-ink">{t('navInbox')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('inboxIntro')}</p>
       </div>
 
-      <div className="grid min-h-[calc(100svh-11rem)] w-full gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-2 rounded-2xl border border-border bg-surface p-3">
-          {(listQuery.data ?? []).map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setSelectedId(c.id)}
-              className={cn(
-                'w-full rounded-xl px-3 py-2.5 text-start transition',
-                selectedId === c.id
-                  ? 'bg-brand/10 text-ink'
-                  : 'hover:bg-lavender text-muted',
-              )}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {c.customer.name ?? t('unknownCustomer')}
+      <div className="grid min-h-0 flex-1 gap-4 overflow-hidden grid-rows-[minmax(10rem,32%)_minmax(0,1fr)] lg:grid-rows-none lg:grid-cols-[320px_1fr]">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+            {(listQuery.data ?? []).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setSelectedId(c.id)}
+                className={cn(
+                  'w-full rounded-xl px-3 py-2.5 text-start transition',
+                  selectedId === c.id
+                    ? 'bg-brand/10 text-ink'
+                    : 'hover:bg-lavender text-muted',
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {c.customer.name ?? t('unknownCustomer')}
+                  </p>
+                  <span className="text-[10px] font-semibold text-muted">
+                    {c.mode === 'HUMAN' || c.needsHuman
+                      ? t('modeYou')
+                      : t('modeAi')}
+                  </span>
+                </div>
+                <p className="truncate text-[11px]">
+                  {c.messages[0]?.content ?? c.channel}
                 </p>
-                <span className="text-[10px] font-semibold text-muted">
-                  {c.mode === 'HUMAN' || c.needsHuman ? 'HUMAN' : 'AI'}
-                </span>
-              </div>
-              <p className="truncate text-[11px]">
-                {c.messages[0]?.content ?? c.channel}
-              </p>
-              <p className="mt-0.5 truncate text-[10px] text-muted">
-                {c.conversionStage ?? 'NEW'}
-                {c.leads?.[0]?.status ? ` · ${c.leads[0].status}` : ''}
-              </p>
-            </button>
-          ))}
-          {(listQuery.data?.length ?? 0) === 0 ? (
-            <p className="p-3 text-sm text-muted">{t('noConversations')}</p>
-          ) : null}
+                <p className="mt-0.5 truncate text-[10px] text-muted">
+                  {c.conversionStage ?? 'NEW'}
+                  {c.leads?.[0]?.status ? ` · ${c.leads[0].status}` : ''}
+                </p>
+              </button>
+            ))}
+            {(listQuery.data?.length ?? 0) === 0 ? (
+              <p className="p-3 text-sm text-muted">{t('noConversations')}</p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-border bg-surface">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface">
           {conversation ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-ink">
                   {conversation.customer.name ?? t('unknownCustomer')}
@@ -169,43 +168,93 @@ export function InboxPage() {
             </div>
           ) : null}
 
-          <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            {(conversation?.messages ?? []).map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  'max-w-[85%] w-fit rounded-2xl px-3 py-2 text-sm',
-                  m.role === 'CUSTOMER'
-                    ? 'ms-auto bg-brand text-white'
-                    : m.role === 'HUMAN'
-                      ? 'bg-trust/15 text-ink'
-                      : 'bg-lavender text-ink',
-                )}
-              >
-                {m.content}
-              </div>
-            ))}
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+            {messages.map((m) => {
+              const isCustomer = m.role === 'CUSTOMER'
+              const isHuman = m.role === 'HUMAN'
+              const speaker = isCustomer
+                ? (conversation?.customer.name ?? t('speakerCustomer'))
+                : isHuman
+                  ? t('speakerYou')
+                  : t('speakerAi')
+
+              return (
+                <div
+                  key={m.id}
+                  className={cn(
+                    'flex max-w-[85%] flex-col gap-1.5',
+                    isCustomer ? 'ms-auto items-end' : 'items-start',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5',
+                      isCustomer ? 'flex-row-reverse' : 'flex-row',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                        isCustomer
+                          ? 'bg-brand text-white'
+                          : isHuman
+                            ? 'bg-trust text-white'
+                            : 'bg-lavender text-ink',
+                      )}
+                    >
+                      {isCustomer ? (
+                        <UserRound className="h-3.5 w-3.5" />
+                      ) : isHuman ? (
+                        <Zap className="h-3.5 w-3.5" />
+                      ) : (
+                        <Bot className="h-3.5 w-3.5" />
+                      )}
+                    </span>
+                    <span className="text-[11px] font-medium text-muted">
+                      {speaker}
+                    </span>
+                  </div>
+                  <div
+                    className={cn(
+                      'w-fit rounded-2xl px-3 py-2 text-sm',
+                      isCustomer
+                        ? 'rounded-se-md bg-brand text-white'
+                        : isHuman
+                          ? 'rounded-ss-md border border-trust/25 bg-trust/10 text-ink'
+                          : 'rounded-ss-md bg-lavender text-ink',
+                    )}
+                  >
+                    {m.content}
+                  </div>
+                </div>
+              )
+            })}
             {!selectedId ? (
               <p className="text-sm text-muted">{t('inboxEmptyHint')}</p>
             ) : null}
+            <div ref={messagesEndRef} />
           </div>
           <form
-            className="flex gap-2 border-t border-border p-3"
+            className="flex shrink-0 gap-2 border-t border-border p-3"
             onSubmit={(e) => {
               e.preventDefault()
-              if (!draft.trim()) return
+              if (!draft.trim() || !isHumanMode) return
               sendMut.mutate(draft.trim())
             }}
           >
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              disabled={!isHumanMode}
               placeholder={
-                isHumanMode ? t('typeCustomerMessage') : t('typeCustomerMessage')
+                isHumanMode ? t('typeYourReply') : t('inboxTakeoverHint')
               }
-              className="h-11 flex-1 rounded-xl border border-border bg-page px-3 text-sm outline-none focus:border-brand/40"
+              className="h-11 flex-1 rounded-xl border border-border bg-page px-3 text-sm outline-none focus:border-brand/40 disabled:opacity-70"
             />
-            <Button type="submit" disabled={sendMut.isPending || !draft.trim()}>
+            <Button
+              type="submit"
+              disabled={sendMut.isPending || !draft.trim() || !isHumanMode}
+            >
               {t('send')}
             </Button>
           </form>

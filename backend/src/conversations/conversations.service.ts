@@ -1,14 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { ConversationChannel, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
+import { MetaOutboundService } from '../social/meta/meta-outbound.service';
 
 @Injectable()
 export class ConversationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    @Inject(forwardRef(() => MetaOutboundService))
+    private readonly outbound: MetaOutboundService,
   ) {}
 
   async list(userId: string) {
@@ -98,6 +101,7 @@ export class ConversationsService {
     const businessId = await this.access.requireBusinessId(userId);
     const conversation = await this.prisma.conversation.findFirst({
       where: { id: conversationId, businessId },
+      include: { customer: true },
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
 
@@ -113,8 +117,31 @@ export class ConversationsService {
       data: {
         lastMessageAt: new Date(),
         mode: 'HUMAN',
+        needsHuman: true,
       },
     });
+
+    if (
+      (conversation.channel === 'FACEBOOK' ||
+        conversation.channel === 'INSTAGRAM') &&
+      conversation.customer.externalId
+    ) {
+      const account = await this.prisma.socialAccount.findFirst({
+        where: {
+          businessId,
+          platform: conversation.channel,
+          status: 'CONNECTED',
+        },
+      });
+      if (account) {
+        await this.outbound.sendText(
+          account.id,
+          conversation.customer.externalId,
+          content,
+        );
+      }
+    }
+
     return { message };
   }
 
