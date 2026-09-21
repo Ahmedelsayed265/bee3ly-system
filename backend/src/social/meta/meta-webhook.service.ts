@@ -56,11 +56,15 @@ export class MetaWebhookService {
     // Signature should be verified by controller when raw body available
     void rawBody;
 
-    const objectType = String(body.object ?? '');
-    const entry = (body.entry as Array<Record<string, unknown>> | undefined) ?? [];
+    const objectType = typeof body.object === 'string' ? body.object : '';
+    const entry =
+      (body.entry as Array<Record<string, unknown>> | undefined) ?? [];
+    this.logger.log(
+      `Webhook received object=${objectType} entries=${entry.length}`,
+    );
 
     for (const item of entry) {
-      const pageId = String(item.id ?? '');
+      const pageId = typeof item.id === 'string' ? item.id : '';
       const messaging =
         (item.messaging as Array<Record<string, unknown>> | undefined) ?? [];
 
@@ -68,15 +72,29 @@ export class MetaWebhookService {
         const sender = event.sender as { id?: string } | undefined;
         const recipient = event.recipient as { id?: string } | undefined;
         const message = event.message as
-          | { mid?: string; text?: string; is_echo?: boolean }
+          | {
+              mid?: string;
+              text?: string;
+              is_echo?: boolean;
+            }
           | undefined;
-        if (!sender?.id || !recipient?.id || !message?.text || message.is_echo) {
+        if (
+          !sender?.id ||
+          !recipient?.id ||
+          !message?.text ||
+          message.is_echo
+        ) {
           continue;
         }
 
+        const timestamp =
+          typeof event.timestamp === 'number' ||
+          typeof event.timestamp === 'string'
+            ? event.timestamp
+            : Date.now();
         const externalEventId =
           message.mid ??
-          `${pageId}:${sender.id}:${event.timestamp ?? Date.now()}:${message.text.slice(0, 24)}`;
+          `${pageId}:${sender.id}:${timestamp}:${message.text.slice(0, 24)}`;
 
         const created = await this.claimEvent('META', externalEventId, event);
         if (!created) {
@@ -96,7 +114,7 @@ export class MetaWebhookService {
           externalSenderId: sender.id,
           externalMessageId: message.mid,
           text: message.text,
-          timestamp: Number(event.timestamp ?? Date.now()),
+          timestamp: Number(timestamp),
           raw: event,
         };
 
