@@ -134,10 +134,11 @@ export class AuthService {
       },
     });
 
-    const frontendUrl = this.config.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:5173',
-    );
+    const frontendUrl = (
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
+    )
+      .split(',')[0]
+      .trim();
     const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
 
     this.logger.log(`Password reset link for ${email}: ${resetUrl}`);
@@ -318,25 +319,32 @@ export class AuthService {
     return { accessToken };
   }
 
-  private setRefreshCookie(res: Response, token: string, expiresAt: Date) {
+  private refreshCookieOptions() {
+    const primaryFrontend = (
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
+    )
+      .split(',')[0]
+      .trim();
+    const crossSiteHttps = primaryFrontend.startsWith('https://');
     const isProd = this.config.get('NODE_ENV') === 'production';
-    res.cookie(this.refreshCookieName, token, {
+    const secureCookie = isProd || crossSiteHttps;
+    return {
       httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-      expires: expiresAt,
+      secure: secureCookie,
+      sameSite: secureCookie ? 'none' : 'lax',
       path: '/auth',
+    };
+  }
+
+  private setRefreshCookie(res: Response, token: string, expiresAt: Date) {
+    res.cookie(this.refreshCookieName, token, {
+      ...this.refreshCookieOptions(),
+      expires: expiresAt,
     });
   }
 
   private clearRefreshCookie(res: Response) {
-    const isProd = this.config.get('NODE_ENV') === 'production';
-    res.clearCookie(this.refreshCookieName, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
-      path: '/auth',
-    });
+    res.clearCookie(this.refreshCookieName, this.refreshCookieOptions());
   }
 
   private hashToken(token: string) {

@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'crypto';
 import {
   BadRequestException,
   Injectable,
@@ -6,10 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  SocialConnectionStatus,
-  SocialPlatform,
-} from '@prisma/client';
+import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
 import { BusinessAccessService } from '../../common/business-access.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetaGraphClient } from './meta-graph.client';
@@ -32,9 +34,9 @@ export class MetaOauthService {
       'http://localhost:3000/social/meta/callback',
     );
     if (!appId) return null;
-    const state = Buffer.from(
-      JSON.stringify({ businessId, userId }),
-    ).toString('base64url');
+    const state = Buffer.from(JSON.stringify({ businessId, userId })).toString(
+      'base64url',
+    );
     const scopes = [
       'pages_show_list',
       'pages_messaging',
@@ -103,10 +105,11 @@ export class MetaOauthService {
       },
     });
 
-    const frontend = this.config.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:5173',
-    );
+    const frontend = (
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173'
+    )
+      .split(',')[0]
+      .trim();
     return {
       redirectTo: `${frontend}/app/settings?metaPending=${pending.id}`,
       pendingId: pending.id,
@@ -121,11 +124,13 @@ export class MetaOauthService {
     if (!pending || pending.expiresAt < new Date()) {
       throw new NotFoundException('Pending Meta connection expired or missing');
     }
-    const pages = (pending.pagesJson as Array<{
-      id: string;
-      name: string;
-      instagram_business_account?: { id: string } | null;
-    }>).map((p) => ({
+    const pages = (
+      pending.pagesJson as Array<{
+        id: string;
+        name: string;
+        instagram_business_account?: { id: string } | null;
+      }>
+    ).map((p) => ({
       id: p.id,
       name: p.name,
       hasInstagram: Boolean(p.instagram_business_account?.id),
@@ -149,7 +154,8 @@ export class MetaOauthService {
       instagram_business_account?: { id: string } | null;
     }>;
     const page = pages.find((p) => p.id === pageId);
-    if (!page) throw new BadRequestException('Page not found in pending session');
+    if (!page)
+      throw new BadRequestException('Page not found in pending session');
 
     const subscribe = await this.graph.subscribeApp(page.id, page.access_token);
     if (!subscribe.success) {
@@ -233,7 +239,9 @@ export class MetaOauthService {
       });
     }
 
-    await this.prisma.pendingMetaConnection.delete({ where: { id: pending.id } });
+    await this.prisma.pendingMetaConnection.delete({
+      where: { id: pending.id },
+    });
 
     return {
       facebook: {
@@ -278,11 +286,11 @@ export class MetaOauthService {
     const decipher = createDecipheriv(
       'aes-256-gcm',
       key,
-      Buffer.from(ivHex!, 'hex'),
+      Buffer.from(ivHex, 'hex'),
     );
-    decipher.setAuthTag(Buffer.from(tagHex!, 'hex'));
+    decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
     return Buffer.concat([
-      decipher.update(Buffer.from(dataHex!, 'hex')),
+      decipher.update(Buffer.from(dataHex, 'hex')),
       decipher.final(),
     ]).toString('utf8');
   }

@@ -7,6 +7,9 @@ export const api = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    // Required for free ngrok tunnels: without this, browser GETs get an HTML
+    // interstitial (ERR_NGROK_6024) with no CORS headers — shows up as "CORS error".
+    'ngrok-skip-browser-warning': 'true',
   },
 })
 

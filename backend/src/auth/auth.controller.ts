@@ -54,10 +54,7 @@ export class AuthController {
     @Req() req: express.Request,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const refreshToken = (
-      req as express.Request & { cookies?: Record<string, string> }
-    ).cookies?.refresh_token;
-    return this.authService.refresh(refreshToken, res);
+    return this.authService.refresh(this.readRefreshCookie(req), res);
   }
 
   @Post('logout')
@@ -65,10 +62,7 @@ export class AuthController {
     @Req() req: express.Request,
     @Res({ passthrough: true }) res: express.Response,
   ) {
-    const refreshToken = (
-      req as express.Request & { cookies?: Record<string, string> }
-    ).cookies?.refresh_token;
-    return this.authService.logout(refreshToken, res);
+    return this.authService.logout(this.readRefreshCookie(req), res);
   }
 
   @Get('me')
@@ -90,5 +84,11 @@ export class AuthController {
     @Body() dto: ChangePasswordDto,
   ) {
     return this.authService.changePassword(user.id, dto);
+  }
+
+  private readRefreshCookie(req: express.Request): string | undefined {
+    const cookies = req.cookies as Record<string, unknown> | undefined;
+    const token = cookies?.refresh_token;
+    return typeof token === 'string' ? token : undefined;
   }
 }

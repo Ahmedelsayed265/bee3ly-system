@@ -167,7 +167,7 @@ export class AiService {
         needsHuman: result.needsHuman,
         status: result.needsHuman ? 'NEEDS_HUMAN' : 'OPEN',
         mode: result.needsHuman ? 'HUMAN' : 'AI',
-        conversionStage: result.conversionStage as ConversionStage,
+        conversionStage: result.conversionStage,
         handoffReason: result.handoffReason ?? null,
       },
     });
@@ -243,8 +243,7 @@ export class AiService {
         mode: 'paused' as const,
         paused: true,
         needsHuman: false,
-        notice:
-          'المساعد الذكي مش متاح دلوقتي، تقدر تكمل المحادثة يدويًا.',
+        notice: 'المساعد الذكي مش متاح دلوقتي، تقدر تكمل المحادثة يدويًا.',
       };
     }
 
@@ -282,16 +281,19 @@ export class AiService {
         needsHuman: result.needsHuman,
         status: result.needsHuman ? 'NEEDS_HUMAN' : 'OPEN',
         mode: result.needsHuman ? 'HUMAN' : 'AI',
-        conversionStage: result.conversionStage as ConversionStage,
+        conversionStage: result.conversionStage,
         handoffReason: result.handoffReason ?? null,
       },
     });
 
     // Soft lead creation for interest intents (avoid dup spam: one NEW per customer)
     if (
-      ['PURCHASE_INTENT', 'PRICE_INQUIRY', 'AVAILABILITY', 'LEAD_INTENT'].includes(
-        result.intent,
-      ) &&
+      [
+        'PURCHASE_INTENT',
+        'PRICE_INQUIRY',
+        'AVAILABILITY',
+        'LEAD_INTENT',
+      ].includes(result.intent) &&
       !result.lead &&
       !result.order
     ) {
@@ -352,7 +354,9 @@ export class AiService {
         needsHuman: mode === 'HUMAN',
         status: mode === 'HUMAN' ? 'NEEDS_HUMAN' : 'OPEN',
         conversionStage:
-          mode === 'HUMAN' ? ConversionStage.HUMAN_HANDOFF : conversation.conversionStage,
+          mode === 'HUMAN'
+            ? ConversionStage.HUMAN_HANDOFF
+            : conversation.conversionStage,
         handoffReason: mode === 'AI' ? null : conversation.handoffReason,
       },
     });

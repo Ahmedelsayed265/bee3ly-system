@@ -90,7 +90,9 @@ export class LlmEngine {
 
         if (!res.ok) {
           const errText = await res.text();
-          this.logger.warn(`OpenAI error ${res.status}: ${errText.slice(0, 200)}`);
+          this.logger.warn(
+            `OpenAI error ${res.status}: ${errText.slice(0, 200)}`,
+          );
           return null;
         }
 
@@ -147,7 +149,8 @@ export class LlmEngine {
           if (name === 'transferToHuman') {
             intent = 'HUMAN_REQUEST';
             needsHuman = true;
-            handoffReason = String(args.reason ?? 'AI handoff');
+            handoffReason =
+              typeof args.reason === 'string' ? args.reason : 'AI handoff';
             conversionStage = 'HUMAN_HANDOFF';
           }
 
@@ -183,7 +186,10 @@ export class LlmEngine {
   }
 
   private openAiTools() {
-    const prop = (properties: Record<string, unknown>, required: string[] = []) => ({
+    const prop = (
+      properties: Record<string, unknown>,
+      required: string[] = [],
+    ) => ({
       type: 'object',
       properties,
       required,
@@ -265,7 +271,8 @@ export class LlmEngine {
         type: 'function',
         function: {
           name: 'createLead',
-          description: 'Create a lead when customer is interested but not ordering yet',
+          description:
+            'Create a lead when customer is interested but not ordering yet',
           parameters: prop({
             intent: { type: 'string' },
             notes: { type: 'string' },

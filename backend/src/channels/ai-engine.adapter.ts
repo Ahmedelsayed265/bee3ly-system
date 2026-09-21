@@ -50,7 +50,11 @@ export class AiEngineAdapter {
         }
         const data = (await res.json()) as { reply?: string };
         if (data.reply) {
-          await this.persistAiReply(payload.conversationId, data.reply, 'external');
+          await this.persistAiReply(
+            payload.conversationId,
+            data.reply,
+            'external',
+          );
         }
         return { reply: data.reply ?? null, mode: 'external' };
       } catch (e) {

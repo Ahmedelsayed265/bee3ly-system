@@ -14,7 +14,10 @@ import {
 import { SocialPlatform } from '@prisma/client';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import type { Request, Response } from 'express';
-import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SocialService } from './social.service';
 

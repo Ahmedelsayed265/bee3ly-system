@@ -9,3 +9,6 @@ coverage/
 frontend/dist/
 backend/dist/
 backend/.local-pg/
+.cursor/
+docs/
+.env*

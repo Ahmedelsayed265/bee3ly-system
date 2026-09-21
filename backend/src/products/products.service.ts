@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -63,7 +62,7 @@ export class ProductsService {
         name: dto.name.trim(),
         description: dto.description?.trim(),
         priceEgp: dto.priceEgp,
-        attributes: attributes as Prisma.InputJsonValue,
+        attributes: attributes,
         sizes: legacy.sizes,
         colors: legacy.colors,
         stockQuantity: stock.stockQuantity,
@@ -107,8 +106,7 @@ export class ProductsService {
             dto.stockQuantity !== undefined
               ? dto.stockQuantity
               : existing.stockQuantity,
-          inStock:
-            dto.inStock !== undefined ? dto.inStock : existing.inStock,
+          inStock: dto.inStock !== undefined ? dto.inStock : existing.inStock,
         })
       : null;
 
@@ -122,7 +120,7 @@ export class ProductsService {
         ...(dto.priceEgp !== undefined ? { priceEgp: dto.priceEgp } : {}),
         ...(shouldTouchAttributes
           ? {
-              attributes: attributes as Prisma.InputJsonValue,
+              attributes: attributes,
               sizes: legacy.sizes,
               colors: legacy.colors,
             }

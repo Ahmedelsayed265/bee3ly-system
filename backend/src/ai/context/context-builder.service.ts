@@ -5,7 +5,7 @@ import {
   formatAttributesLine,
   syncLegacyArrays,
 } from '../../products/product-attributes';
-import type { BusinessContext, ConversionStageName } from '../types';
+import type { BusinessContext } from '../types';
 
 @Injectable()
 export class ContextBuilderService {
@@ -53,7 +53,7 @@ export class ContextBuilderService {
       customerId: params.customerId,
       campaignId: conversation.campaignId,
       mode: conversation.mode,
-      conversionStage: conversation.conversionStage as ConversionStageName,
+      conversionStage: conversation.conversionStage,
       channel: conversation.channel,
       business: {
         name: business.name,
@@ -138,7 +138,9 @@ export class ContextBuilderService {
       ctx.business.faqs ? `FAQs:\n${ctx.business.faqs}` : '',
       `Agent goal: ${ctx.agent.primaryGoal}`,
       `Tone: ${ctx.agent.tone}`,
-      ctx.agent.instructions ? `Extra instructions: ${ctx.agent.instructions}` : '',
+      ctx.agent.instructions
+        ? `Extra instructions: ${ctx.agent.instructions}`
+        : '',
       `Customer known: name=${ctx.customer.name ?? '-'} phone=${ctx.customer.phone ?? '-'}`,
       `Stage: ${ctx.conversionStage}`,
       ctx.campaign

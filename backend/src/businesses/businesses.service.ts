@@ -42,9 +42,7 @@ export class BusinessesService {
       where: { id: businessId },
       data: {
         ...data,
-        ...(completeOnboarding
-          ? { onboardingCompletedAt: new Date() }
-          : {}),
+        ...(completeOnboarding ? { onboardingCompletedAt: new Date() } : {}),
       },
     });
 

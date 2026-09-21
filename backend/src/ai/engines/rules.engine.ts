@@ -16,7 +16,8 @@ export class RulesEngine {
     const text = content.toLowerCase();
     if (/عايز أكلم|كلم حد|موظف|human|agent|ممثل/.test(text))
       return 'HUMAN_REQUEST';
-    if (/حجز|ميعاد|موعد|booking|appointment/.test(text)) return 'BOOKING_INTENT';
+    if (/حجز|ميعاد|موعد|booking|appointment/.test(text))
+      return 'BOOKING_INTENT';
     if (/عايز أطلب|اطلب|هطلب|purchase|order|اشتري|هشتري/.test(text))
       return 'PURCHASE_INTENT';
     if (/سيب رقم|كلمني|مهتم|lead/.test(text)) return 'LEAD_INTENT';
@@ -98,8 +99,7 @@ export class RulesEngine {
       });
       needsHuman = true;
       return {
-        reply:
-          'تمام، هحوّلك لحد من الفريق دلوقتي. هيتواصل معاك في أقرب وقت ❤️',
+        reply: 'تمام، هحوّلك لحد من الفريق دلوقتي. هيتواصل معاك في أقرب وقت ❤️',
         intent,
         toolsUsed,
         order,
@@ -140,7 +140,9 @@ export class RulesEngine {
         fromCtx && Object.keys(fromCtx.attributes).length
           ? Object.entries(fromCtx.attributes)
               .map(([k, v]) =>
-                Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${String(v)}`,
+                Array.isArray(v)
+                  ? `${k}: ${v.join(', ')}`
+                  : `${k}: ${String(v)}`,
               )
               .join(' · ')
           : '';
@@ -224,8 +226,7 @@ export class RulesEngine {
       )) as { text: string | null };
       return {
         reply:
-          delivery.text ||
-          'التوصيل متاح — التفاصيل هتتأكد عند تأكيد الطلب.',
+          delivery.text || 'التوصيل متاح — التفاصيل هتتأكد عند تأكيد الطلب.',
         intent,
         toolsUsed,
         order,
@@ -253,7 +254,11 @@ export class RulesEngine {
           confidence: 0.8,
         };
       }
-      const o = existing as { orderNumber: number; status: string; totalEgp: number };
+      const o = existing as {
+        orderNumber: number;
+        status: string;
+        totalEgp: number;
+      };
       return {
         reply: `طلبك #${o.orderNumber} حالته ${o.status} بإجمالي ${o.totalEgp} ج.م.`,
         intent,
@@ -336,9 +341,10 @@ export class RulesEngine {
           customerName: name,
           customerPhone: phone,
           size: this.extractSize(
-            [...ctx.history.map((h) => h.content), ctx.latestCustomerMessage].join(
-              ' ',
-            ),
+            [
+              ...ctx.history.map((h) => h.content),
+              ctx.latestCustomerMessage,
+            ].join(' '),
           ),
           quantity: 1,
         });
@@ -371,7 +377,10 @@ export class RulesEngine {
     }
 
     // FAQ soft match
-    if (ctx.business.faqs && /سؤال|faq|يعني إيه/.test(ctx.latestCustomerMessage.toLowerCase())) {
+    if (
+      ctx.business.faqs &&
+      /سؤال|faq|يعني إيه/.test(ctx.latestCustomerMessage.toLowerCase())
+    ) {
       toolsUsed.push('getFAQ');
       return {
         reply: `من الأسئلة الشائعة عندنا:\n${ctx.business.faqs.slice(0, 400)}`,
@@ -432,7 +441,7 @@ export class RulesEngine {
       /^[\s]*([^\d\-–—]+?)[\s\-–—]+(01[0-9]{8,9})/,
     );
     if (namePhone) {
-      name = namePhone[1]!.trim();
+      name = namePhone[1].trim();
     } else if (phone) {
       const before = content.replace(phone, '').replace(/[-–—]/g, '').trim();
       if (before.length >= 2 && before.length < 40) name = before;

@@ -9,10 +9,7 @@ import { RulesEngine } from './engines/rules.engine';
 import { AiToolsService } from './tools/ai-tools.service';
 
 @Module({
-  imports: [
-    forwardRef(() => ConversationsModule),
-    NotificationsModule,
-  ],
+  imports: [forwardRef(() => ConversationsModule), NotificationsModule],
   controllers: [AiController],
   providers: [
     AiService,

@@ -1,5 +1,8 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
-import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BusinessesService } from './businesses.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';

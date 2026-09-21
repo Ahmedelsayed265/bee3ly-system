@@ -1,13 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  SocialConnectionStatus,
-  SocialPlatform,
-} from '@prisma/client';
+import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetaOauthService } from './meta/meta-oauth.service';

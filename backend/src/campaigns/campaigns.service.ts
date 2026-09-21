@@ -59,7 +59,8 @@ export class CampaignsService {
         offer: dto.offer,
         audienceDescription: dto.audienceDescription,
         budget: dto.budget,
-        valueProposition: dto.valueProposition ?? recommendation.valueProposition,
+        valueProposition:
+          dto.valueProposition ?? recommendation.valueProposition,
         suggestedMessaging: recommendation.suggestedMessaging,
         suggestedCta: recommendation.suggestedCta,
         suggestedCreative: recommendation.suggestedCreative,
@@ -130,10 +131,7 @@ export class CampaignsService {
     };
   }
 
-  private buildRecommendation(
-    dto: CreateCampaignDto,
-    businessName: string,
-  ) {
+  private buildRecommendation(dto: CreateCampaignDto, businessName: string) {
     const objectiveLabel: Record<CampaignObjective, string> = {
       MORE_ORDERS: 'طلبات',
       MORE_LEADS: 'عملاء مهتمين',

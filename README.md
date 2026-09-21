@@ -203,9 +203,18 @@ Enums مهمة: `BusinessType`, `BusinessGoal`, `PlanTier`, `OrderStatus`, `Lead
 
 `DATABASE_URL`, `JWT_*`, `PORT`, `FRONTEND_URL`, `NODE_ENV`, `TOKEN_ENCRYPTION_KEY`, `META_*`, `OPENAI_API_KEY`
 
+For production (Vercel frontend + separate API host), set on the **backend**:
+
+- `FRONTEND_URL=https://bee3ly-system.vercel.app` (comma-separated if you also need local / preview origins)
+- `NODE_ENV=production`
+
+Then restart or redeploy the API.
+
 **Frontend** (`frontend/.env.example`):
 
 `VITE_API_URL=http://localhost:3000`
+
+On **Vercel**, set `VITE_API_URL` to the public HTTPS backend URL (not localhost), then redeploy so the build picks it up.
 
 ---
 

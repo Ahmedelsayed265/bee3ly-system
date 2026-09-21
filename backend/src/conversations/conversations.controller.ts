@@ -9,7 +9,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { IsIn, IsString, MinLength } from 'class-validator';
-import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../auth/decorators/current-user.decorator';
 import { PaginationQueryDto } from '../common/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConversationsService } from './conversations.service';
@@ -50,10 +53,7 @@ export class ConversationsController {
   }
 
   @Get('leads')
-  listLeads(
-    @CurrentUser() user: AuthUser,
-    @Query() query: PaginationQueryDto,
-  ) {
+  listLeads(@CurrentUser() user: AuthUser, @Query() query: PaginationQueryDto) {
     return this.conversations.listLeads(
       user.id,
       query.page ?? 1,

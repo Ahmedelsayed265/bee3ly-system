@@ -28,7 +28,11 @@ export type AiEngineInboundPayload = {
   channel: string;
   messageId: string;
   text: string;
-  customer: { name: string | null; phone: string | null; externalId: string | null };
+  customer: {
+    name: string | null;
+    phone: string | null;
+    externalId: string | null;
+  };
 };
 
 export type AiEngineInboundResponse = {

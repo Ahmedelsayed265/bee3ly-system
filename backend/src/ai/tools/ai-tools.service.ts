@@ -1,10 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  ActorType,
-  LeadStatus,
-  NotificationType,
-  type Product,
-} from '@prisma/client';
+import { ActorType, LeadStatus, NotificationType } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -15,6 +10,10 @@ import {
 } from '../../products/product-attributes';
 import { isAvailable } from '../../products/stock-mode';
 import type { BusinessContext, ToolName } from '../types';
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
 @Injectable()
 export class AiToolsService {
@@ -49,19 +48,27 @@ export class AiToolsService {
         return this.notifyOwner(ctx, args);
       case 'transferToHuman':
         return this.transferToHuman(ctx, args);
-      default:
-        throw new BadRequestException(`Unknown tool: ${name}`);
+      default: {
+        const _exhaustive: never = name;
+        throw new BadRequestException(`Unknown tool: ${String(_exhaustive)}`);
+      }
     }
   }
 
-  private async getProduct(ctx: BusinessContext, args: Record<string, unknown>) {
+  private async getProduct(
+    ctx: BusinessContext,
+    args: Record<string, unknown>,
+  ) {
     if (args.productId) {
       return this.prisma.product.findFirst({
-        where: { id: String(args.productId), businessId: ctx.businessId },
+        where: {
+          id: asString(args.productId),
+          businessId: ctx.businessId,
+        },
       });
     }
     if (args.name) {
-      const q = String(args.name).toLowerCase();
+      const q = asString(args.name).toLowerCase();
       const match = ctx.products.find((p) => p.name.toLowerCase().includes(q));
       if (match) {
         return this.prisma.product.findFirst({
@@ -75,8 +82,11 @@ export class AiToolsService {
     });
   }
 
-  private async checkStock(ctx: BusinessContext, args: Record<string, unknown>) {
-    const product = (await this.getProduct(ctx, args)) as Product | null;
+  private async checkStock(
+    ctx: BusinessContext,
+    args: Record<string, unknown>,
+  ) {
+    const product = await this.getProduct(ctx, args);
     if (!product) return null;
     const attributes = asAttributes(product.attributes);
     const legacy = syncLegacyArrays(attributes);
@@ -122,7 +132,7 @@ export class AiToolsService {
     ctx: BusinessContext,
     args: Record<string, unknown>,
   ) {
-    const product = (await this.getProduct(ctx, args)) as Product | null;
+    const product = await this.getProduct(ctx, args);
     if (!product) {
       throw new BadRequestException('Product required for order');
     }
@@ -134,33 +144,32 @@ export class AiToolsService {
     const legacy = syncLegacyArrays(attributes);
     const availableSizes = legacy.sizes.length ? legacy.sizes : product.sizes;
 
-    const customerName = String(
-      args.customerName ?? ctx.customer.name ?? '',
+    const customerName = asString(
+      args.customerName ?? ctx.customer.name,
     ).trim();
-    const customerPhone = String(
-      args.customerPhone ?? ctx.customer.phone ?? '',
+    const customerPhone = asString(
+      args.customerPhone ?? ctx.customer.phone,
     ).trim();
     if (!customerName || !/^01[0-9]{8,9}$/.test(customerPhone)) {
-      throw new BadRequestException('Valid customer name and Egyptian phone required');
+      throw new BadRequestException(
+        'Valid customer name and Egyptian phone required',
+      );
     }
 
     const quantity = Math.max(1, Number(args.quantity ?? 1));
-    if (
-      product.stockQuantity != null &&
-      quantity > product.stockQuantity
-    ) {
+    if (product.stockQuantity != null && quantity > product.stockQuantity) {
       throw new BadRequestException(
         `Only ${product.stockQuantity} units available`,
       );
     }
-    const size = args.size ? String(args.size) : null;
+    const size = args.size ? asString(args.size) : null;
     if (size && availableSizes.length > 0 && !availableSizes.includes(size)) {
       throw new BadRequestException(`Size ${size} not available`);
     }
 
     // Optional variant keys from attributes (flavor, color, option, …)
     for (const key of ['color', 'flavor', 'option', 'variant'] as const) {
-      const chosen = args[key] ? String(args[key]) : null;
+      const chosen = args[key] ? asString(args[key]) : null;
       if (!chosen) continue;
       const options = listAttributeOptions(
         attributes,
@@ -319,8 +328,8 @@ export class AiToolsService {
         conversationId: ctx.conversationId,
         campaignId: ctx.campaignId,
         status: LeadStatus.NEW,
-        intent: String(args.intent ?? 'LEAD_INTENT'),
-        notes: args.notes ? String(args.notes) : null,
+        intent: asString(args.intent, 'LEAD_INTENT'),
+        notes: args.notes ? asString(args.notes) : null,
         createdBy: ActorType.AI,
       },
     });
@@ -341,8 +350,8 @@ export class AiToolsService {
   ) {
     await this.notifications.create(ctx.businessId, {
       type: NotificationType.SYSTEM,
-      title: String(args.title ?? 'تنبيه'),
-      body: String(args.body ?? ''),
+      title: asString(args.title, 'تنبيه'),
+      body: asString(args.body),
       data: { conversationId: ctx.conversationId },
     });
     return { ok: true };
@@ -352,7 +361,7 @@ export class AiToolsService {
     ctx: BusinessContext,
     args: Record<string, unknown>,
   ) {
-    const reason = String(args.reason ?? 'طلب العميل أو حاجة لتدخل بشري');
+    const reason = asString(args.reason, 'طلب العميل أو حاجة لتدخل بشري');
     await this.prisma.conversation.update({
       where: { id: ctx.conversationId },
       data: {
@@ -361,7 +370,7 @@ export class AiToolsService {
         mode: 'HUMAN',
         conversionStage: 'HUMAN_HANDOFF',
         handoffReason: reason,
-        aiSummary: args.summary ? String(args.summary) : null,
+        aiSummary: args.summary ? asString(args.summary) : null,
       },
     });
     await this.notifications.create(ctx.businessId, {

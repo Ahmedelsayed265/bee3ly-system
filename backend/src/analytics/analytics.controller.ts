@@ -1,5 +1,8 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -69,7 +72,13 @@ export class AnalyticsController {
       where: { businessId },
       orderBy: { createdAt: 'desc' },
       take: 10,
-      select: { id: true, name: true, status: true, objective: true, budget: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        objective: true,
+        budget: true,
+      },
     });
 
     const campaignStats = await Promise.all(

@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { ConversationChannel, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
@@ -51,10 +56,7 @@ export class ConversationsService {
     const orders = await this.prisma.order.findMany({
       where: {
         businessId,
-        OR: [
-          { conversationId: id },
-          { customerId: conversation.customerId },
-        ],
+        OR: [{ conversationId: id }, { customerId: conversation.customerId }],
       },
       include: { items: true },
       orderBy: { createdAt: 'desc' },
@@ -97,7 +99,11 @@ export class ConversationsService {
     return { lead: updated };
   }
 
-  async sendHumanMessage(userId: string, conversationId: string, content: string) {
+  async sendHumanMessage(
+    userId: string,
+    conversationId: string,
+    content: string,
+  ) {
     const businessId = await this.access.requireBusinessId(userId);
     const conversation = await this.prisma.conversation.findFirst({
       where: { id: conversationId, businessId },
