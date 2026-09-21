@@ -1,3 +1,4 @@
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -58,103 +59,269 @@ function orderStatusTone(status: string) {
   return 'bg-lavender text-muted'
 }
 
-/** Soft curved sales chart */
+/** Soft curved sales chart with hover + peak highlight */
 function SalesChart({
   points,
 }: {
   points: Array<{ day: string; value: number }>
 }) {
-  const { t } = useLocale()
-  const width = 560
-  const height = 200
-  const padX = 20
-  const padY = 24
-  const max = Math.max(1, ...points.map((d) => d.value))
-  const mapped = points.map((d, i) => {
-    const x = padX + (i / Math.max(points.length - 1, 1)) * (width - padX * 2)
-    const y = height - padY - (d.value / max) * (height - padY * 2)
-    return { x, y, ...d }
-  })
+  const { t, locale } = useLocale()
+  const gradId = useId().replace(/:/g, '')
+  const [activeIdx, setActiveIdx] = useState<number | null>(null)
+  const plotRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
 
-  let path = ''
-  if (mapped.length) {
-    path = `M ${mapped[0]!.x} ${mapped[0]!.y}`
-    for (let i = 1; i < mapped.length; i++) {
-      const prev = mapped[i - 1]!
-      const curr = mapped[i]!
-      const cx = (prev.x + curr.x) / 2
-      path += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`
+  useLayoutEffect(() => {
+    const el = plotRef.current
+    if (!el) return
+    const update = () => {
+      const width = Math.round(el.clientWidth)
+      const height = Math.round(el.clientHeight)
+      if (width <= 0 || height <= 0) return
+      setSize((prev) =>
+        prev.width === width && prev.height === height ? prev : { width, height },
+      )
     }
-  }
-  const area = mapped.length
-    ? `${path} L ${mapped.at(-1)!.x} ${height - padY} L ${mapped[0]!.x} ${height - padY} Z`
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const width = size.width || 560
+  const height = size.height || 220
+  const padX = 14
+  const padTop = 44
+  const padBottom = 22
+  const chartBottom = height - padBottom
+
+  const { mapped, path, area, peakIdx, total, gridYs } = useMemo(() => {
+    const max = Math.max(1, ...points.map((d) => d.value))
+    const mappedPts = points.map((d, i) => {
+      const x =
+        padX + (i / Math.max(points.length - 1, 1)) * (width - padX * 2)
+      const y = chartBottom - (d.value / max) * (chartBottom - padTop)
+      return { x, y, index: i, ...d }
+    })
+
+    let linePath = ''
+    if (mappedPts.length) {
+      linePath = `M ${mappedPts[0]!.x} ${mappedPts[0]!.y}`
+      for (let i = 1; i < mappedPts.length; i++) {
+        const prev = mappedPts[i - 1]!
+        const curr = mappedPts[i]!
+        const cx = (prev.x + curr.x) / 2
+        linePath += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`
+      }
+    }
+    const areaPath = mappedPts.length
+      ? `${linePath} L ${mappedPts.at(-1)!.x} ${chartBottom} L ${mappedPts[0]!.x} ${chartBottom} Z`
+      : ''
+
+    let peak = 0
+    for (let i = 1; i < mappedPts.length; i++) {
+      if (mappedPts[i]!.value >= mappedPts[peak]!.value) peak = i
+    }
+
+    const ys = [0.25, 0.5, 0.75].map(
+      (r) => padTop + (chartBottom - padTop) * r,
+    )
+
+    return {
+      mapped: mappedPts,
+      path: linePath,
+      area: areaPath,
+      peakIdx: peak,
+      total: points.reduce((s, p) => s + p.value, 0),
+      gridYs: ys,
+    }
+  }, [points, chartBottom, width, padX])
+
+  const tipIdx = activeIdx ?? peakIdx
+  const tip = mapped[tipIdx]
+  const tipLabel = tip
+    ? `${tip.value.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')} ج.م`
     : ''
-  const tip = mapped[Math.min(mapped.length - 1, 4)]
+  const tipWidth = Math.max(72, tipLabel.length * 7.2 + 20)
+  const tipX = tip
+    ? Math.min(
+        Math.max(tip.x - tipWidth / 2, 8),
+        width - tipWidth - 8,
+      )
+    : 0
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface p-5 shadow-[0_12px_40px_-24px_rgba(44,44,42,0.35)]">
+    <div className="home-fade relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface p-5 shadow-[0_12px_40px_-24px_rgba(44,44,42,0.35)]">
       <div className="pointer-events-none absolute -start-10 top-0 h-40 w-40 rounded-full bg-brand/5 blur-2xl" />
-      <h3 className="relative text-sm font-semibold text-ink">
-        {t('salesChartTitle')}
-      </h3>
-      <p className="relative mt-0.5 text-xs text-muted">
-        {t('salesChartSubtitle')}
-      </p>
-      <svg viewBox={`0 0 ${width} ${height}`} className="relative mt-2 h-48 w-full">
+      <div className="pointer-events-none absolute -end-8 bottom-0 h-32 w-32 rounded-full bg-trust/5 blur-2xl" />
+
+      <div className="relative flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">
+            {t('salesChartTitle')}
+          </h3>
+          <p className="mt-0.5 text-xs text-muted">{t('salesChartSubtitle')}</p>
+        </div>
+        <div className="rounded-2xl bg-brand/8 px-3 py-1.5 text-end">
+          <p className="text-[10px] font-medium text-muted">
+            {t('salesWeekTotal')}
+          </p>
+          <p className="text-sm font-bold tabular-nums text-ink">
+            {total.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')}{' '}
+            <span className="text-[11px] font-semibold text-muted">ج.م</span>
+          </p>
+        </div>
+      </div>
+
+      <div
+        ref={plotRef}
+        className="relative -mx-5 mt-1 h-[13.5rem] sm:h-56"
+      >
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        className="absolute inset-0 h-full w-full select-none"
+        role="img"
+        aria-label={t('salesChartTitle')}
+        onMouseLeave={() => setActiveIdx(null)}
+      >
         <defs>
-          <linearGradient id="salesFillSoul" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.32" />
+          <linearGradient id={`salesFill-${gradId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366F1" stopOpacity="0.38" />
+            <stop offset="55%" stopColor="#818CF8" stopOpacity="0.12" />
             <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
           </linearGradient>
+          <linearGradient id={`salesStroke-${gradId}`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#818CF8" />
+            <stop offset="50%" stopColor="#6366F1" />
+            <stop offset="100%" stopColor="#4F46E5" />
+          </linearGradient>
+          <filter id={`tipShadow-${gradId}`} x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.22" />
+          </filter>
         </defs>
-        {area ? <path d={area} fill="url(#salesFillSoul)" /> : null}
+
+        {gridYs.map((y) => (
+          <line
+            key={y}
+            x1={0}
+            x2={width}
+            y1={y}
+            y2={y}
+            stroke="currentColor"
+            className="text-border"
+            strokeWidth="1"
+            strokeDasharray="4 6"
+            opacity="0.7"
+          />
+        ))}
+
+        {area ? (
+          <path
+            d={area}
+            fill={`url(#salesFill-${gradId})`}
+            className="sales-chart-area"
+          />
+        ) : null}
         {path ? (
           <path
             d={path}
             fill="none"
-            stroke="#6366F1"
-            strokeWidth="3"
+            stroke={`url(#salesStroke-${gradId})`}
+            strokeWidth="3.25"
             strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={1}
+            className="sales-chart-line"
           />
         ) : null}
-        {mapped.map((p) => (
-          <circle
-            key={p.day}
-            cx={p.x}
-            cy={p.y}
-            r="4"
-            fill="#fff"
-            stroke="#6366F1"
-            strokeWidth="2.5"
-          />
-        ))}
+
         {tip ? (
-          <g>
+          <line
+            x1={tip.x}
+            x2={tip.x}
+            y1={padTop - 8}
+            y2={chartBottom}
+            stroke="#6366F1"
+            strokeWidth="1.25"
+            strokeDasharray="3 5"
+            opacity="0.35"
+          />
+        ) : null}
+
+        {mapped.map((p) => {
+          const active = p.index === tipIdx
+          return (
+            <g
+              key={`${p.day}-${p.index}`}
+              onMouseEnter={() => setActiveIdx(p.index)}
+              onFocus={() => setActiveIdx(p.index)}
+              className="cursor-pointer"
+            >
+              <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
+              {active ? (
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r="10"
+                  fill="#6366F1"
+                  opacity="0.16"
+                  className="sales-chart-pulse"
+                />
+              ) : null}
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={active ? 5.5 : 4}
+                fill="#fff"
+                stroke={active ? '#4F46E5' : '#6366F1'}
+                strokeWidth={active ? 2.75 : 2.25}
+              />
+            </g>
+          )
+        })}
+
+        {tip ? (
+          <g filter={`url(#tipShadow-${gradId})`} className="sales-chart-tip">
             <rect
-              x={tip.x - 36}
-              y={tip.y - 36}
-              width="72"
-              height="26"
-              rx="8"
+              x={tipX}
+              y={Math.max(6, tip.y - 42)}
+              width={tipWidth}
+              height="28"
+              rx="10"
+              fill="#0F172A"
+            />
+            <polygon
+              points={`${tip.x - 5},${Math.max(6, tip.y - 42) + 28} ${tip.x + 5},${Math.max(6, tip.y - 42) + 28} ${tip.x},${Math.max(6, tip.y - 42) + 34}`}
               fill="#0F172A"
             />
             <text
-              x={tip.x}
-              y={tip.y - 18}
+              x={tipX + tipWidth / 2}
+              y={Math.max(6, tip.y - 42) + 18}
               textAnchor="middle"
               fill="#F8FAFC"
-              fontSize="11"
+              fontSize="11.5"
               fontWeight="700"
+              style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {tip.value.toLocaleString()} ج.م
+              {tipLabel}
             </text>
           </g>
         ) : null}
-      </svg>
-      <div className="relative flex justify-between px-1 text-[11px] text-muted">
-        {points.map((d) => (
-          <span key={d.day}>{d.day}</span>
+
+        {mapped.map((p) => (
+          <text
+            key={`label-${p.day}-${p.index}`}
+            x={p.x}
+            y={height - 6}
+            textAnchor="middle"
+            fill={p.index === tipIdx ? '#0F172A' : '#64748B'}
+            fontSize="11"
+            fontWeight={p.index === tipIdx ? 600 : 500}
+          >
+            {p.day}
+          </text>
         ))}
+      </svg>
       </div>
     </div>
   )

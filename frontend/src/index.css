@@ -279,10 +279,73 @@ select:-webkit-autofill {
   animation: home-mascot-float 3.6s ease-in-out infinite;
 }
 
+@keyframes sales-chart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sales-chart-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sales-chart-pulse {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.28;
+    transform: scale(1.08);
+  }
+}
+
+.sales-chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sales-chart-draw 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+}
+
+.sales-chart-area {
+  opacity: 0;
+  animation: sales-chart-fade 0.7s ease-out 0.45s forwards;
+}
+
+.sales-chart-tip {
+  opacity: 0;
+  animation: sales-chart-fade 0.35s ease-out 0.7s forwards;
+}
+
+.sales-chart-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sales-chart-pulse 1.8s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-fade,
-  .home-mascot {
+  .home-mascot,
+  .sales-chart-line,
+  .sales-chart-area,
+  .sales-chart-tip,
+  .sales-chart-pulse {
     animation: none !important;
+  }
+
+  .sales-chart-line {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+
+  .sales-chart-area,
+  .sales-chart-tip {
+    opacity: 1;
   }
 }
 
