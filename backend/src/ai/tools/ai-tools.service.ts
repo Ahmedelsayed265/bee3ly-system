@@ -179,9 +179,13 @@ export class AiToolsService {
     });
     const orderNumber = (last?.orderNumber ?? 1000) + 1;
 
+    // Keep Messenger/profile display name; order stores its own customerName
     await this.prisma.customer.update({
       where: { id: ctx.customerId },
-      data: { name: customerName, phone: customerPhone },
+      data: {
+        ...(ctx.customer.name ? {} : { name: customerName }),
+        phone: customerPhone,
+      },
     });
 
     const order = await this.prisma.order.create({
@@ -227,7 +231,7 @@ export class AiToolsService {
       });
     }
 
-    await this.prisma.lead.updateMany({
+    const openLeads = await this.prisma.lead.updateMany({
       where: {
         businessId: ctx.businessId,
         customerId: ctx.customerId,
@@ -235,6 +239,31 @@ export class AiToolsService {
       },
       data: { status: LeadStatus.CONVERTED },
     });
+
+    if (openLeads.count === 0) {
+      const existingConverted = await this.prisma.lead.findFirst({
+        where: {
+          businessId: ctx.businessId,
+          customerId: ctx.customerId,
+          conversationId: ctx.conversationId,
+          status: LeadStatus.CONVERTED,
+        },
+      });
+      if (!existingConverted) {
+        await this.prisma.lead.create({
+          data: {
+            businessId: ctx.businessId,
+            customerId: ctx.customerId,
+            conversationId: ctx.conversationId,
+            campaignId: ctx.campaignId,
+            status: LeadStatus.CONVERTED,
+            intent: 'PURCHASE_INTENT',
+            notes: `Order #${orderNumber}`,
+            createdBy: ActorType.AI,
+          },
+        });
+      }
+    }
 
     await this.prisma.conversation.update({
       where: { id: ctx.conversationId },

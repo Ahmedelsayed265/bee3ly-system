@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
+import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import {
@@ -25,13 +26,20 @@ export class ProductsService {
     return business.type;
   }
 
-  async list(userId: string) {
+  async list(userId: string, page = 1, limit = 10) {
     const businessId = await this.access.requireBusinessId(userId);
-    const products = await this.prisma.product.findMany({
-      where: { businessId },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { products };
+    const window = pageWindow(page, limit);
+    const where = { businessId };
+    const [products, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: window.skip,
+        take: window.limit,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+    return { products, ...pageMeta(total, window.page, window.limit) };
   }
 
   async create(userId: string, dto: CreateProductDto) {

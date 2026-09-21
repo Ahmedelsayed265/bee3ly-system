@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import { PaginationQueryDto } from '../common/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto, LaunchCampaignDto } from './dto/campaign.dto';
@@ -10,8 +11,8 @@ export class CampaignsController {
   constructor(private readonly campaigns: CampaignsService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.campaigns.list(user.id);
+  list(@CurrentUser() user: AuthUser, @Query() query: PaginationQueryDto) {
+    return this.campaigns.list(user.id, query.page ?? 1, query.limit ?? 10);
   }
 
   @Get(':id')

@@ -223,8 +223,8 @@ export function HomeDashboard() {
     queryFn: fetchOverview,
   })
   const ordersQuery = useQuery({
-    queryKey: ['orders'],
-    queryFn: fetchOrders,
+    queryKey: ['orders', 'dashboard'],
+    queryFn: () => fetchOrders(1, 4),
   })
   const convQuery = useQuery({
     queryKey: ['conversations'],
@@ -263,7 +263,7 @@ export function HomeDashboard() {
     },
   ]
 
-  const latestOrders = (ordersQuery.data ?? []).slice(0, 4)
+  const latestOrders = ordersQuery.data?.orders ?? []
   const latestChats = (convQuery.data ?? []).slice(0, 4)
   const campaignSwatches = ['#6366F1', '#4F46E5', '#818CF8']
 

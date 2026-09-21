@@ -17,6 +17,8 @@ export function InboxPage() {
   const listQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: fetchConversations,
+    refetchInterval: 3_000,
+    staleTime: 0,
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -31,6 +33,8 @@ export function InboxPage() {
     queryKey: ['conversation', selectedId],
     queryFn: () => fetchConversation(selectedId!),
     enabled: Boolean(selectedId),
+    refetchInterval: 3_000,
+    staleTime: 0,
   })
 
   const conversation = detailQuery.data?.conversation
@@ -170,7 +174,7 @@ export function InboxPage() {
               <div
                 key={m.id}
                 className={cn(
-                  'max-w-[85%] rounded-2xl px-3 py-2 text-sm',
+                  'max-w-[85%] w-fit rounded-2xl px-3 py-2 text-sm',
                   m.role === 'CUSTOMER'
                     ? 'ms-auto bg-brand text-white'
                     : m.role === 'HUMAN'

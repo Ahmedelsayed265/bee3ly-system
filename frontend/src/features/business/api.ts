@@ -79,9 +79,18 @@ export async function changePassword(input: {
   return data
 }
 
-export async function fetchProducts() {
-  const { data } = await api.get<{ products: Product[] }>('/products')
-  return data.products
+export type PageResult<T> = {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+} & T
+
+export async function fetchProducts(page = 1, limit = 10) {
+  const { data } = await api.get<PageResult<{ products: Product[] }>>('/products', {
+    params: { page, limit },
+  })
+  return data
 }
 
 export async function createProduct(input: {
@@ -119,20 +128,31 @@ export async function deleteProduct(id: string) {
   await api.delete(`/products/${id}`)
 }
 
-export async function fetchOrders() {
+export type OrderRow = {
+  id: string
+  orderNumber: number
+  status: string
+  totalEgp: number
+  customerName: string | null
+  customerPhone: string | null
+  createdAt: string
+  items: Array<{
+    name: string
+    size: string | null
+    quantity: number
+    priceEgp: number
+  }>
+}
+
+export async function fetchOrders(page = 1, limit = 10) {
   const { data } = await api.get<{
-    orders: Array<{
-      id: string
-      orderNumber: number
-      status: string
-      totalEgp: number
-      customerName: string | null
-      customerPhone: string | null
-      createdAt: string
-      items: Array<{ name: string; size: string | null; quantity: number; priceEgp: number }>
-    }>
-  }>('/orders')
-  return data.orders
+    orders: OrderRow[]
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }>('/orders', { params: { page, limit } })
+  return data
 }
 
 export async function updateOrderStatus(id: string, status: string) {
@@ -204,17 +224,19 @@ export async function simulateMessage(content: string, conversationId?: string) 
   return data
 }
 
-export async function fetchLeads() {
-  const { data } = await api.get<{
-    leads: Array<{
-      id: string
-      status: string
-      intent: string | null
-      createdAt: string
-      customer: { name: string | null; phone: string | null }
+export async function fetchLeads(page = 1, limit = 10) {
+  const { data } = await api.get<
+    PageResult<{
+      leads: Array<{
+        id: string
+        status: string
+        intent: string | null
+        createdAt: string
+        customer: { name: string | null; phone: string | null }
+      }>
     }>
-  }>('/leads')
-  return data.leads
+  >('/leads', { params: { page, limit } })
+  return data
 }
 
 export async function fetchNotifications() {
@@ -389,9 +411,12 @@ export type Campaign = {
   createdAt: string
 }
 
-export async function fetchCampaigns() {
-  const { data } = await api.get<{ campaigns: Campaign[] }>('/campaigns')
-  return data.campaigns
+export async function fetchCampaigns(page = 1, limit = 10) {
+  const { data } = await api.get<PageResult<{ campaigns: Campaign[] }>>(
+    '/campaigns',
+    { params: { page, limit } },
+  )
+  return data
 }
 
 export async function createCampaign(input: {

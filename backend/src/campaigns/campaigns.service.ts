@@ -5,6 +5,7 @@ import {
   NotificationType,
 } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
+import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCampaignDto } from './dto/campaign.dto';
@@ -17,13 +18,20 @@ export class CampaignsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async list(userId: string) {
+  async list(userId: string, page = 1, limit = 10) {
     const businessId = await this.access.requireBusinessId(userId);
-    const campaigns = await this.prisma.campaign.findMany({
-      where: { businessId },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { campaigns };
+    const window = pageWindow(page, limit);
+    const where = { businessId };
+    const [campaigns, total] = await Promise.all([
+      this.prisma.campaign.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: window.skip,
+        take: window.limit,
+      }),
+      this.prisma.campaign.count({ where }),
+    ]);
+    return { campaigns, ...pageMeta(total, window.page, window.limit) };
   }
 
   async getOne(userId: string, id: string) {

@@ -90,6 +90,19 @@ export class InboundMessageService {
       });
     }
 
+    if (!customer.name && account.status === SocialConnectionStatus.CONNECTED) {
+      const senderName = await this.outbound.getSenderName(
+        account.id,
+        event.externalSenderId,
+      );
+      if (senderName) {
+        customer = await this.prisma.customer.update({
+          where: { id: customer.id },
+          data: { name: senderName },
+        });
+      }
+    }
+
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         businessId: account.businessId,
@@ -143,15 +156,40 @@ export class InboundMessageService {
         },
       });
 
-      if (
-        aiResult.reply &&
-        account.status === SocialConnectionStatus.CONNECTED
-      ) {
-        await this.outbound.sendText(
+      let reply = aiResult.reply;
+      if (!reply) {
+        const business = await this.prisma.business.findUnique({
+          where: { id: account.businessId },
+          select: { name: true },
+        });
+        const shop = business?.name?.trim() || 'المتجر';
+        // Fixed ack while AI Engine is offline / agent paused
+        reply = `أهلاً بيك! رسالتك وصلت لـ ${shop}. هنرد عليك حالاً.`;
+        await this.prisma.message.create({
+          data: {
+            conversationId: conversation.id,
+            role: MessageRole.AI,
+            content: reply,
+            meta: { source: 'fixed_reply' },
+          },
+        });
+        await this.prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { lastMessageAt: new Date() },
+        });
+      }
+
+      if (account.status === SocialConnectionStatus.CONNECTED) {
+        const sent = await this.outbound.sendText(
           account.id,
           event.externalSenderId,
-          aiResult.reply,
+          reply,
         );
+        if (!sent.sent) {
+          this.logger.warn(
+            `Outbound reply not sent for conversation ${conversation.id}`,
+          );
+        }
       }
     }
 

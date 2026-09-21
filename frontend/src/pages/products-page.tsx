@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Minus, PackagePlus, Plus, Trash2 } from 'lucide-react'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { PaginationBar } from '@/components/ui/pagination-bar'
 import {
   Dialog,
   DialogBody,
@@ -38,6 +40,12 @@ export function ProductsPage() {
   const businessType = (business?.type ?? 'OTHER') as BusinessType
   const template = ATTRIBUTE_TEMPLATES[businessType] ?? ATTRIBUTE_TEMPLATES.OTHER
   const quantityMode = usesQuantityStock(businessType)
+  const pageSize = 9
+  const [page, setPage] = useState(1)
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string
+    name: string
+  } | null>(null)
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
@@ -53,9 +61,16 @@ export function ProductsPage() {
   >([])
 
   const productsQuery = useQuery({
-    queryKey: ['products'],
-    queryFn: fetchProducts,
+    queryKey: ['products', page, pageSize],
+    queryFn: () => fetchProducts(page, pageSize),
   })
+  const products = productsQuery.data?.products ?? []
+  const total = productsQuery.data?.total ?? 0
+  const totalPages = productsQuery.data?.totalPages ?? 1
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const resetForm = () => {
     setName('')
@@ -81,6 +96,7 @@ export function ProductsPage() {
   const deleteMut = useMutation({
     mutationFn: deleteProduct,
     onSuccess: async () => {
+      setPendingDelete(null)
       await qc.invalidateQueries({ queryKey: ['products'] })
     },
   })
@@ -100,7 +116,6 @@ export function ProductsPage() {
   })
 
   const formHint = useMemo(() => t('productDetailsHint'), [t])
-  const products = productsQuery.data ?? []
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -316,7 +331,7 @@ export function ProductsPage() {
         </DialogContent>
       </Dialog>
 
-      {products.length === 0 ? (
+      {total === 0 && !productsQuery.isLoading ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -467,7 +482,9 @@ export function ProductsPage() {
                     size="sm"
                     variant="ghost"
                     className="text-danger hover:bg-danger/10 hover:text-danger"
-                    onClick={() => deleteMut.mutate(p.id)}
+                    onClick={() =>
+                      setPendingDelete({ id: p.id, name: p.name })
+                    }
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     {t('delete')}
@@ -478,6 +495,34 @@ export function ProductsPage() {
           })}
         </div>
       )}
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        fetching={productsQuery.isFetching}
+        previousLabel={t('previous')}
+        nextLabel={t('next')}
+        pageLabel={t('pageOf', {
+          page: String(page),
+          total: String(totalPages),
+        })}
+        onPage={setPage}
+      />
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title={t('confirmDeleteTitle')}
+        description={t('confirmDeleteBody', {
+          name: pendingDelete?.name ?? '',
+        })}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+        pending={deleteMut.isPending}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null)
+        }}
+        onConfirm={() => {
+          if (pendingDelete) deleteMut.mutate(pendingDelete.id)
+        }}
+      />
     </PageLayout>
   )
 }

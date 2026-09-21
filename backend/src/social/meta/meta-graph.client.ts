@@ -66,7 +66,11 @@ export class MetaGraphClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        subscribed_fields: ['messages', 'messaging_postbacks', 'message_deliveries'],
+        subscribed_fields: [
+          'messages',
+          'messaging_postbacks',
+          'message_deliveries',
+        ],
         access_token: pageAccessToken,
       }),
     });
@@ -76,6 +80,64 @@ export class MetaGraphClient {
       return { success: false, error: text };
     }
     return { success: true };
+  }
+
+  async getUserProfile(pageAccessToken: string, userId: string) {
+    const url = new URL(`${this.base()}/${userId}`);
+    url.searchParams.set('fields', 'name,first_name,last_name');
+    url.searchParams.set('access_token', pageAccessToken);
+    const res = await fetch(url);
+    if (res.ok) {
+      const json = (await res.json()) as {
+        name?: string;
+        first_name?: string;
+        last_name?: string;
+      };
+      const full =
+        json.name?.trim() ||
+        [json.first_name, json.last_name].filter(Boolean).join(' ').trim();
+      if (full) return full;
+    } else {
+      const text = await res.text();
+      this.logger.debug(`Get user profile failed: ${text.slice(0, 200)}`);
+    }
+    return null;
+  }
+
+  /** Fallback when User Profile API is blocked (common in Dev mode). */
+  async getSenderNameFromConversations(
+    pageId: string,
+    pageAccessToken: string,
+    senderId: string,
+  ) {
+    const url = new URL(`${this.base()}/${pageId}/conversations`);
+    url.searchParams.set('fields', 'participants');
+    url.searchParams.set('user_id', senderId);
+    url.searchParams.set('platform', 'messenger');
+    url.searchParams.set('access_token', pageAccessToken);
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `Conversations name lookup failed: ${text.slice(0, 300)}`,
+      );
+      return null;
+    }
+    const json = (await res.json()) as {
+      data?: Array<{
+        participants?: {
+          data?: Array<{ id?: string; name?: string }>;
+        };
+      }>;
+    };
+    for (const thread of json.data ?? []) {
+      for (const p of thread.participants?.data ?? []) {
+        if (p.id === senderId && p.name?.trim()) {
+          return p.name.trim();
+        }
+      }
+    }
+    return null;
   }
 
   async sendTextMessage(

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationChannel, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
+import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -60,17 +61,24 @@ export class ConversationsService {
     return { conversation, orders };
   }
 
-  async listLeads(userId: string) {
+  async listLeads(userId: string, page = 1, limit = 10) {
     const businessId = await this.access.requireBusinessId(userId);
-    const leads = await this.prisma.lead.findMany({
-      where: { businessId },
-      include: {
-        customer: true,
-        campaign: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    return { leads };
+    const window = pageWindow(page, limit);
+    const where = { businessId };
+    const [leads, total] = await Promise.all([
+      this.prisma.lead.findMany({
+        where,
+        include: {
+          customer: true,
+          campaign: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: window.skip,
+        take: window.limit,
+      }),
+      this.prisma.lead.count({ where }),
+    ]);
+    return { leads, ...pageMeta(total, window.page, window.limit) };
   }
 
   async updateLeadStatus(userId: string, leadId: string, status: string) {
