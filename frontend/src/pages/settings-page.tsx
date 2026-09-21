@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import {
+  FacebookIcon,
+  InstagramIcon,
+  WhatsAppIcon,
+} from '@/components/brand/channel-icons'
 import { PageLayout } from '@/components/layout/page-layout'
 import { Button } from '@/components/ui/button'
 import { InputField } from '@/components/ui/input-field'
@@ -19,6 +24,15 @@ import type { MessageKey } from '@/features/i18n/messages'
 import { cn } from '@/lib/utils'
 
 type Tab = 'social' | 'knowledge'
+type ChannelId = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP'
+
+type SocialAccount = {
+  id: string
+  platform: string
+  displayName: string | null
+  status?: string
+  webhookSubscribedAt?: string | null
+}
 
 function statusLabel(
   status: string | undefined,
@@ -38,6 +52,83 @@ function statusLabel(
     default:
       return t('connectionDisconnected')
   }
+}
+
+function statusTone(status: string | undefined) {
+  switch (status) {
+    case 'CONNECTED':
+      return 'bg-trust/15 text-trust'
+    case 'CONNECTING':
+      return 'bg-brand/10 text-brand'
+    case 'ERROR':
+    case 'REAUTH_REQUIRED':
+      return 'bg-danger/10 text-danger'
+    default:
+      return 'bg-lavender text-muted'
+  }
+}
+
+function ChannelCard({
+  icon,
+  iconClassName,
+  title,
+  description,
+  account,
+  action,
+  footer,
+}: {
+  icon: ReactNode
+  iconClassName: string
+  title: string
+  description: string
+  account?: SocialAccount | null
+  action: ReactNode
+  footer?: ReactNode
+}) {
+  const { t } = useLocale()
+  const connected =
+    account?.status === 'CONNECTED' || account?.status === 'CONNECTING'
+
+  return (
+    <article className="flex h-full flex-col gap-4 rounded-2xl border border-border bg-surface p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={cn(
+              'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+              iconClassName,
+            )}
+          >
+            {icon}
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-ink">{title}</h3>
+            <p className="mt-0.5 text-xs leading-5 text-muted">{description}</p>
+          </div>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
+            statusTone(account?.status),
+          )}
+        >
+          {account ? statusLabel(account.status, t) : t('channelNotLinked')}
+        </span>
+      </div>
+
+      {connected && account?.displayName ? (
+        <div className="rounded-xl bg-page px-3 py-2.5 text-sm">
+          <p className="font-semibold text-ink">{account.displayName}</p>
+          {account.webhookSubscribedAt ? (
+            <p className="mt-0.5 text-[11px] text-trust">webhook</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-auto flex flex-wrap items-center gap-2">{action}</div>
+      {footer}
+    </article>
+  )
 }
 
 export function SettingsPage() {
@@ -109,7 +200,9 @@ export function SettingsPage() {
     mutationFn: ({ pageId }: { pageId: string }) =>
       selectMetaPage(pendingId!, pageId),
     onSuccess: async (data) => {
-      toast.success(data.notice || t('metaConnectedOk'))
+      toast.success(
+        data.instagram ? t('metaConnectedFbIg') : t('metaConnectedFbOnly'),
+      )
       setSearchParams({})
       await qc.invalidateQueries({ queryKey: ['social'] })
     },
@@ -123,9 +216,25 @@ export function SettingsPage() {
     { id: 'knowledge', labelKey: 'businessKnowledge' },
   ]
 
-  const realAccounts = (socialQuery.data?.accounts ?? []).filter(
-    (a) => a.status !== 'SIMULATION',
-  )
+  const accountsByPlatform = useMemo(() => {
+    const map = new Map<string, SocialAccount>()
+    for (const account of socialQuery.data?.accounts ?? []) {
+      if (account.status === 'SIMULATION') continue
+      map.set(account.platform, account)
+    }
+    return map
+  }, [socialQuery.data?.accounts])
+
+  const facebook = accountsByPlatform.get('FACEBOOK')
+  const instagram = accountsByPlatform.get('INSTAGRAM')
+  const metaReady = Boolean(socialQuery.data?.metaConfigured)
+  const metaBusy = metaConnectMut.isPending
+
+  const connectMeta = () => metaConnectMut.mutate()
+  const disconnect = (platform: ChannelId) => {
+    if (platform === 'WHATSAPP') return
+    disconnectMut.mutate(platform)
+  }
 
   return (
     <PageLayout
@@ -167,108 +276,141 @@ export function SettingsPage() {
       </div>
 
       {tab === 'social' ? (
-        <section className="grid w-full gap-4 rounded-2xl border border-border bg-surface p-5 lg:grid-cols-[1fr_1.2fr]">
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-ink">
-              {t('connectFacebookInstagram')}
-            </p>
-            <p className="text-sm text-muted">{t('socialAccountsHint')}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                disabled={
-                  metaConnectMut.isPending || !socialQuery.data?.metaConfigured
-                }
-                onClick={() => metaConnectMut.mutate()}
-              >
-                {t('connectRealMeta')}
-              </Button>
-            </div>
-            {!socialQuery.data?.metaConfigured ? (
-              <p className="text-xs text-muted">{t('metaNotConfigured')}</p>
+        <section className="w-full space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-ink">{t('channelsTitle')}</h2>
+            <p className="mt-1 text-sm text-muted">{t('socialAccountsHint')}</p>
+            {!metaReady ? (
+              <p className="mt-2 text-xs text-muted">{t('metaNotConfigured')}</p>
             ) : (
-              <p className="text-xs text-muted">{t('metaConnectHint')}</p>
+              <p className="mt-2 text-xs text-muted">{t('metaConnectHint')}</p>
             )}
-
-            {pendingId ? (
-              <div className="space-y-2 rounded-xl border border-brand/30 bg-brand/5 p-4">
-                <p className="text-sm font-semibold text-ink">
-                  {t('selectFacebookPage')}
-                </p>
-                <p className="text-xs text-muted">{t('selectFacebookPageHint')}</p>
-                {(pendingQuery.data?.pages ?? []).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={selectPageMut.isPending}
-                    onClick={() => selectPageMut.mutate({ pageId: p.id })}
-                    className="flex w-full items-center justify-between rounded-xl border border-border bg-surface px-3 py-2.5 text-start text-sm hover:bg-lavender"
-                  >
-                    <span className="font-semibold text-ink">{p.name}</span>
-                    <span className="text-[11px] text-muted">
-                      {p.hasInstagram
-                        ? t('pageHasInstagram')
-                        : t('pageNoInstagram')}
-                    </span>
-                  </button>
-                ))}
-                {pendingQuery.isError ? (
-                  <p className="text-sm text-danger">{t('metaPendingExpired')}</p>
-                ) : null}
-              </div>
-            ) : null}
           </div>
 
-          <ul className="space-y-2 text-sm">
-            {realAccounts.map((a) => (
-              <li
-                key={a.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-page px-4 py-3"
-              >
-                <span>
-                  {a.platform} · {a.displayName}
-                  {a.webhookSubscribedAt ? (
-                    <span className="ms-2 text-[10px] text-trust">
-                      webhook
-                    </span>
-                  ) : null}
-                </span>
-                <span className="flex items-center gap-2">
-                  <span
-                    className={cn(
-                      'rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      a.status === 'CONNECTED'
-                        ? 'bg-trust/15 text-trust'
-                        : a.status === 'CONNECTING'
-                          ? 'bg-brand/10 text-brand'
-                          : 'bg-lavender text-muted',
-                    )}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ChannelCard
+              icon={<FacebookIcon className="h-5 w-5" />}
+              iconClassName="bg-[#1877F2]/10 text-[#1877F2]"
+              title={t('channelFacebook')}
+              description={
+                pendingId
+                  ? t('selectFacebookPageHint')
+                  : t('channelFacebookHint')
+              }
+              account={pendingId ? undefined : facebook}
+              action={
+                pendingId ? (
+                  <p className="text-xs font-semibold text-brand">
+                    {t('selectFacebookPage')}
+                  </p>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      disabled={metaBusy || !metaReady}
+                      onClick={connectMeta}
+                    >
+                      {facebook?.status === 'CONNECTED'
+                        ? t('channelReconnect')
+                        : t('channelConnect')}
+                    </Button>
+                    {facebook && facebook.status !== 'DISCONNECTED' ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-danger hover:bg-danger/10 hover:text-danger"
+                        disabled={disconnectMut.isPending}
+                        onClick={() => disconnect('FACEBOOK')}
+                      >
+                        {t('disconnectAccount')}
+                      </Button>
+                    ) : null}
+                  </>
+                )
+              }
+              footer={
+                pendingId ? (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    {(pendingQuery.data?.pages ?? []).map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        disabled={selectPageMut.isPending}
+                        onClick={() =>
+                          selectPageMut.mutate({ pageId: p.id })
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-border bg-page px-3 py-2.5 text-start text-sm transition hover:border-brand/40 hover:bg-lavender"
+                      >
+                        <span className="font-semibold text-ink">{p.name}</span>
+                        <span className="text-[11px] text-muted">
+                          {p.hasInstagram
+                            ? t('pageHasInstagram')
+                            : t('pageNoInstagram')}
+                        </span>
+                      </button>
+                    ))}
+                    {pendingQuery.isLoading ? (
+                      <p className="text-xs text-muted">
+                        {t('connectionConnecting')}…
+                      </p>
+                    ) : null}
+                    {pendingQuery.isError ? (
+                      <p className="text-sm text-danger">
+                        {t('metaPendingExpired')}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null
+              }
+            />
+
+            <ChannelCard
+              icon={<InstagramIcon className="h-5 w-5" />}
+              iconClassName="bg-[#E1306C]/10 text-[#E1306C]"
+              title={t('channelInstagram')}
+              description={t('channelInstagramHint')}
+              account={instagram}
+              action={
+                <>
+                  <Button
+                    size="sm"
+                    variant={
+                      instagram?.status === 'CONNECTED' ? 'outline' : 'default'
+                    }
+                    disabled={metaBusy || !metaReady || Boolean(pendingId)}
+                    onClick={connectMeta}
                   >
-                    {statusLabel(a.status, t)}
-                  </span>
-                  {a.status !== 'DISCONNECTED' ? (
+                    {instagram?.status === 'CONNECTED'
+                      ? t('channelReconnect')
+                      : t('channelConnect')}
+                  </Button>
+                  {instagram && instagram.status !== 'DISCONNECTED' ? (
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-xs text-danger"
-                      onClick={() =>
-                        disconnectMut.mutate(
-                          a.platform as 'FACEBOOK' | 'INSTAGRAM',
-                        )
-                      }
+                      className="text-danger hover:bg-danger/10 hover:text-danger"
+                      disabled={disconnectMut.isPending}
+                      onClick={() => disconnect('INSTAGRAM')}
                     >
                       {t('disconnectAccount')}
                     </Button>
                   ) : null}
-                </span>
-              </li>
-            ))}
-            {realAccounts.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-                {t('noSocialAccounts')}
-              </li>
-            ) : null}
-          </ul>
+                </>
+              }
+            />
+
+            <ChannelCard
+              icon={<WhatsAppIcon className="h-5 w-5" />}
+              iconClassName="bg-[#25D366]/10 text-[#25D366]"
+              title={t('channelWhatsApp')}
+              description={t('channelWhatsAppHint')}
+              action={
+                <Button size="sm" variant="outline" disabled>
+                  {t('channelComingSoon')}
+                </Button>
+              }
+            />
+          </div>
         </section>
       ) : (
         <section className="w-full rounded-2xl border border-border bg-surface p-5">
