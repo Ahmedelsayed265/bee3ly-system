@@ -50,9 +50,7 @@ function axesFromProduct(
     return existing.axes.map((axis) => {
       const match =
         dictionary.find((d) => d.name === axis.name) ??
-        dictionary.find((d) =>
-          axis.values.every((v) => d.values.includes(v)),
-        );
+        dictionary.find((d) => axis.values.every((v) => d.values.includes(v)));
       return {
         dictionaryId: match?.id ?? `legacy_${axis.name}`,
         name: axis.name,
@@ -85,9 +83,7 @@ function axesFromProduct(
     : Array.isArray(attrs.colors)
       ? attrs.colors.map(String)
       : [];
-  const flavors = Array.isArray(attrs.flavors)
-    ? attrs.flavors.map(String)
-    : [];
+  const flavors = Array.isArray(attrs.flavors) ? attrs.flavors.map(String) : [];
 
   pushIf(['مقاس', 'Size', 'sizes'], sizes);
   pushIf(['لون', 'Color', 'colors'], colors);

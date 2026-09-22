@@ -147,12 +147,16 @@ export function formValuesFromProduct(input: {
   const attrs: ProductAttributes = {
     ...(input.product.attributes ?? {}),
   };
-  if ((!attrs.sizes || (Array.isArray(attrs.sizes) && !attrs.sizes.length)) &&
-    input.product.sizes?.length) {
+  if (
+    (!attrs.sizes || (Array.isArray(attrs.sizes) && !attrs.sizes.length)) &&
+    input.product.sizes?.length
+  ) {
     attrs.sizes = input.product.sizes;
   }
-  if ((!attrs.colors || (Array.isArray(attrs.colors) && !attrs.colors.length)) &&
-    input.product.colors?.length) {
+  if (
+    (!attrs.colors || (Array.isArray(attrs.colors) && !attrs.colors.length)) &&
+    input.product.colors?.length
+  ) {
     attrs.colors = input.product.colors;
   }
 

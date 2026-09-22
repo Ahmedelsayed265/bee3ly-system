@@ -57,7 +57,9 @@ export function AgentSettingsForm({
           <h2 className="text-ink text-sm font-semibold">
             {t('aiSectionBehavior')}
           </h2>
-          <p className="text-muted mt-1 text-xs">{t('aiSectionBehaviorHint')}</p>
+          <p className="text-muted mt-1 text-xs">
+            {t('aiSectionBehaviorHint')}
+          </p>
         </div>
 
         <div className="space-y-3">

@@ -104,9 +104,7 @@ export function VariantDictionaryDialog({
       .map((row) => ({
         id: row.id || createDictionaryOptionId(),
         name: row.name.trim(),
-        values: [
-          ...new Set(row.values.map((v) => v.trim()).filter(Boolean)),
-        ],
+        values: [...new Set(row.values.map((v) => v.trim()).filter(Boolean))],
       }))
       .filter((row) => row.name && row.values.length);
 

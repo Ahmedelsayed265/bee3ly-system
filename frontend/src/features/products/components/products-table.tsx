@@ -80,9 +80,7 @@ export function ProductsTable({
                   ) : null}
                 </td>
                 <td className="text-ink px-4 py-3 text-start align-top font-semibold tabular-nums">
-                  {priceEgp.toLocaleString(
-                    locale === 'ar' ? 'ar-EG' : 'en-US',
-                  )}{' '}
+                  {priceEgp.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')}{' '}
                   <span className="text-muted text-xs font-medium">
                     {t('egp')}
                   </span>

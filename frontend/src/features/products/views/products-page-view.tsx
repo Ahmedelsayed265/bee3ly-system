@@ -20,10 +20,7 @@ export function ProductsPageView() {
       description={t('productsIntro')}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => products.setDictOpen(true)}
-          >
+          <Button variant="outline" onClick={() => products.setDictOpen(true)}>
             <Tags className="h-4 w-4" />
             {t('variantDictManage')}
           </Button>

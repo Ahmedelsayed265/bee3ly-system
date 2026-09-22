@@ -95,7 +95,12 @@ export function ProductVariantsEditor({
       {!enabled ? null : !dictionary.length ? (
         <div className="border-border bg-surface space-y-2 rounded-xl border border-dashed p-4 text-center">
           <p className="text-muted text-xs">{t('variantDictEmptyInProduct')}</p>
-          <Button type="button" size="sm" variant="outline" onClick={onOpenDictionary}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onOpenDictionary}
+          >
             {t('variantDictManage')}
           </Button>
         </div>
