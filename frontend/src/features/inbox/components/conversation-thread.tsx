@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { MessageBubble } from '@/features/inbox/components/message-bubble';
 import { MessageComposer } from '@/features/inbox/components/message-composer';
 import { useLocale } from '@/features/i18n/locale-context';
+import type { MessageKey } from '@/features/i18n/messages';
 
 type Message = {
   id: string;
@@ -31,6 +32,12 @@ type ConversationThreadProps = {
   onSetMode: (mode: 'AI' | 'HUMAN') => void;
 };
 
+function channelLabel(t: (key: MessageKey) => string, channel: string) {
+  const key = `channel_${channel}` as MessageKey;
+  const translated = t(key);
+  return translated === key ? channel : translated;
+}
+
 export function ConversationThread({
   conversation,
   messages,
@@ -55,7 +62,7 @@ export function ConversationThread({
               {conversation.customer.name ?? t('unknownCustomer')}
             </p>
             <p className="text-muted text-[11px]">
-              {conversation.channel}
+              {channelLabel(t, conversation.channel)}
               {conversation.campaign ? ` · ${conversation.campaign.name}` : ''}
               {conversation.handoffReason
                 ? ` · ${conversation.handoffReason}`

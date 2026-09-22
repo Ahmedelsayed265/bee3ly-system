@@ -1,4 +1,5 @@
 import { useLocale } from '@/features/i18n/locale-context';
+import type { MessageKey } from '@/features/i18n/messages';
 import { cn } from '@/lib/utils';
 
 type ConversationSummary = {
@@ -17,6 +18,18 @@ type ConversationListProps = {
   selectedId: string | null;
   onSelect: (id: string) => void;
 };
+
+function labelOrRaw(
+  t: (key: MessageKey) => string,
+  prefix: string,
+  value: string | undefined | null,
+  fallback: MessageKey,
+) {
+  if (!value) return t(fallback);
+  const key = `${prefix}${value}` as MessageKey;
+  const translated = t(key);
+  return translated === key ? value : translated;
+}
 
 export function ConversationList({
   conversations,
@@ -51,11 +64,14 @@ export function ConversationList({
               </span>
             </div>
             <p className="truncate text-[11px]">
-              {c.messages[0]?.content ?? c.channel}
+              {c.messages[0]?.content ??
+                labelOrRaw(t, 'channel_', c.channel, 'channel_FACEBOOK')}
             </p>
             <p className="text-muted mt-0.5 truncate text-[10px]">
-              {c.conversionStage ?? 'NEW'}
-              {c.leads?.[0]?.status ? ` · ${c.leads[0].status}` : ''}
+              {labelOrRaw(t, 'stage_', c.conversionStage, 'stage_NEW')}
+              {c.leads?.[0]?.status
+                ? ` · ${labelOrRaw(t, 'leadStatus_', c.leads[0].status, 'leadStatus_NEW')}`
+                : ''}
             </p>
           </button>
         ))}

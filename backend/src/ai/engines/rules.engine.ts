@@ -22,9 +22,18 @@ export class RulesEngine {
       return 'PURCHASE_INTENT';
     if (/سيب رقم|كلمني|مهتم|lead/.test(text)) return 'LEAD_INTENT';
     if (/سعر|كام|بكام|price|تكلفة/.test(text)) return 'PRICE_INQUIRY';
-    if (/منتج|مواصفات|فيه إيه|product/.test(text)) return 'PRODUCT_QUESTION';
-    if (/متوفر|موجود|مخزون|مقاس|size|xl|availability/.test(text))
+    if (
+      /منتج|مواصفات|فيه إيه|product|بسأل عن|بسال عن|عايز أعرف|عايز اعرف/.test(
+        text,
+      )
+    ) {
+      return 'PRODUCT_QUESTION';
+    }
+    if (
+      /متوفر|موجود|مخزون|مقاس|size|xl|availability|فى |فيه |في /.test(text)
+    ) {
       return 'AVAILABILITY';
+    }
     if (/توصيل|delivery|شحن/.test(text)) return 'DELIVERY_QUESTION';
     if (/فين طلبي|حالة الطلب|order status/.test(text)) return 'ORDER_STATUS';
     if (/شكوى|مشكلة|complaint|زعلان/.test(text)) return 'COMPLAINT';

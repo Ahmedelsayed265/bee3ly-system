@@ -68,7 +68,18 @@ export const ATTRIBUTE_TEMPLATES: Record<
     { key: 'extras', labelKey: 'attrExtras', kind: 'tags' },
   ],
   ECOMMERCE: [
-    { key: 'variants', labelKey: 'attrVariants', kind: 'tags' },
+    {
+      key: 'sizes',
+      labelKey: 'attrSizes',
+      kind: 'tags',
+      placeholderKey: 'attrSizesPlaceholder',
+    },
+    {
+      key: 'flavors',
+      labelKey: 'attrFlavors',
+      kind: 'tags',
+      placeholderKey: 'attrFlavorsPlaceholder',
+    },
     { key: 'sku', labelKey: 'attrSku', kind: 'text' },
   ],
   REAL_ESTATE: [

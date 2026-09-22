@@ -132,6 +132,29 @@ export class AiService {
       where: { businessId: input.businessId },
     });
     if (agent && !agent.isActive) {
+      const intent = this.rules.detectIntent(input.content);
+      await this.ensureSoftLead({
+        businessId: input.businessId,
+        customerId: input.customerId,
+        conversationId: conversation.id,
+        campaignId: conversation.campaignId,
+        intent,
+        alreadyCreatedLead: false,
+        alreadyCreatedOrder: false,
+      });
+      const nextStage = this.rules.stageForIntent(
+        intent,
+        conversation.conversionStage === 'HUMAN_HANDOFF' &&
+          !conversation.needsHuman
+          ? 'NEW'
+          : conversation.conversionStage,
+      );
+      if (nextStage !== conversation.conversionStage) {
+        await this.prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { conversionStage: nextStage },
+        });
+      }
       return { reply: null as string | null, mode: 'paused' as const };
     }
     if (conversation.mode === 'HUMAN' || conversation.needsHuman) {
@@ -172,6 +195,16 @@ export class AiService {
         conversionStage: result.conversionStage,
         handoffReason: result.handoffReason ?? null,
       },
+    });
+
+    await this.ensureSoftLead({
+      businessId: input.businessId,
+      customerId: input.customerId,
+      conversationId: conversation.id,
+      campaignId: conversation.campaignId,
+      intent: result.intent,
+      alreadyCreatedLead: Boolean(result.lead),
+      alreadyCreatedOrder: Boolean(result.order),
     });
 
     this.realtime.notifyConversationUpdated(
@@ -302,36 +335,15 @@ export class AiService {
     });
 
     // Soft lead creation for interest intents (avoid dup spam: one NEW per customer)
-    if (
-      [
-        'PURCHASE_INTENT',
-        'PRICE_INQUIRY',
-        'AVAILABILITY',
-        'LEAD_INTENT',
-      ].includes(result.intent) &&
-      !result.lead &&
-      !result.order
-    ) {
-      const existing = await this.prisma.lead.findFirst({
-        where: {
-          businessId: input.businessId,
-          customerId: input.customerId,
-          status: { in: [LeadStatus.NEW, LeadStatus.QUALIFIED] },
-        },
-      });
-      if (!existing) {
-        await this.prisma.lead.create({
-          data: {
-            businessId: input.businessId,
-            customerId: input.customerId,
-            conversationId: conversation.id,
-            campaignId: conversation.campaignId,
-            status: LeadStatus.NEW,
-            intent: result.intent,
-          },
-        });
-      }
-    }
+    await this.ensureSoftLead({
+      businessId: input.businessId,
+      customerId: input.customerId,
+      conversationId: conversation.id,
+      campaignId: conversation.campaignId,
+      intent: result.intent,
+      alreadyCreatedLead: Boolean(result.lead),
+      alreadyCreatedOrder: Boolean(result.order),
+    });
 
     this.logger.debug(`AI reply via ${result.mode} intent=${result.intent}`);
 
@@ -353,6 +365,51 @@ export class AiService {
       needsHuman: result.needsHuman,
       conversionStage: result.conversionStage,
     };
+  }
+
+  /** Create NEW lead for interest intents when tools didn't already create one. */
+  private async ensureSoftLead(input: {
+    businessId: string;
+    customerId: string;
+    conversationId: string;
+    campaignId: string | null;
+    intent: string;
+    alreadyCreatedLead: boolean;
+    alreadyCreatedOrder: boolean;
+  }) {
+    if (
+      input.alreadyCreatedLead ||
+      input.alreadyCreatedOrder ||
+      ![
+        'PURCHASE_INTENT',
+        'PRICE_INQUIRY',
+        'AVAILABILITY',
+        'PRODUCT_QUESTION',
+        'LEAD_INTENT',
+      ].includes(input.intent)
+    ) {
+      return;
+    }
+
+    const existing = await this.prisma.lead.findFirst({
+      where: {
+        businessId: input.businessId,
+        customerId: input.customerId,
+        status: { in: [LeadStatus.NEW, LeadStatus.QUALIFIED] },
+      },
+    });
+    if (existing) return;
+
+    await this.prisma.lead.create({
+      data: {
+        businessId: input.businessId,
+        customerId: input.customerId,
+        conversationId: input.conversationId,
+        campaignId: input.campaignId,
+        status: LeadStatus.NEW,
+        intent: input.intent,
+      },
+    });
   }
 
   async setConversationMode(
