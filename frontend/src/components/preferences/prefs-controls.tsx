@@ -1,6 +1,6 @@
-import { LanguageDropdown } from '@/components/preferences/language-dropdown'
-import { ThemeToggle } from '@/components/preferences/theme-toggle'
-import { cn } from '@/lib/utils'
+import { LanguageDropdown } from '@/components/preferences/language-dropdown';
+import { ThemeToggle } from '@/components/preferences/theme-toggle';
+import { cn } from '@/lib/utils';
 
 export function PrefsControls({ className }: { className?: string }) {
   return (
@@ -8,5 +8,5 @@ export function PrefsControls({ className }: { className?: string }) {
       <LanguageDropdown />
       <ThemeToggle />
     </div>
-  )
+  );
 }

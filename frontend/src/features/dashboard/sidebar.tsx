@@ -1,7 +1,7 @@
-import { Bee3lyLogo } from '@/components/brand/bee3ly-logo'
-import { useAuth } from '@/features/auth/auth-context'
-import { useLocale } from '@/features/i18n/locale-context'
-import { cn } from '@/lib/utils'
+import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
+import { useAuth } from '@/features/auth/auth-context';
+import { useLocale } from '@/features/i18n/locale-context';
+import { cn } from '@/lib/utils';
 import {
   BarChart3,
   Brain,
@@ -15,58 +15,59 @@ import {
   MessageCircle,
   UserRound,
   Users,
-} from 'lucide-react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+} from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { paths } from '@/routes/paths';
 
 const navItems = [
-  { to: '/app', labelKey: 'navHome' as const, icon: Home, end: true },
-  { to: '/app/inbox', labelKey: 'navInbox' as const, icon: MessageCircle },
+  { to: paths.app, labelKey: 'navHome' as const, icon: Home, end: true },
+  { to: paths.inbox, labelKey: 'navInbox' as const, icon: MessageCircle },
   {
-    to: '/app/campaigns',
+    to: paths.campaigns,
     labelKey: 'navCampaigns' as const,
     icon: Rocket,
     soon: true,
   },
   {
-    to: '/app/analytics',
+    to: paths.analytics,
     labelKey: 'navAnalytics' as const,
     icon: BarChart3,
     soon: true,
   },
-  { to: '/app/leads', labelKey: 'navLeads' as const, icon: Users },
-  { to: '/app/orders', labelKey: 'navOrders' as const, icon: ShoppingBag },
-  { to: '/app/products', labelKey: 'navProducts' as const, icon: Package },
-  { to: '/app/ai', labelKey: 'navAi' as const, icon: Brain },
-  { to: '/app/profile', labelKey: 'navProfile' as const, icon: UserRound },
-  { to: '/app/billing', labelKey: 'navBilling' as const, icon: CreditCard },
-  { to: '/app/settings', labelKey: 'navSettings' as const, icon: Settings },
-]
+  { to: paths.leads, labelKey: 'navLeads' as const, icon: Users },
+  { to: paths.orders, labelKey: 'navOrders' as const, icon: ShoppingBag },
+  { to: paths.products, labelKey: 'navProducts' as const, icon: Package },
+  { to: paths.ai, labelKey: 'navAi' as const, icon: Brain },
+  { to: paths.profile, labelKey: 'navProfile' as const, icon: UserRound },
+  { to: paths.billing, labelKey: 'navBilling' as const, icon: CreditCard },
+  { to: paths.settings, labelKey: 'navSettings' as const, icon: Settings },
+];
 
 function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
-  return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase()
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
 }
 
 export function DashboardSidebar({ className }: { className?: string }) {
-  const { t } = useLocale()
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { t } = useLocale();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout()
-    navigate('/login', { replace: true })
-  }
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside
       className={cn(
-        'flex h-full w-[260px] shrink-0 flex-col border-e border-border bg-surface',
+        'border-border bg-surface flex h-full w-[260px] shrink-0 flex-col border-e',
         className,
       )}
     >
-      <div className="h-16 border-b border-border px-5 flex items-center">
+      <div className="border-border flex h-16 items-center border-b px-5">
         <Bee3lyLogo markClassName="h-9 w-9" />
       </div>
 
@@ -113,20 +114,20 @@ export function DashboardSidebar({ className }: { className?: string }) {
         ))}
       </nav>
 
-      <div className="border-t border-border px-3 py-3">
-        <div className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-lavender">
+      <div className="border-border border-t px-3 py-3">
+        <div className="hover:bg-lavender flex items-center gap-2 rounded-xl px-2 py-2">
           <Link
-            to="/app/profile"
+            to={paths.profile}
             className="flex min-w-0 flex-1 items-center gap-2.5"
           >
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
+            <span className="bg-brand inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white">
               {initials(user?.name ?? '')}
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold leading-tight text-ink">
+              <span className="text-ink block truncate text-sm leading-tight font-semibold">
                 {user?.name}
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-muted">
+              <span className="text-muted mt-0.5 block truncate text-[11px]">
                 {t('roleOwner')}
               </span>
             </span>
@@ -134,15 +135,15 @@ export function DashboardSidebar({ className }: { className?: string }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface hover:text-danger"
+            className="text-muted hover:bg-surface hover:text-danger inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
             aria-label={t('logout')}
             title={t('logout')}
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-1 px-2 text-[10px] text-muted/55">v1.0.0</p>
+        <p className="text-muted/55 mt-1 px-2 text-[10px]">v1.0.0</p>
       </div>
     </aside>
-  )
+  );
 }

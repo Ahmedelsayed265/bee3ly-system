@@ -1,13 +1,13 @@
-import { cn } from '@/lib/utils'
-import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
 
 type PageLayoutProps = {
-  title: string
-  description?: string
-  actions?: ReactNode
-  children: ReactNode
-  className?: string
-}
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+};
 
 /** Full-bleed app page shell — no narrow max-width centering. */
 export function PageLayout({
@@ -21,9 +21,9 @@ export function PageLayout({
     <div className={cn('flex w-full flex-col gap-5', className)}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-ink">{title}</h1>
+          <h1 className="text-ink text-2xl font-bold">{title}</h1>
           {description ? (
-            <p className="mt-1 text-sm text-muted">{description}</p>
+            <p className="text-muted mt-1 text-sm">{description}</p>
           ) : null}
         </div>
         {actions ? (
@@ -32,5 +32,5 @@ export function PageLayout({
       </div>
       {children}
     </div>
-  )
+  );
 }

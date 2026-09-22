@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @font-face {
   font-family: 'Marzouk';
@@ -11,8 +11,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: "Marzouk", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Marzouk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Marzouk', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Marzouk', ui-sans-serif, system-ui, sans-serif;
   --color-brand: #6366f1;
   --color-brand-foreground: #ffffff;
   --color-trust: #4f46e5;
@@ -109,8 +109,16 @@ select:-webkit-autofill {
 /* —— Auth marketing panel —— */
 .marketing-panel {
   background:
-    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(99, 102, 241, 0.28), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(129, 140, 248, 0.2), transparent 50%),
+    radial-gradient(
+      ellipse 80% 60% at 10% 0%,
+      rgba(99, 102, 241, 0.28),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 70% 50% at 100% 100%,
+      rgba(129, 140, 248, 0.2),
+      transparent 50%
+    ),
     linear-gradient(165deg, #0f172a 0%, #1e1b4b 48%, #312e81 100%);
 }
 
@@ -348,4 +356,3 @@ select:-webkit-autofill {
     opacity: 1;
   }
 }
-

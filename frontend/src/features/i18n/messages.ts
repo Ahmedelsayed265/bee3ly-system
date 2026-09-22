@@ -1,4 +1,4 @@
-export type Locale = 'ar' | 'en'
+export type Locale = 'ar' | 'en';
 
 export const messages = {
   ar: {
@@ -110,7 +110,8 @@ export const messages = {
     passwordChanged: 'تم تحديث كلمة المرور',
     currentPasswordWrong: 'كلمة المرور الحالية غير صحيحة',
     managePlan: 'إدارة الباقة',
-    billingIntro: 'اختار الباقة المناسبة لبيزنسك. الدفع الحقيقي لاحقًا — دلوقتي للتجربة.',
+    billingIntro:
+      'اختار الباقة المناسبة لبيزنسك. الدفع الحقيقي لاحقًا — دلوقتي للتجربة.',
     currentPlanLabel: 'باقتك الحالية',
     billingDemoNote: 'تجريبي بدون دفع',
     planPopular: 'الأكثر اختيارًا',
@@ -180,7 +181,8 @@ export const messages = {
     productSizes: 'المقاسات (مفصولة بفاصلة)',
     productColors: 'الألوان (مفصولة بفاصلة)',
     productDetails: 'تفاصيل إضافية',
-    productDetailsHint: 'الحقول دي مقترحة حسب نوع بيزنسك — تقدر تضيف أي خاصية كمان.',
+    productDetailsHint:
+      'الحقول دي مقترحة حسب نوع بيزنسك — تقدر تضيف أي خاصية كمان.',
     attrSizes: 'المقاسات',
     attrSizesPlaceholder: 'S, M, L, XL',
     attrColors: 'الألوان',
@@ -234,7 +236,8 @@ export const messages = {
     confirmLaunchBody: 'هتنفّذ "{action}" على الحملة.',
     noProducts: 'لا توجد عناصر بعد.',
     noProductsHint: 'ابدأ بإضافة أول منتج أو خدمة عشان الـ AI يرد صح.',
-    inboxIntro: 'رسائل العملاء من فيسبوك وإنستجرام. استلم المحادثة عشان ترد بنفسك.',
+    inboxIntro:
+      'رسائل العملاء من فيسبوك وإنستجرام. استلم المحادثة عشان ترد بنفسك.',
     noConversations: 'لا توجد محادثات بعد.',
     inboxEmptyHint: 'اختار محادثة من القائمة.',
     typeCustomerMessage: 'اكتب رسالة العميل...',
@@ -308,8 +311,7 @@ export const messages = {
     channelInstagram: 'Instagram',
     channelWhatsApp: 'WhatsApp',
     channelFacebookHint: 'اربط صفحة فيسبوك للرسائل والتعليقات.',
-    channelInstagramHint:
-      'بيتصل تلقائيًا مع صفحة فيسبوك لو الحساب مربوط بيها.',
+    channelInstagramHint: 'بيتصل تلقائيًا مع صفحة فيسبوك لو الحساب مربوط بيها.',
     channelWhatsAppHint: 'قريبًا — ردود وأوردرات من واتساب.',
     channelConnect: 'ربط',
     channelReconnect: 'إعادة الربط',
@@ -337,7 +339,8 @@ export const messages = {
     supportSection: 'المساعدة والدعم',
     supportIntro: 'محتاج مساعدة؟ اختار الطريقة المناسبة ليك.',
     next: 'التالي',
-    campaignsIntro: 'قول عايز تعلن عن إيه وهدفك — bee3ly يجهّز لك توصية حملة بسيطة.',
+    campaignsIntro:
+      'قول عايز تعلن عن إيه وهدفك — bee3ly يجهّز لك توصية حملة بسيطة.',
     campaignWizardTitle: 'إنشاء حملة بسيطة',
     campaignStepOffer: 'إنت عايز تعلن عن إيه؟',
     campaignOfferLabel: 'العرض / المنتج',
@@ -403,7 +406,8 @@ export const messages = {
     metaConnectHint:
       'بعد الموافقة هتختار صفحة الفيسبوك. إنستجرام بيتصل تلقائيًا لو مربوط بالصفحة.',
     selectFacebookPage: 'اختار صفحة الفيسبوك',
-    selectFacebookPageHint: 'اختار الصفحة اللي عايز Bee3ly يرد منها على العملاء.',
+    selectFacebookPageHint:
+      'اختار الصفحة اللي عايز Bee3ly يرد منها على العملاء.',
     pageHasInstagram: 'معها Instagram',
     pageNoInstagram: 'بدون Instagram',
     metaPendingExpired: 'جلسة الربط انتهت — ابدأ الربط من جديد.',
@@ -583,7 +587,8 @@ export const messages = {
     passwordChanged: 'Password updated',
     currentPasswordWrong: 'Current password is incorrect',
     managePlan: 'Manage plan',
-    billingIntro: 'Pick the plan that fits your business. Real billing comes later — this is for testing.',
+    billingIntro:
+      'Pick the plan that fits your business. Real billing comes later — this is for testing.',
     currentPlanLabel: 'Current plan',
     billingDemoNote: 'demo, no payment',
     planPopular: 'Most popular',
@@ -620,7 +625,8 @@ export const messages = {
     bizType_REAL_ESTATE: 'Real estate',
     bizType_OTHER: 'Other',
     onboardingTitle: 'Let’s set up your business quickly',
-    onboardingSubtitle: 'A few short questions so the AI can help from the first message.',
+    onboardingSubtitle:
+      'A few short questions so the AI can help from the first message.',
     onboardingStep: 'Step {step} of {total}',
     onboardingWhatSell: 'What do you sell?',
     onboardingWhatSellPlaceholder: 'e.g. t-shirts, perfume, meals...',
@@ -707,8 +713,10 @@ export const messages = {
     confirmLaunchTitle: 'Confirm this action?',
     confirmLaunchBody: 'Run "{action}" on this campaign.',
     noProducts: 'No items yet.',
-    noProductsHint: 'Add your first product or service so AI can answer accurately.',
-    inboxIntro: 'Customer messages from Facebook and Instagram. Take over to reply yourself.',
+    noProductsHint:
+      'Add your first product or service so AI can answer accurately.',
+    inboxIntro:
+      'Customer messages from Facebook and Instagram. Take over to reply yourself.',
     noConversations: 'No conversations yet.',
     inboxEmptyHint: 'Pick a conversation from the list.',
     typeCustomerMessage: 'Type customer message...',
@@ -863,7 +871,8 @@ export const messages = {
     aiInstructions: 'Extra instructions',
     aiInstructionsHint: 'Any notes for the AI employee (optional).',
     aiHandoff: 'Human handoff',
-    aiHandoffHint: 'When the customer asks for a person or the case is complex.',
+    aiHandoffHint:
+      'When the customer asks for a person or the case is complex.',
     aiTestArea: 'Try a reply',
     takeOver: 'Take over',
     returnToAi: 'Return to AI',
@@ -929,7 +938,8 @@ export const messages = {
     actionManageCustomers: 'Manage customers',
     actionViewOrders: 'View orders',
 
-    marketingAlt: 'bee3ly — focus on your work, we follow up with your customers',
+    marketingAlt:
+      'bee3ly — focus on your work, we follow up with your customers',
     marketingEyebrow: 'AI that sells',
     marketingHeadlineBefore: 'You focus on work. We follow up with',
     marketingHeadlineHighlight: 'your customers',
@@ -949,6 +959,6 @@ export const messages = {
     benefitTime: 'Save your time',
     benefitSales: 'Higher sales',
   },
-} as const
+} as const;
 
-export type MessageKey = keyof typeof messages.ar
+export type MessageKey = keyof typeof messages.ar;

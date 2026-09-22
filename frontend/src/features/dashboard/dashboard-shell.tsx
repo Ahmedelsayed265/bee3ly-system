@@ -1,10 +1,10 @@
-import { DashboardSidebar } from '@/features/dashboard/sidebar'
-import { DashboardTopBar } from '@/features/dashboard/top-bar'
-import { Outlet } from 'react-router-dom'
+import { DashboardSidebar } from '@/features/dashboard/sidebar';
+import { DashboardTopBar } from '@/features/dashboard/top-bar';
+import { Outlet } from 'react-router-dom';
 
 export function DashboardShell() {
   return (
-    <div className="flex h-svh overflow-hidden bg-page text-ink">
+    <div className="bg-page text-ink flex h-svh overflow-hidden">
       <DashboardSidebar className="hidden md:flex" />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardTopBar />
@@ -15,5 +15,5 @@ export function DashboardShell() {
         </main>
       </div>
     </div>
-  )
+  );
 }

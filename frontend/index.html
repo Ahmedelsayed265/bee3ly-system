@@ -1,37 +1,35 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bee3ly</title>
 
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>bee3ly</title>
+    <script>
+      (function () {
+        try {
+          var locale = localStorage.getItem('bee3ly_locale');
 
-  <script>
-    (function () {
-      try {
-        var locale = localStorage.getItem('bee3ly_locale')
+          if (locale !== 'ar' && locale !== 'en') locale = 'ar';
 
-        if (locale !== 'ar' && locale !== 'en') locale = 'ar'
+          document.documentElement.lang = locale;
+          document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
 
-        document.documentElement.lang = locale
-        document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr'
+          var theme = localStorage.getItem('bee3ly_theme');
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+          }
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+        } catch (_) {}
+      })();
+    </script>
+  </head>
 
-        var theme = localStorage.getItem('bee3ly_theme')
-        if (theme !== 'light' && theme !== 'dark') {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'light'
-        }
-        document.documentElement.classList.toggle('dark', theme === 'dark')
-      } catch (_) { }
-    })()
-  </script>
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

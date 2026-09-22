@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+cd "$(dirname -- "$0")/.." || exit 1
+
+echo "Running lint before push..."
+npm run lint
+
+echo "Running build before push..."
+npm run build
+
+echo "Running Prettier check before push..."
+npm run format:check
+
+echo "All checks passed. Pushing..."

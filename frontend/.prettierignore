@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Vite
+*.local
+.vite/
+
+# Generated files
+*.generated.ts
+*.generated.tsx
+
+# Env files
+.env*
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

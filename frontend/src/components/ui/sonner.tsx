@@ -1,10 +1,10 @@
-import { useTheme } from '@/features/theme/theme-context'
-import { useLocale } from '@/features/i18n/locale-context'
-import { Toaster as Sonner, type ToasterProps } from 'sonner'
+import { useTheme } from '@/features/theme/theme-context';
+import { useLocale } from '@/features/i18n/locale-context';
+import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
 export function Toaster({ ...props }: ToasterProps) {
-  const { theme } = useTheme()
-  const { dir } = useLocale()
+  const { theme } = useTheme();
+  const { dir } = useLocale();
 
   return (
     <Sonner
@@ -26,5 +26,5 @@ export function Toaster({ ...props }: ToasterProps) {
       }}
       {...props}
     />
-  )
+  );
 }

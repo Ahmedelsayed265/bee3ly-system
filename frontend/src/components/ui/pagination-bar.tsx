@@ -1,14 +1,14 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 
 type PaginationBarProps = {
-  page: number
-  totalPages: number
-  fetching?: boolean
-  previousLabel: string
-  nextLabel: string
-  pageLabel: string
-  onPage: (page: number) => void
-}
+  page: number;
+  totalPages: number;
+  fetching?: boolean;
+  previousLabel: string;
+  nextLabel: string;
+  pageLabel: string;
+  onPage: (page: number) => void;
+};
 
 export function PaginationBar({
   page,
@@ -19,11 +19,11 @@ export function PaginationBar({
   pageLabel,
   onPage,
 }: PaginationBarProps) {
-  if (totalPages <= 1) return null
+  if (totalPages <= 1) return null;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-sm text-muted">{pageLabel}</p>
+      <p className="text-muted text-sm">{pageLabel}</p>
       <div className="flex items-center gap-2">
         <Button
           size="sm"
@@ -43,5 +43,5 @@ export function PaginationBar({
         </Button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -6,18 +6,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from '@/components/ui/dialog';
 
 type ConfirmDialogProps = {
-  open: boolean
-  title: string
-  description: string
-  confirmLabel: string
-  cancelLabel: string
-  pending?: boolean
-  onConfirm: () => void
-  onOpenChange: (open: boolean) => void
-}
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  pending?: boolean;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+};
 
 export function ConfirmDialog({
   open,
@@ -33,8 +33,8 @@ export function ConfirmDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && pending) return
-        onOpenChange(next)
+        if (!next && pending) return;
+        onOpenChange(next);
       }}
     >
       <DialogContent className="max-w-md">
@@ -57,5 +57,5 @@ export function ConfirmDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

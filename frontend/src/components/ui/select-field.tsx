@@ -1,29 +1,29 @@
-import { Label } from '@/components/ui/label'
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 export type SelectFieldOption = {
-  value: string
-  label: string
-}
+  value: string;
+  label: string;
+};
 
 type SelectFieldProps = {
-  id?: string
-  label?: string
-  value: string
-  onValueChange: (value: string) => void
-  options: SelectFieldOption[]
-  placeholder?: string
-  error?: string
-  disabled?: boolean
-  className?: string
-}
+  id?: string;
+  label?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: SelectFieldOption[];
+  placeholder?: string;
+  error?: string;
+  disabled?: boolean;
+  className?: string;
+};
 
 export function SelectField({
   id,
@@ -43,7 +43,9 @@ export function SelectField({
         <SelectTrigger
           id={id}
           aria-invalid={Boolean(error) || undefined}
-          className={cn(error && 'border-danger focus:border-danger focus:ring-danger/20')}
+          className={cn(
+            error && 'border-danger focus:border-danger focus:ring-danger/20',
+          )}
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -55,7 +57,7 @@ export function SelectField({
           ))}
         </SelectContent>
       </Select>
-      {error ? <p className="mt-1.5 text-sm text-danger">{error}</p> : null}
+      {error ? <p className="text-danger mt-1.5 text-sm">{error}</p> : null}
     </div>
-  )
+  );
 }

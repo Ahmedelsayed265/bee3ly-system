@@ -1,6 +1,6 @@
-import axios from 'axios'
+import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -11,42 +11,45 @@ export const api = axios.create({
     // interstitial (ERR_NGROK_6024) with no CORS headers — shows up as "CORS error".
     'ngrok-skip-browser-warning': 'true',
   },
-})
+});
 
-let accessToken: string | null = localStorage.getItem('bee3ly_access_token')
+let accessToken: string | null = localStorage.getItem('bee3ly_access_token');
 
 export function setAccessToken(token: string | null) {
-  accessToken = token
+  accessToken = token;
   if (token) {
-    localStorage.setItem('bee3ly_access_token', token)
+    localStorage.setItem('bee3ly_access_token', token);
   } else {
-    localStorage.removeItem('bee3ly_access_token')
+    localStorage.removeItem('bee3ly_access_token');
   }
   // Lazy import avoids circular dependency with features/realtime/socket
-  void import('@/features/realtime/socket').then(({ reconnectRealtimeWithToken }) => {
-    reconnectRealtimeWithToken(token)
-  })
+  void import('@/features/realtime/socket').then(
+    ({ reconnectRealtimeWithToken }) => {
+      reconnectRealtimeWithToken(token);
+    },
+  );
 }
 
 export function getAccessToken() {
-  return accessToken
+  return accessToken;
 }
 
 api.interceptors.request.use((config) => {
   if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
-  return config
-})
+  return config;
+});
 
-let refreshPromise: Promise<string | null> | null = null
+let refreshPromise: Promise<string | null> | null = null;
 
-type RetryConfig = { _retry?: boolean }
+type RetryConfig = { _retry?: boolean };
 
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const original = error.config as (typeof error.config & RetryConfig) | undefined
+    const original = error.config as
+      (typeof error.config & RetryConfig) | undefined;
     if (
       error.response?.status === 401 &&
       original &&
@@ -55,27 +58,27 @@ api.interceptors.response.use(
       !String(original.url ?? '').includes('/auth/register') &&
       !String(original.url ?? '').includes('/auth/refresh')
     ) {
-      original._retry = true
+      original._retry = true;
       refreshPromise ??= api
         .post<{ accessToken: string }>('/auth/refresh')
         .then((res) => {
-          setAccessToken(res.data.accessToken)
-          return res.data.accessToken
+          setAccessToken(res.data.accessToken);
+          return res.data.accessToken;
         })
         .catch(() => {
-          setAccessToken(null)
-          return null
+          setAccessToken(null);
+          return null;
         })
         .finally(() => {
-          refreshPromise = null
-        })
+          refreshPromise = null;
+        });
 
-      const token = await refreshPromise
+      const token = await refreshPromise;
       if (token) {
-        original.headers.Authorization = `Bearer ${token}`
-        return api(original)
+        original.headers.Authorization = `Bearer ${token}`;
+        return api(original);
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(error);
   },
-)
+);

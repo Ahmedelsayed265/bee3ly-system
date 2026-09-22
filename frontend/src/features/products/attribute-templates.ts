@@ -1,18 +1,18 @@
-import type { BusinessType } from '@/features/business/api'
-import type { MessageKey } from '@/features/i18n/messages'
+import type { BusinessType } from '@/features/business/api';
+import type { MessageKey } from '@/features/i18n/messages';
 
-export type AttributeFieldKind = 'tags' | 'text' | 'number'
+export type AttributeFieldKind = 'tags' | 'text' | 'number';
 
 export type AttributeTemplateField = {
-  key: string
-  labelKey: MessageKey
-  kind: AttributeFieldKind
-  placeholderKey?: MessageKey
-}
+  key: string;
+  labelKey: MessageKey;
+  kind: AttributeFieldKind;
+  placeholderKey?: MessageKey;
+};
 
 /** Physical catalog → quantity. Made-to-order / listings → available/unavailable. */
 export function usesQuantityStock(type: BusinessType | string): boolean {
-  return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE'
+  return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE';
 }
 
 /** Suggested detail fields per business type — merchants can still add custom keys. */
@@ -21,12 +21,27 @@ export const ATTRIBUTE_TEMPLATES: Record<
   AttributeTemplateField[]
 > = {
   FASHION: [
-    { key: 'sizes', labelKey: 'attrSizes', kind: 'tags', placeholderKey: 'attrSizesPlaceholder' },
-    { key: 'colors', labelKey: 'attrColors', kind: 'tags', placeholderKey: 'attrColorsPlaceholder' },
+    {
+      key: 'sizes',
+      labelKey: 'attrSizes',
+      kind: 'tags',
+      placeholderKey: 'attrSizesPlaceholder',
+    },
+    {
+      key: 'colors',
+      labelKey: 'attrColors',
+      kind: 'tags',
+      placeholderKey: 'attrColorsPlaceholder',
+    },
     { key: 'material', labelKey: 'attrMaterial', kind: 'text' },
   ],
   PERFUME: [
-    { key: 'sizes', labelKey: 'attrBottleSizes', kind: 'tags', placeholderKey: 'attrBottleSizesPlaceholder' },
+    {
+      key: 'sizes',
+      labelKey: 'attrBottleSizes',
+      kind: 'tags',
+      placeholderKey: 'attrBottleSizesPlaceholder',
+    },
     { key: 'notes', labelKey: 'attrNotes', kind: 'text' },
   ],
   BEAUTY: [
@@ -35,11 +50,21 @@ export const ATTRIBUTE_TEMPLATES: Record<
     { key: 'shade', labelKey: 'attrShade', kind: 'tags' },
   ],
   RESTAURANT: [
-    { key: 'portions', labelKey: 'attrPortions', kind: 'tags', placeholderKey: 'attrPortionsPlaceholder' },
+    {
+      key: 'portions',
+      labelKey: 'attrPortions',
+      kind: 'tags',
+      placeholderKey: 'attrPortionsPlaceholder',
+    },
     { key: 'extras', labelKey: 'attrExtras', kind: 'tags' },
   ],
   CAFE: [
-    { key: 'sizes', labelKey: 'attrCupSizes', kind: 'tags', placeholderKey: 'attrCupSizesPlaceholder' },
+    {
+      key: 'sizes',
+      labelKey: 'attrCupSizes',
+      kind: 'tags',
+      placeholderKey: 'attrCupSizesPlaceholder',
+    },
     { key: 'extras', labelKey: 'attrExtras', kind: 'tags' },
   ],
   ECOMMERCE: [
@@ -52,23 +77,28 @@ export const ATTRIBUTE_TEMPLATES: Record<
     { key: 'location', labelKey: 'attrLocation', kind: 'text' },
   ],
   OTHER: [
-    { key: 'options', labelKey: 'attrOptions', kind: 'tags', placeholderKey: 'attrOptionsPlaceholder' },
+    {
+      key: 'options',
+      labelKey: 'attrOptions',
+      kind: 'tags',
+      placeholderKey: 'attrOptionsPlaceholder',
+    },
   ],
-}
+};
 
-export type ProductAttributeValue = string | number | boolean | string[]
-export type ProductAttributes = Record<string, ProductAttributeValue>
+export type ProductAttributeValue = string | number | boolean | string[];
+export type ProductAttributes = Record<string, ProductAttributeValue>;
 
 export function parseTagsInput(value: string): string[] {
   return value
     .split(/[,،]/)
     .map((part) => part.trim())
-    .filter(Boolean)
+    .filter(Boolean);
 }
 
 export function formatAttributeValue(value: ProductAttributeValue): string {
-  if (Array.isArray(value)) return value.join(', ')
-  return String(value)
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
 }
 
 const KNOWN_ATTR_LABELS: Record<string, MessageKey> = {
@@ -90,10 +120,10 @@ const KNOWN_ATTR_LABELS: Record<string, MessageKey> = {
   flavor: 'attrFlavors',
   protein_g: 'attrProtein',
   serving: 'attrServing',
-}
+};
 
 export function attributeLabelKey(key: string): MessageKey | null {
-  return KNOWN_ATTR_LABELS[key] ?? null
+  return KNOWN_ATTR_LABELS[key] ?? null;
 }
 
 export function resolveAttributeEntries(
@@ -105,49 +135,49 @@ export function resolveAttributeEntries(
       field.key,
       field.labelKey,
     ]),
-  )
+  );
 
   return Object.entries(attrs)
     .filter(([, value]) => {
-      if (Array.isArray(value)) return value.length > 0
-      if (typeof value === 'string') return value.trim().length > 0
-      return typeof value === 'number' || typeof value === 'boolean'
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') return value.trim().length > 0;
+      return typeof value === 'number' || typeof value === 'boolean';
     })
     .map(([key, value]) => ({
       key,
       labelKey: templateKeys.get(key) ?? attributeLabelKey(key),
       value: formatAttributeValue(value),
-    }))
+    }));
 }
 
 export function buildAttributesFromForm(input: {
-  templateValues: Record<string, string>
-  template: AttributeTemplateField[]
-  customRows: Array<{ key: string; value: string }>
+  templateValues: Record<string, string>;
+  template: AttributeTemplateField[];
+  customRows: Array<{ key: string; value: string }>;
 }): ProductAttributes {
-  const attributes: ProductAttributes = {}
+  const attributes: ProductAttributes = {};
 
   for (const field of input.template) {
-    const raw = (input.templateValues[field.key] ?? '').trim()
-    if (!raw) continue
+    const raw = (input.templateValues[field.key] ?? '').trim();
+    if (!raw) continue;
     if (field.kind === 'tags') {
-      const tags = parseTagsInput(raw)
-      if (tags.length) attributes[field.key] = tags
+      const tags = parseTagsInput(raw);
+      if (tags.length) attributes[field.key] = tags;
     } else if (field.kind === 'number') {
-      const num = Number(raw)
-      if (Number.isFinite(num)) attributes[field.key] = num
+      const num = Number(raw);
+      if (Number.isFinite(num)) attributes[field.key] = num;
     } else {
-      attributes[field.key] = raw
+      attributes[field.key] = raw;
     }
   }
 
   for (const row of input.customRows) {
-    const key = row.key.trim()
-    const value = row.value.trim()
-    if (!key || !value) continue
-    const tags = parseTagsInput(value)
-    attributes[key] = tags.length > 1 ? tags : value
+    const key = row.key.trim();
+    const value = row.value.trim();
+    if (!key || !value) continue;
+    const tags = parseTagsInput(value);
+    attributes[key] = tags.length > 1 ? tags : value;
   }
 
-  return attributes
+  return attributes;
 }

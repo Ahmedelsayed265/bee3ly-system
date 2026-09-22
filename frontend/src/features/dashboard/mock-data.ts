@@ -6,7 +6,7 @@ export const salesSpark = [
   { day: '16', value: 28 },
   { day: '17', value: 36 },
   { day: '18', value: 42 },
-]
+];
 
 export const campaigns = [
   {
@@ -33,13 +33,13 @@ export const campaigns = [
     spend: '2,150',
     roas: '3.2x',
   },
-]
+];
 
 export const recentSales = [
   { id: '1', name: 'سارة أحمد', amount: '1,250', product: 'تيشيرت أسود' },
   { id: '2', name: 'محمد علي', amount: '890', product: 'عطر' },
   { id: '3', name: 'نور حسن', amount: '2,100', product: 'سنيكرز' },
-]
+];
 
 export const recentOrders = [
   {
@@ -57,7 +57,7 @@ export const recentOrders = [
     product: 'سنيكرز أسود',
     tone: '#4F46E5',
   },
-]
+];
 
 export const recentChats = [
   {
@@ -81,7 +81,7 @@ export const recentChats = [
     time: '15د',
     initials: 'كي',
   },
-]
+];
 
 export const metrics = [
   {
@@ -108,4 +108,4 @@ export const metrics = [
     suffix: '',
     delta: '+12.3%',
   },
-]
+];

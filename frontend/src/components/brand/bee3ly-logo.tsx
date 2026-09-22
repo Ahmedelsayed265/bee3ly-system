@@ -1,26 +1,34 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 type Bee3lyLogoProps = {
-  className?: string
-  markClassName?: string
-  withWordmark?: boolean
+  className?: string;
+  markClassName?: string;
+  withWordmark?: boolean;
   /** brand = primary mark; light = surface mark; ink = text mark; onDark = primary mark + light wordmark */
-  tone?: 'brand' | 'light' | 'ink' | 'onDark'
-}
+  tone?: 'brand' | 'light' | 'ink' | 'onDark';
+};
 
 /** Official growth-path mark */
 export function Bee3lyMark({
   className,
   tone = 'brand',
 }: {
-  className?: string
-  tone?: Exclude<Bee3lyLogoProps['tone'], 'onDark'> | 'brand'
+  className?: string;
+  tone?: Exclude<Bee3lyLogoProps['tone'], 'onDark'> | 'brand';
 }) {
-  const resolved = tone === 'brand' || !tone ? 'brand' : tone
+  const resolved = tone === 'brand' || !tone ? 'brand' : tone;
   const bg =
-    resolved === 'brand' ? '#6366F1' : resolved === 'light' ? '#F8FAFC' : '#0F172A'
+    resolved === 'brand'
+      ? '#6366F1'
+      : resolved === 'light'
+        ? '#F8FAFC'
+        : '#0F172A';
   const stroke =
-    resolved === 'brand' ? '#FFFFFF' : resolved === 'light' ? '#6366F1' : '#F8FAFC'
+    resolved === 'brand'
+      ? '#FFFFFF'
+      : resolved === 'light'
+        ? '#6366F1'
+        : '#F8FAFC';
 
   return (
     <svg
@@ -42,7 +50,7 @@ export function Bee3lyMark({
       />
       <circle cx="90" cy="40" r="9" fill={stroke} />
     </svg>
-  )
+  );
 }
 
 export function Bee3lyLogo({
@@ -51,10 +59,11 @@ export function Bee3lyLogo({
   withWordmark = true,
   tone = 'brand',
 }: Bee3lyLogoProps) {
-  const markTone = tone === 'onDark' ? 'brand' : tone
-  const wordColor = tone === 'onDark' || tone === 'light' ? 'text-[#F8FAFC]' : 'text-ink'
+  const markTone = tone === 'onDark' ? 'brand' : tone;
+  const wordColor =
+    tone === 'onDark' || tone === 'light' ? 'text-[#F8FAFC]' : 'text-ink';
   const accentColor =
-    tone === 'onDark' || tone === 'light' ? 'text-[#818CF8]' : 'text-brand'
+    tone === 'onDark' || tone === 'light' ? 'text-[#818CF8]' : 'text-brand';
 
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
@@ -62,7 +71,7 @@ export function Bee3lyLogo({
       {withWordmark ? (
         <span
           className={cn(
-            'font-display text-[1.65rem] font-bold leading-none tracking-tight',
+            'font-display text-[1.65rem] leading-none font-bold tracking-tight',
             wordColor,
           )}
         >
@@ -73,5 +82,5 @@ export function Bee3lyLogo({
       ) : null}
       <span className="sr-only">bee3ly</span>
     </span>
-  )
+  );
 }
