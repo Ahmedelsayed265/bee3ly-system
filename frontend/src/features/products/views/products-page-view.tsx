@@ -1,11 +1,12 @@
-import { Plus } from 'lucide-react';
+import { Plus, Tags } from 'lucide-react';
 import { PageLayout } from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PaginationBar } from '@/components/ui/pagination-bar';
 import { ProductEmptyState } from '@/features/products/components/product-empty-state';
 import { ProductFormDialog } from '@/features/products/components/product-form-dialog';
-import { ProductGrid } from '@/features/products/components/product-grid';
+import { ProductsTable } from '@/features/products/components/products-table';
+import { VariantDictionaryDialog } from '@/features/products/components/variant-dictionary-dialog';
 import { useProducts } from '@/features/products/hooks/use-products';
 import { useLocale } from '@/features/i18n/locale-context';
 
@@ -18,18 +19,40 @@ export function ProductsPageView() {
       title={t('navProducts')}
       description={t('productsIntro')}
       actions={
-        <Button onClick={() => products.setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          {t('addProduct')}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => products.setDictOpen(true)}
+          >
+            <Tags className="h-4 w-4" />
+            {t('variantDictManage')}
+          </Button>
+          <Button onClick={products.openCreate}>
+            <Plus className="h-4 w-4" />
+            {t('addProduct')}
+          </Button>
+        </div>
       }
     >
+      <VariantDictionaryDialog
+        open={products.dictOpen}
+        onOpenChange={products.setDictOpen}
+        businessType={products.businessType}
+        initial={products.dictionary}
+        products={products.products}
+        onSaved={products.onDictionarySaved}
+      />
+
       <ProductFormDialog
         open={products.open}
         onOpenChange={products.setDialogOpen}
+        mode={products.mode}
         quantityMode={products.quantityMode}
-        template={products.template}
-        formHint={products.formHint}
+        variantsEnabled={products.variantsEnabled}
+        onVariantsEnabledChange={products.setVariantsEnabled}
+        dictionary={products.dictionary}
+        onOpenDictionary={() => products.setDictOpen(true)}
+        productSku={products.productSku}
         name={products.name}
         onNameChange={products.setName}
         priceEgp={products.priceEgp}
@@ -40,23 +63,23 @@ export function ProductsPageView() {
         onStockQuantityChange={products.setStockQuantity}
         listingAvailable={products.listingAvailable}
         onListingAvailableChange={products.setListingAvailable}
-        templateValues={products.templateValues}
-        onTemplateValuesChange={products.setTemplateValues}
-        customRows={products.customRows}
-        onCustomRowsChange={products.setCustomRows}
-        isPending={products.isCreating}
+        variantAxes={products.variantAxes}
+        onVariantAxesChange={products.setVariantAxes}
+        variantSkus={products.variantSkus}
+        onSkuChange={products.onSkuChange}
+        onApplyDefaults={products.applyBasePriceToSkus}
+        isPending={products.isSaving}
         onSubmit={products.submit}
       />
 
       {products.total === 0 && !products.isLoading ? (
-        <ProductEmptyState onAdd={() => products.setDialogOpen(true)} />
+        <ProductEmptyState onAdd={products.openCreate} />
       ) : (
-        <ProductGrid
+        <ProductsTable
           products={products.products}
           businessType={products.businessType}
           quantityMode={products.quantityMode}
-          isUpdatingStock={products.isUpdatingStock}
-          onUpdateStock={products.updateStock}
+          onEdit={products.openEdit}
           onDelete={products.setPendingDelete}
         />
       )}

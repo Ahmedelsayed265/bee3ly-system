@@ -13,43 +13,123 @@ import {
   fetchProducts,
   updateProduct,
   type BusinessType,
+  type Product,
+  type VariantDictionaryOption,
 } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
+import { usesQuantityStock } from '@/features/products/attribute-templates';
+import type { VariantAxisDraft } from '@/features/products/components/product-variants-editor';
 import {
-  ATTRIBUTE_TEMPLATES,
-  buildAttributesFromForm,
-  usesQuantityStock,
-} from '@/features/products/attribute-templates';
+  asVariants,
+  hasVariantMatrix,
+  rebuildVariantSkus,
+  type ProductVariantSku,
+  type ProductVariants,
+} from '@/features/products/product-variants';
+import { asVariantDictionary } from '@/features/products/variant-dictionary';
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 10;
+
+function generateProductSku(): string {
+  const part = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `PRD-${part}`;
+}
+
+function readExistingSku(product: Product): string | null {
+  const raw = product.attributes?.sku;
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  return null;
+}
+
+function axesFromProduct(
+  product: Product,
+  dictionary: VariantDictionaryOption[],
+): VariantAxisDraft[] {
+  const existing = asVariants(product.variants);
+  if (hasVariantMatrix(existing)) {
+    return existing.axes.map((axis) => {
+      const match =
+        dictionary.find((d) => d.name === axis.name) ??
+        dictionary.find((d) =>
+          axis.values.every((v) => d.values.includes(v)),
+        );
+      return {
+        dictionaryId: match?.id ?? `legacy_${axis.name}`,
+        name: axis.name,
+        selectedValues: axis.values,
+      };
+    });
+  }
+
+  const attrs = product.attributes ?? {};
+  const drafts: VariantAxisDraft[] = [];
+  const pushIf = (names: string[], values: string[]) => {
+    if (!values.length) return;
+    const match = dictionary.find((d) =>
+      names.some((n) => d.name.toLowerCase() === n.toLowerCase()),
+    );
+    drafts.push({
+      dictionaryId: match?.id ?? `legacy_${names[0]}`,
+      name: match?.name ?? names[0]!,
+      selectedValues: values,
+    });
+  };
+
+  const sizes = product.sizes?.length
+    ? product.sizes
+    : Array.isArray(attrs.sizes)
+      ? attrs.sizes.map(String)
+      : [];
+  const colors = product.colors?.length
+    ? product.colors
+    : Array.isArray(attrs.colors)
+      ? attrs.colors.map(String)
+      : [];
+  const flavors = Array.isArray(attrs.flavors)
+    ? attrs.flavors.map(String)
+    : [];
+
+  pushIf(['مقاس', 'Size', 'sizes'], sizes);
+  pushIf(['لون', 'Color', 'colors'], colors);
+  pushIf(['نكهة', 'Flavor', 'flavors'], flavors);
+  return drafts;
+}
 
 export function useProducts() {
   const { t } = useLocale();
-  const { business } = useAuth();
+  const { business, refreshMe } = useAuth();
   const qc = useQueryClient();
   const businessType = (business?.type ?? 'OTHER') as BusinessType;
-  const template =
-    ATTRIBUTE_TEMPLATES[businessType] ?? ATTRIBUTE_TEMPLATES.OTHER;
   const quantityMode = usesQuantityStock(businessType);
+  const [dictionary, setDictionary] = useState<VariantDictionaryOption[]>(() =>
+    asVariantDictionary(business?.variantDictionary),
+  );
+
+  useEffect(() => {
+    setDictionary(asVariantDictionary(business?.variantDictionary));
+  }, [business?.variantDictionary]);
 
   const [page, setPage] = useState(1);
   const [pendingDelete, setPendingDelete] = useState<{
     id: string;
     name: string;
   } | null>(null);
+  const [dictOpen, setDictOpen] = useState(false);
 
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [productSku, setProductSku] = useState(() => generateProductSku());
+  const [preservedAttributes, setPreservedAttributes] = useState<
+    Record<string, string | number | boolean | string[]>
+  >({});
   const [name, setName] = useState('');
   const [priceEgp, setPriceEgp] = useState('');
   const [description, setDescription] = useState('');
   const [stockQuantity, setStockQuantity] = useState('10');
   const [listingAvailable, setListingAvailable] = useState(true);
-  const [templateValues, setTemplateValues] = useState<Record<string, string>>(
-    {},
-  );
-  const [customRows, setCustomRows] = useState<
-    Array<{ key: string; value: string }>
-  >([]);
+  const [variantsEnabled, setVariantsEnabled] = useState(false);
+  const [variantAxes, setVariantAxes] = useState<VariantAxisDraft[]>([]);
+  const [variantSkus, setVariantSkus] = useState<ProductVariantSku[]>([]);
 
   const productsQuery = useQuery({
     queryKey: ['products', page, PAGE_SIZE],
@@ -66,18 +146,96 @@ export function useProducts() {
     }
   }, [productsQuery.isSuccess, page, totalPages]);
 
+  useEffect(() => {
+    if (!variantsEnabled) {
+      setVariantSkus([]);
+      return;
+    }
+    setVariantSkus((prev) => {
+      const next = rebuildVariantSkus({
+        axes: variantAxes.map((axis) => ({
+          name: axis.name,
+          valuesInput: axis.selectedValues.join(', '),
+        })),
+        previousSkus: prev,
+        defaultPriceEgp: Number(priceEgp) || 0,
+        defaultStockQuantity: Number(stockQuantity) || 0,
+      });
+      const prevKeys = prev.map((s) => s.key).join('\0');
+      const nextKeys = next.skus.map((s) => s.key).join('\0');
+      if (prevKeys === nextKeys) return prev;
+      return next.skus;
+    });
+  }, [variantAxes, priceEgp, stockQuantity, variantsEnabled]);
+
+  const hasVariants = variantsEnabled && variantSkus.length > 0;
+
   const resetForm = () => {
+    setEditingId(null);
+    setProductSku(generateProductSku());
+    setPreservedAttributes({});
     setName('');
     setPriceEgp('');
     setDescription('');
     setStockQuantity('10');
     setListingAvailable(true);
-    setTemplateValues({});
-    setCustomRows([]);
+    setVariantsEnabled(false);
+    setVariantAxes([]);
+    setVariantSkus([]);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const openEdit = (product: Product) => {
+    const existing = asVariants(product.variants);
+    const axes = axesFromProduct(product, dictionary);
+    const attrs = { ...(product.attributes ?? {}) };
+    delete attrs.sizes;
+    delete attrs.colors;
+    delete attrs.flavors;
+    const sku = readExistingSku(product) ?? generateProductSku();
+    setEditingId(product.id);
+    setProductSku(sku);
+    setPreservedAttributes(attrs);
+    setName(product.name);
+    setPriceEgp(String(product.priceEgp));
+    setDescription(product.description ?? '');
+    setStockQuantity(String(product.stockQuantity ?? 0));
+    setListingAvailable(product.inStock);
+    setVariantsEnabled(hasVariantMatrix(existing) || axes.length > 0);
+    setVariantAxes(axes);
+    setVariantSkus(existing.skus);
+    setOpen(true);
   };
 
   const createMut = useMutation({
     mutationFn: createProduct,
+    onSuccess: async () => {
+      resetForm();
+      setOpen(false);
+      toast.success(t('profileSaved'));
+      await qc.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: () => toast.error(t('saveFailed')),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({
+      id,
+      ...input
+    }: {
+      id: string;
+      name: string;
+      priceEgp: number;
+      description?: string;
+      attributes: Record<string, string | number | boolean | string[]>;
+      variants: ProductVariants;
+      stockQuantity?: number;
+      inStock?: boolean;
+    }) => updateProduct(id, input),
     onSuccess: async () => {
       resetForm();
       setOpen(false);
@@ -95,37 +253,54 @@ export function useProducts() {
     },
   });
 
-  const updateStockMut = useMutation({
-    mutationFn: (
-      input:
-        | { id: string; stockQuantity: number }
-        | { id: string; inStock: boolean },
-    ) => {
-      const { id, ...patch } = input;
-      return updateProduct(id, patch);
-    },
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['products'] });
-    },
-  });
+  const onSkuChange = (key: string, patch: Partial<ProductVariantSku>) => {
+    setVariantSkus((prev) =>
+      prev.map((sku) => (sku.key === key ? { ...sku, ...patch } : sku)),
+    );
+  };
+
+  const applyBasePriceToSkus = () => {
+    const price = Math.max(0, Math.floor(Number(priceEgp) || 0));
+    setVariantSkus((prev) => prev.map((sku) => ({ ...sku, priceEgp: price })));
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !priceEgp) return;
-    const attributes = buildAttributesFromForm({
-      template,
-      templateValues,
-      customRows,
-    });
-    createMut.mutate({
+    const attributes = {
+      ...preservedAttributes,
+      sku: productSku,
+    };
+    const variants = variantsEnabled
+      ? rebuildVariantSkus({
+          axes: variantAxes.map((axis) => ({
+            name: axis.name,
+            valuesInput: axis.selectedValues.join(', '),
+          })),
+          previousSkus: variantSkus,
+          defaultPriceEgp: Number(priceEgp) || 0,
+          defaultStockQuantity: Number(stockQuantity) || 0,
+        })
+      : { axes: [], skus: [] };
+    const payload = {
       name: name.trim(),
       priceEgp: Number(priceEgp),
       description: description.trim() || undefined,
       attributes,
+      variants,
       ...(quantityMode
-        ? { stockQuantity: Math.max(0, Number(stockQuantity) || 0) }
+        ? {
+            stockQuantity: hasVariantMatrix(variants)
+              ? variants.skus.reduce((s, sku) => s + sku.stockQuantity, 0)
+              : Math.max(0, Number(stockQuantity) || 0),
+          }
         : { inStock: listingAvailable }),
-    });
+    };
+    if (editingId) {
+      updateMut.mutate({ id: editingId, ...payload });
+      return;
+    }
+    createMut.mutate(payload);
   };
 
   const setDialogOpen = (next: boolean) => {
@@ -133,10 +308,18 @@ export function useProducts() {
     if (!next) resetForm();
   };
 
+  const onDictionarySaved = async (next: VariantDictionaryOption[]) => {
+    setDictionary(next);
+    await refreshMe();
+  };
+
   return {
     businessType,
-    template,
     quantityMode,
+    dictionary,
+    dictOpen,
+    setDictOpen,
+    onDictionarySaved,
     page,
     setPage,
     totalPages,
@@ -147,7 +330,11 @@ export function useProducts() {
     pendingDelete,
     setPendingDelete,
     open,
+    mode: (editingId ? 'edit' : 'create') as 'create' | 'edit',
+    openCreate,
+    openEdit,
     setDialogOpen,
+    productSku,
     name,
     setName,
     priceEgp,
@@ -158,16 +345,17 @@ export function useProducts() {
     setStockQuantity,
     listingAvailable,
     setListingAvailable,
-    templateValues,
-    setTemplateValues,
-    customRows,
-    setCustomRows,
-    formHint: t('productDetailsHint'),
+    variantsEnabled,
+    setVariantsEnabled,
+    variantAxes,
+    setVariantAxes,
+    variantSkus,
+    onSkuChange,
+    applyBasePriceToSkus,
+    hasVariants,
     submit,
-    isCreating: createMut.isPending,
+    isSaving: createMut.isPending || updateMut.isPending,
     isDeleting: deleteMut.isPending,
-    isUpdatingStock: updateStockMut.isPending,
-    updateStock: updateStockMut.mutate,
     deleteProduct: deleteMut.mutate,
   };
 }

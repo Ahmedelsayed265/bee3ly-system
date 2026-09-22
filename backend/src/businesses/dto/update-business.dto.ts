@@ -8,8 +8,23 @@ import {
   IsString,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { BusinessGoal, BusinessType, PlanTier } from '@prisma/client';
+
+export class VariantDictionaryOptionDto {
+  @IsString()
+  @MinLength(1)
+  id!: string;
+
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  values!: string[];
+}
 
 export class UpdateBusinessDto {
   @IsOptional()
@@ -63,6 +78,12 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsString()
   faqs?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VariantDictionaryOptionDto)
+  variantDictionary?: VariantDictionaryOptionDto[];
 
   @IsOptional()
   @IsBoolean()

@@ -59,9 +59,14 @@ export class PageCommentsPollerService implements OnModuleInit {
     return Math.floor(raw);
   }
 
-  private fixedReply(businessName?: string | null) {
-    const custom = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
-    if (custom) return custom;
+  private fixedReply(
+    businessName?: string | null,
+    businessReply?: string | null,
+  ) {
+    const fromBusiness = businessReply?.trim();
+    if (fromBusiness) return fromBusiness;
+    const fromEnv = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
+    if (fromEnv) return fromEnv;
     const shop = businessName?.trim() || 'المتجر';
     return `أهلاً بيك! تعليقك وصل لـ ${shop}. هنبعتلك التفاصيل في رسالة خاصة قريب 💬`;
   }
@@ -91,7 +96,12 @@ export class PageCommentsPollerService implements OnModuleInit {
         accessTokenEnc: { not: null },
       },
       include: {
-        business: { select: { name: true } },
+        business: {
+          select: {
+            name: true,
+            aiAgent: { select: { commentFixedReply: true } },
+          },
+        },
       },
     });
 
@@ -156,7 +166,10 @@ export class PageCommentsPollerService implements OnModuleInit {
         continue;
       }
 
-      const replyText = this.fixedReply(account.business?.name);
+      const replyText = this.fixedReply(
+        account.business?.name,
+        account.business?.aiAgent?.commentFixedReply,
+      );
 
       for (const comment of result.comments) {
         let row = await this.prisma.pageComment.findUnique({

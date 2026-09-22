@@ -5,6 +5,11 @@ import {
   formatAttributesLine,
   syncLegacyArrays,
 } from '../../products/product-attributes';
+import {
+  asVariants,
+  formatVariantsSummary,
+  hasVariantMatrix,
+} from '../../products/product-variants';
 import type { BusinessContext } from '../types';
 
 @Injectable()
@@ -76,6 +81,7 @@ export class ContextBuilderService {
       products: products.map((p) => {
         const attributes = asAttributes(p.attributes);
         const legacy = syncLegacyArrays(attributes);
+        const variants = asVariants(p.variants);
         return {
           id: p.id,
           name: p.name,
@@ -86,6 +92,9 @@ export class ContextBuilderService {
           colors: legacy.colors.length ? legacy.colors : p.colors,
           stockQuantity: p.stockQuantity,
           inStock: p.inStock,
+          variantsSummary: hasVariantMatrix(variants)
+            ? formatVariantsSummary(variants)
+            : undefined,
         };
       }),
       customer: {
@@ -124,7 +133,9 @@ export class ContextBuilderService {
           p.stockQuantity != null
             ? `qty:${p.stockQuantity}`
             : `available:${p.inStock ? 'yes' : 'no'}`
-        }${details ? ` | ${details}` : ''}`;
+        }${details ? ` | ${details}` : ''}${
+          p.variantsSummary ? ` | ${p.variantsSummary}` : ''
+        }`;
       })
       .join('\n');
 

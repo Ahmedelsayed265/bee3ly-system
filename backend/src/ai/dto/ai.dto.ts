@@ -40,6 +40,10 @@ export class UpdateAgentDto {
   instructions?: string;
 
   @IsOptional()
+  @IsString()
+  commentFixedReply?: string;
+
+  @IsOptional()
   @IsBoolean()
   handoffEnabled?: boolean;
 }

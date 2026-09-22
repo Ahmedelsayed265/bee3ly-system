@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ActorType, LeadStatus, NotificationType } from '@prisma/client';
+import { ActorType, LeadStatus, NotificationType, Prisma } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -8,6 +8,14 @@ import {
   listAttributeOptions,
   syncLegacyArrays,
 } from '../../products/product-attributes';
+import {
+  asVariants,
+  findMatchingSku,
+  formatVariantLabel,
+  formatVariantsSummary,
+  hasVariantMatrix,
+  variantsTotalStock,
+} from '../../products/product-variants';
 import { isAvailable } from '../../products/stock-mode';
 import type { BusinessContext, ToolName } from '../types';
 
@@ -90,18 +98,44 @@ export class AiToolsService {
     if (!product) return null;
     const attributes = asAttributes(product.attributes);
     const legacy = syncLegacyArrays(attributes);
-    const available = isAvailable(product);
+    const variants = asVariants(product.variants);
+    const chosen = {
+      size: args.size ? asString(args.size) : null,
+      color: args.color ? asString(args.color) : null,
+      flavor: args.flavor ? asString(args.flavor) : null,
+      option: args.option ? asString(args.option) : null,
+      variant: args.variant ? asString(args.variant) : null,
+    };
+    const matched = hasVariantMatrix(variants)
+      ? findMatchingSku(variants, chosen)
+      : null;
+    const available = matched
+      ? matched.stockQuantity > 0
+      : isAvailable(product);
     return {
       id: product.id,
       name: product.name,
       description: product.description,
       inStock: available,
-      stockQuantity: product.stockQuantity,
+      stockQuantity: matched
+        ? matched.stockQuantity
+        : product.stockQuantity,
       attributes,
       details: formatAttributesLine(attributes),
       sizes: legacy.sizes.length ? legacy.sizes : product.sizes,
       colors: legacy.colors.length ? legacy.colors : product.colors,
-      priceEgp: product.priceEgp,
+      priceEgp: matched?.priceEgp ?? product.priceEgp,
+      variants: hasVariantMatrix(variants)
+        ? formatVariantsSummary(variants)
+        : null,
+      selectedVariant: matched
+        ? {
+            label: formatVariantLabel(matched.options),
+            options: matched.options,
+            priceEgp: matched.priceEgp,
+            stockQuantity: matched.stockQuantity,
+          }
+        : null,
     };
   }
 
@@ -142,6 +176,7 @@ export class AiToolsService {
 
     const attributes = asAttributes(product.attributes);
     const legacy = syncLegacyArrays(attributes);
+    const variants = asVariants(product.variants);
     const availableSizes = legacy.sizes.length ? legacy.sizes : product.sizes;
 
     const customerName = asString(
@@ -157,28 +192,56 @@ export class AiToolsService {
     }
 
     const quantity = Math.max(1, Number(args.quantity ?? 1));
-    if (product.stockQuantity != null && quantity > product.stockQuantity) {
-      throw new BadRequestException(
-        `Only ${product.stockQuantity} units available`,
-      );
-    }
     const size = args.size ? asString(args.size) : null;
-    if (size && availableSizes.length > 0 && !availableSizes.includes(size)) {
-      throw new BadRequestException(`Size ${size} not available`);
-    }
+    const color = args.color ? asString(args.color) : null;
+    const chosen = {
+      size,
+      color,
+      flavor: args.flavor ? asString(args.flavor) : null,
+      option: args.option ? asString(args.option) : null,
+      variant: args.variant ? asString(args.variant) : null,
+    };
 
-    // Optional variant keys from attributes (flavor, color, option, …)
-    for (const key of ['color', 'flavor', 'option', 'variant'] as const) {
-      const chosen = args[key] ? asString(args[key]) : null;
-      if (!chosen) continue;
-      const options = listAttributeOptions(
-        attributes,
-        key === 'color' ? 'colors' : key === 'flavor' ? 'flavors' : `${key}s`,
-      );
-      const alt = listAttributeOptions(attributes, key);
-      const pool = options.length ? options : alt;
-      if (pool.length > 0 && !pool.includes(chosen)) {
-        throw new BadRequestException(`${key} ${chosen} not available`);
+    let unitPrice = product.priceEgp;
+    let matchedSkuKey: string | null = null;
+
+    if (hasVariantMatrix(variants)) {
+      const matched = findMatchingSku(variants, chosen);
+      if (!matched) {
+        throw new BadRequestException(
+          `Choose a valid variant (${variants.axes
+            .map((a) => a.name)
+            .join(' + ')})`,
+        );
+      }
+      if (quantity > matched.stockQuantity) {
+        throw new BadRequestException(
+          `Only ${matched.stockQuantity} units available for ${formatVariantLabel(matched.options)}`,
+        );
+      }
+      unitPrice = matched.priceEgp;
+      matchedSkuKey = matched.key;
+    } else {
+      if (product.stockQuantity != null && quantity > product.stockQuantity) {
+        throw new BadRequestException(
+          `Only ${product.stockQuantity} units available`,
+        );
+      }
+      if (size && availableSizes.length > 0 && !availableSizes.includes(size)) {
+        throw new BadRequestException(`Size ${size} not available`);
+      }
+      for (const key of ['color', 'flavor', 'option', 'variant'] as const) {
+        const chosenValue = args[key] ? asString(args[key]) : null;
+        if (!chosenValue) continue;
+        const options = listAttributeOptions(
+          attributes,
+          key === 'color' ? 'colors' : key === 'flavor' ? 'flavors' : `${key}s`,
+        );
+        const alt = listAttributeOptions(attributes, key);
+        const pool = options.length ? options : alt;
+        if (pool.length > 0 && !pool.includes(chosenValue)) {
+          throw new BadRequestException(`${key} ${chosenValue} not available`);
+        }
       }
     }
 
@@ -204,7 +267,7 @@ export class AiToolsService {
         conversationId: ctx.conversationId,
         campaignId: ctx.campaignId,
         orderNumber,
-        totalEgp: product.priceEgp * quantity,
+        totalEgp: unitPrice * quantity,
         customerName,
         customerPhone,
         createdBy: ActorType.AI,
@@ -214,8 +277,9 @@ export class AiToolsService {
               productId: product.id,
               name: product.name,
               size,
+              color,
               quantity,
-              priceEgp: product.priceEgp,
+              priceEgp: unitPrice,
             },
           ],
         },
@@ -223,7 +287,29 @@ export class AiToolsService {
       include: { items: true },
     });
 
-    if (product.stockQuantity != null) {
+    if (matchedSkuKey) {
+      const nextVariants = {
+        ...variants,
+        skus: variants.skus.map((sku) =>
+          sku.key === matchedSkuKey
+            ? {
+                ...sku,
+                stockQuantity: Math.max(0, sku.stockQuantity - quantity),
+              }
+            : sku,
+        ),
+      };
+      const nextTotal = variantsTotalStock(nextVariants);
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          variants: nextVariants as unknown as Prisma.InputJsonValue,
+          stockQuantity: nextTotal,
+          inStock: nextTotal > 0,
+          priceEgp: product.priceEgp,
+        },
+      });
+    } else if (product.stockQuantity != null) {
       const nextQty = Math.max(0, product.stockQuantity - quantity);
       await this.prisma.product.update({
         where: { id: product.id },

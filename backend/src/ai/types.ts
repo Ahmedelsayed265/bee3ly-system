@@ -95,6 +95,7 @@ export type BusinessContext = {
     colors: string[];
     stockQuantity: number | null;
     inStock: boolean;
+    variantsSummary?: string;
   }>;
   customer: {
     name: string | null;

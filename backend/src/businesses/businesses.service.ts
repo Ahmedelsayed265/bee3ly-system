@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
@@ -36,12 +37,18 @@ export class BusinessesService {
 
   async updateMine(userId: string, dto: UpdateBusinessDto) {
     const businessId = await this.access.requireBusinessId(userId);
-    const { completeOnboarding, ...data } = dto;
+    const { completeOnboarding, variantDictionary, ...data } = dto;
 
     const business = await this.prisma.business.update({
       where: { id: businessId },
       data: {
         ...data,
+        ...(variantDictionary !== undefined
+          ? {
+              variantDictionary:
+                variantDictionary as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
         ...(completeOnboarding ? { onboardingCompletedAt: new Date() } : {}),
       },
     });

@@ -44,6 +44,7 @@ export class AiService {
       isActive?: boolean;
       tone?: string;
       instructions?: string | null;
+      commentFixedReply?: string | null;
       handoffEnabled?: boolean;
     },
   ) {
@@ -61,6 +62,7 @@ export class AiService {
         isActive: input.isActive ?? true,
         tone: input.tone ?? 'FRIENDLY',
         instructions: input.instructions ?? null,
+        commentFixedReply: input.commentFixedReply ?? null,
         handoffEnabled: input.handoffEnabled ?? true,
       },
       update: {
@@ -74,6 +76,9 @@ export class AiService {
         ...(input.tone !== undefined ? { tone: input.tone } : {}),
         ...(input.instructions !== undefined
           ? { instructions: input.instructions }
+          : {}),
+        ...(input.commentFixedReply !== undefined
+          ? { commentFixedReply: input.commentFixedReply }
           : {}),
         ...(input.handoffEnabled !== undefined
           ? { handoffEnabled: input.handoffEnabled }

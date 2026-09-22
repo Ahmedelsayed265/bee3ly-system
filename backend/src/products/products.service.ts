@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -8,6 +9,15 @@ import {
   mergeLegacyIntoAttributes,
   syncLegacyArrays,
 } from './product-attributes';
+import {
+  asVariants,
+  axisValuesByKind,
+  hasVariantMatrix,
+  rebuildVariantSkus,
+  variantsFirstPrice,
+  variantsTotalStock,
+  type ProductVariants,
+} from './product-variants';
 import { resolveInStock } from './stock-mode';
 
 @Injectable()
@@ -23,6 +33,74 @@ export class ProductsService {
       select: { type: true },
     });
     return business.type;
+  }
+
+  private normalizeVariants(
+    raw: unknown,
+    defaultPriceEgp: number,
+    defaultStockQuantity?: number,
+  ): ProductVariants {
+    const parsed = asVariants(raw);
+    if (!parsed.axes.length) return { axes: [], skus: [] };
+    return rebuildVariantSkus({
+      axes: parsed.axes,
+      previousSkus: parsed.skus,
+      defaultPriceEgp,
+      defaultStockQuantity: defaultStockQuantity ?? 0,
+    });
+  }
+
+  private applyVariantDerived(input: {
+    type: string;
+    attributes: ReturnType<typeof asAttributes>;
+    variants: ProductVariants;
+    priceEgp: number;
+    stockQuantity?: number | null;
+    inStock?: boolean;
+  }) {
+    const fromAxes = axisValuesByKind(input.variants);
+    let attributes = { ...input.attributes };
+    if (fromAxes.sizes.length) attributes.sizes = fromAxes.sizes;
+    if (fromAxes.colors.length) attributes.colors = fromAxes.colors;
+    const legacy = syncLegacyArrays(attributes);
+    if (!legacy.sizes.length && fromAxes.sizes.length) {
+      legacy.sizes.push(...fromAxes.sizes);
+    }
+    if (!legacy.colors.length && fromAxes.colors.length) {
+      legacy.colors.push(...fromAxes.colors);
+    }
+
+    if (hasVariantMatrix(input.variants)) {
+      const total = variantsTotalStock(input.variants);
+      const firstPrice = variantsFirstPrice(input.variants);
+      const stock = resolveInStock({
+        type: input.type,
+        stockQuantity: total,
+        inStock: total > 0,
+      });
+      return {
+        attributes,
+        legacy,
+        variants: input.variants,
+        priceEgp: firstPrice ?? input.priceEgp,
+        stockQuantity: stock.stockQuantity,
+        inStock: stock.inStock,
+      };
+    }
+
+    const stock = resolveInStock({
+      type: input.type,
+      stockQuantity: input.stockQuantity,
+      inStock: input.inStock,
+    });
+    return {
+      attributes,
+      legacy,
+      variants: { axes: [], skus: [] } as ProductVariants,
+      priceEgp: input.priceEgp,
+      stockQuantity: stock.stockQuantity,
+      inStock: stock.inStock,
+    };
   }
 
   async list(userId: string, page = 1, limit = 10) {
@@ -49,9 +127,16 @@ export class ProductsService {
       dto.sizes,
       dto.colors,
     );
-    const legacy = syncLegacyArrays(attributes);
-    const stock = resolveInStock({
+    const variants = this.normalizeVariants(
+      dto.variants,
+      dto.priceEgp,
+      dto.stockQuantity,
+    );
+    const derived = this.applyVariantDerived({
       type,
+      attributes,
+      variants,
+      priceEgp: dto.priceEgp,
       stockQuantity: dto.stockQuantity,
       inStock: dto.inStock,
     });
@@ -61,12 +146,13 @@ export class ProductsService {
         businessId,
         name: dto.name.trim(),
         description: dto.description?.trim(),
-        priceEgp: dto.priceEgp,
-        attributes: attributes,
-        sizes: legacy.sizes,
-        colors: legacy.colors,
-        stockQuantity: stock.stockQuantity,
-        inStock: stock.inStock,
+        priceEgp: derived.priceEgp,
+        attributes: derived.attributes,
+        variants: derived.variants as unknown as Prisma.InputJsonValue,
+        sizes: derived.legacy.sizes,
+        colors: derived.legacy.colors,
+        stockQuantity: derived.stockQuantity,
+        inStock: derived.inStock,
       },
     });
     return { product };
@@ -95,20 +181,35 @@ export class ProductsService {
         dto.colors,
       );
     }
-    const legacy = syncLegacyArrays(attributes);
+
+    const existingVariants = asVariants(existing.variants);
+    const variants =
+      dto.variants !== undefined
+        ? this.normalizeVariants(
+            dto.variants,
+            dto.priceEgp ?? existing.priceEgp,
+            dto.stockQuantity ?? existing.stockQuantity ?? 0,
+          )
+        : existingVariants;
 
     const shouldTouchStock =
-      dto.stockQuantity !== undefined || dto.inStock !== undefined;
-    const stock = shouldTouchStock
-      ? resolveInStock({
-          type,
-          stockQuantity:
-            dto.stockQuantity !== undefined
-              ? dto.stockQuantity
-              : existing.stockQuantity,
-          inStock: dto.inStock !== undefined ? dto.inStock : existing.inStock,
-        })
-      : null;
+      dto.stockQuantity !== undefined ||
+      dto.inStock !== undefined ||
+      dto.variants !== undefined;
+
+    const derived = this.applyVariantDerived({
+      type,
+      attributes,
+      variants,
+      priceEgp: dto.priceEgp ?? existing.priceEgp,
+      stockQuantity: shouldTouchStock
+        ? dto.stockQuantity !== undefined
+          ? dto.stockQuantity
+          : existing.stockQuantity
+        : existing.stockQuantity,
+      inStock:
+        dto.inStock !== undefined ? dto.inStock : existing.inStock,
+    });
 
     const product = await this.prisma.product.update({
       where: { id },
@@ -117,18 +218,23 @@ export class ProductsService {
         ...(dto.description !== undefined
           ? { description: dto.description.trim() }
           : {}),
-        ...(dto.priceEgp !== undefined ? { priceEgp: dto.priceEgp } : {}),
-        ...(shouldTouchAttributes
+        priceEgp: derived.priceEgp,
+        ...(shouldTouchAttributes || dto.variants !== undefined
           ? {
-              attributes: attributes,
-              sizes: legacy.sizes,
-              colors: legacy.colors,
+              attributes: derived.attributes,
+              sizes: derived.legacy.sizes,
+              colors: derived.legacy.colors,
             }
           : {}),
-        ...(stock
+        ...(dto.variants !== undefined
           ? {
-              stockQuantity: stock.stockQuantity,
-              inStock: stock.inStock,
+              variants: derived.variants as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
+        ...(shouldTouchStock || dto.variants !== undefined
+          ? {
+              stockQuantity: derived.stockQuantity,
+              inStock: derived.inStock,
             }
           : {}),
       },

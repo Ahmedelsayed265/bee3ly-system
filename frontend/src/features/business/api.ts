@@ -19,6 +19,12 @@ export type BusinessGoal =
 
 export type PlanTier = 'FREE' | 'STARTER' | 'GROWTH';
 
+export type VariantDictionaryOption = {
+  id: string;
+  name: string;
+  values: string[];
+};
+
 export type Business = {
   id: string;
   name: string;
@@ -33,6 +39,7 @@ export type Business = {
   workingHours: string | null;
   paymentInfo: string | null;
   faqs: string | null;
+  variantDictionary?: VariantDictionaryOption[];
   onboardingCompletedAt: string | null;
 };
 
@@ -42,6 +49,15 @@ export type Product = {
   description: string | null;
   priceEgp: number;
   attributes?: Record<string, string | number | boolean | string[]>;
+  variants?: {
+    axes: Array<{ name: string; values: string[] }>;
+    skus: Array<{
+      key: string;
+      options: Record<string, string>;
+      priceEgp: number;
+      stockQuantity: number;
+    }>;
+  };
   sizes: string[];
   colors: string[];
   stockQuantity?: number | null;
@@ -103,6 +119,15 @@ export async function createProduct(input: {
   priceEgp: number;
   description?: string;
   attributes?: Record<string, string | number | boolean | string[]>;
+  variants?: {
+    axes: Array<{ name: string; values: string[] }>;
+    skus: Array<{
+      key?: string;
+      options: Record<string, string>;
+      priceEgp: number;
+      stockQuantity: number;
+    }>;
+  };
   sizes?: string[];
   colors?: string[];
   stockQuantity?: number;
@@ -119,6 +144,15 @@ export async function updateProduct(
     priceEgp: number;
     description: string;
     attributes: Record<string, string | number | boolean | string[]>;
+    variants: {
+      axes: Array<{ name: string; values: string[] }>;
+      skus: Array<{
+        key?: string;
+        options: Record<string, string>;
+        priceEgp: number;
+        stockQuantity: number;
+      }>;
+    };
     sizes: string[];
     colors: string[];
     stockQuantity: number;
@@ -372,6 +406,7 @@ export async function fetchAiAgent() {
       isActive: boolean;
       tone?: string;
       instructions?: string | null;
+      commentFixedReply?: string | null;
       handoffEnabled?: boolean;
     };
   }>('/ai/agent');
@@ -384,6 +419,7 @@ export async function updateAiAgent(input: {
   isActive?: boolean;
   tone?: string;
   instructions?: string | null;
+  commentFixedReply?: string | null;
   handoffEnabled?: boolean;
 }) {
   const { data } = await api.patch('/ai/agent', input);

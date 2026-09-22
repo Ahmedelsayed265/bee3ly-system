@@ -8,7 +8,49 @@ import {
   IsString,
   Min,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+
+export class VariantAxisDto {
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  values!: string[];
+}
+
+export class VariantSkuDto {
+  @IsOptional()
+  @IsString()
+  key?: string;
+
+  @IsObject()
+  options!: Record<string, string>;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceEgp!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  stockQuantity!: number;
+}
+
+export class ProductVariantsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VariantAxisDto)
+  axes!: VariantAxisDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => VariantSkuDto)
+  skus!: VariantSkuDto[];
+}
 
 export class CreateProductDto {
   @IsString()
@@ -24,24 +66,30 @@ export class CreateProductDto {
   @Min(0)
   priceEgp!: number;
 
-  /** Flexible details: { sizes: [], flavor: "…", area_m2: 120, … } */
+  /** Flexible details: { material: "…", area_m2: 120, … } */
   @IsOptional()
   @IsObject()
   attributes?: Record<string, unknown>;
 
-  /** @deprecated Prefer attributes.sizes — kept for compatibility */
+  /** Variant axes + SKU matrix with per-combination price/qty */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductVariantsDto)
+  variants?: ProductVariantsDto;
+
+  /** @deprecated Prefer attributes.sizes / variants — kept for compatibility */
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   sizes?: string[];
 
-  /** @deprecated Prefer attributes.colors — kept for compatibility */
+  /** @deprecated Prefer attributes.colors / variants — kept for compatibility */
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   colors?: string[];
 
-  /** Inventory count for sellable units (t-shirts, bottles…). Ignored for real estate. */
+  /** Inventory count when no variant matrix. Ignored/overwritten when variants.skus exist. */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -73,6 +121,11 @@ export class UpdateProductDto {
   @IsOptional()
   @IsObject()
   attributes?: Record<string, unknown>;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductVariantsDto)
+  variants?: ProductVariantsDto;
 
   @IsOptional()
   @IsArray()

@@ -15,86 +15,25 @@ export function usesQuantityStock(type: BusinessType | string): boolean {
   return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE';
 }
 
-/** Suggested detail fields per business type — merchants can still add custom keys. */
+/** Suggested detail fields per business type — merchants can still add custom keys.
+ * Tag-like options (sizes/colors/flavors) belong in the variants matrix, not here.
+ */
 export const ATTRIBUTE_TEMPLATES: Record<
   BusinessType,
   AttributeTemplateField[]
 > = {
-  FASHION: [
-    {
-      key: 'sizes',
-      labelKey: 'attrSizes',
-      kind: 'tags',
-      placeholderKey: 'attrSizesPlaceholder',
-    },
-    {
-      key: 'colors',
-      labelKey: 'attrColors',
-      kind: 'tags',
-      placeholderKey: 'attrColorsPlaceholder',
-    },
-    { key: 'material', labelKey: 'attrMaterial', kind: 'text' },
-  ],
-  PERFUME: [
-    {
-      key: 'sizes',
-      labelKey: 'attrBottleSizes',
-      kind: 'tags',
-      placeholderKey: 'attrBottleSizesPlaceholder',
-    },
-    { key: 'notes', labelKey: 'attrNotes', kind: 'text' },
-  ],
-  BEAUTY: [
-    { key: 'sizes', labelKey: 'attrSizes', kind: 'tags' },
-    { key: 'skinType', labelKey: 'attrSkinType', kind: 'tags' },
-    { key: 'shade', labelKey: 'attrShade', kind: 'tags' },
-  ],
-  RESTAURANT: [
-    {
-      key: 'portions',
-      labelKey: 'attrPortions',
-      kind: 'tags',
-      placeholderKey: 'attrPortionsPlaceholder',
-    },
-    { key: 'extras', labelKey: 'attrExtras', kind: 'tags' },
-  ],
-  CAFE: [
-    {
-      key: 'sizes',
-      labelKey: 'attrCupSizes',
-      kind: 'tags',
-      placeholderKey: 'attrCupSizesPlaceholder',
-    },
-    { key: 'extras', labelKey: 'attrExtras', kind: 'tags' },
-  ],
-  ECOMMERCE: [
-    {
-      key: 'sizes',
-      labelKey: 'attrSizes',
-      kind: 'tags',
-      placeholderKey: 'attrSizesPlaceholder',
-    },
-    {
-      key: 'flavors',
-      labelKey: 'attrFlavors',
-      kind: 'tags',
-      placeholderKey: 'attrFlavorsPlaceholder',
-    },
-    { key: 'sku', labelKey: 'attrSku', kind: 'text' },
-  ],
+  FASHION: [{ key: 'material', labelKey: 'attrMaterial', kind: 'text' }],
+  PERFUME: [{ key: 'notes', labelKey: 'attrNotes', kind: 'text' }],
+  BEAUTY: [{ key: 'skinType', labelKey: 'attrSkinType', kind: 'text' }],
+  RESTAURANT: [{ key: 'extras', labelKey: 'attrExtras', kind: 'text' }],
+  CAFE: [{ key: 'extras', labelKey: 'attrExtras', kind: 'text' }],
+  ECOMMERCE: [],
   REAL_ESTATE: [
     { key: 'area_m2', labelKey: 'attrArea', kind: 'number' },
     { key: 'rooms', labelKey: 'attrRooms', kind: 'text' },
     { key: 'location', labelKey: 'attrLocation', kind: 'text' },
   ],
-  OTHER: [
-    {
-      key: 'options',
-      labelKey: 'attrOptions',
-      kind: 'tags',
-      placeholderKey: 'attrOptionsPlaceholder',
-    },
-  ],
+  OTHER: [],
 };
 
 export type ProductAttributeValue = string | number | boolean | string[];
@@ -191,4 +130,47 @@ export function buildAttributesFromForm(input: {
   }
 
   return attributes;
+}
+
+/** Hydrate form fields from a saved product for edit mode. */
+export function formValuesFromProduct(input: {
+  product: {
+    attributes?: ProductAttributes;
+    sizes?: string[];
+    colors?: string[];
+  };
+  template: AttributeTemplateField[];
+}): {
+  templateValues: Record<string, string>;
+  customRows: Array<{ key: string; value: string }>;
+} {
+  const attrs: ProductAttributes = {
+    ...(input.product.attributes ?? {}),
+  };
+  if ((!attrs.sizes || (Array.isArray(attrs.sizes) && !attrs.sizes.length)) &&
+    input.product.sizes?.length) {
+    attrs.sizes = input.product.sizes;
+  }
+  if ((!attrs.colors || (Array.isArray(attrs.colors) && !attrs.colors.length)) &&
+    input.product.colors?.length) {
+    attrs.colors = input.product.colors;
+  }
+
+  const templateKeys = new Set(input.template.map((f) => f.key));
+  const templateValues: Record<string, string> = {};
+  for (const field of input.template) {
+    const value = attrs[field.key];
+    if (value === undefined || value === null) continue;
+    templateValues[field.key] = formatAttributeValue(value);
+  }
+
+  const customRows = Object.entries(attrs)
+    .filter(([key]) => !templateKeys.has(key))
+    .map(([key, value]) => ({
+      key,
+      value: formatAttributeValue(value),
+    }))
+    .filter((row) => row.value.trim().length > 0);
+
+  return { templateValues, customRows };
 }

@@ -1,4 +1,3 @@
-import { Plus } from 'lucide-react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,15 +10,26 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { InputField } from '@/components/ui/input-field';
-import type { AttributeTemplateField } from '@/features/products/attribute-templates';
+import { Label } from '@/components/ui/label';
+import type { VariantDictionaryOption } from '@/features/business/api';
+import {
+  ProductVariantsEditor,
+  type VariantAxisDraft,
+} from '@/features/products/components/product-variants-editor';
+import type { ProductVariantSku } from '@/features/products/product-variants';
 import { useLocale } from '@/features/i18n/locale-context';
+import { cn } from '@/lib/utils';
 
 type ProductFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode: 'create' | 'edit';
   quantityMode: boolean;
-  template: AttributeTemplateField[];
-  formHint: string;
+  variantsEnabled: boolean;
+  onVariantsEnabledChange: (enabled: boolean) => void;
+  dictionary: VariantDictionaryOption[];
+  onOpenDictionary: () => void;
+  productSku: string;
   name: string;
   onNameChange: (value: string) => void;
   priceEgp: string;
@@ -30,12 +40,11 @@ type ProductFormDialogProps = {
   onStockQuantityChange: (value: string) => void;
   listingAvailable: boolean;
   onListingAvailableChange: (value: boolean) => void;
-  templateValues: Record<string, string>;
-  onTemplateValuesChange: Dispatch<SetStateAction<Record<string, string>>>;
-  customRows: Array<{ key: string; value: string }>;
-  onCustomRowsChange: Dispatch<
-    SetStateAction<Array<{ key: string; value: string }>>
-  >;
+  variantAxes: VariantAxisDraft[];
+  onVariantAxesChange: Dispatch<SetStateAction<VariantAxisDraft[]>>;
+  variantSkus: ProductVariantSku[];
+  onSkuChange: (key: string, patch: Partial<ProductVariantSku>) => void;
+  onApplyDefaults: () => void;
   isPending: boolean;
   onSubmit: (e: FormEvent) => void;
 };
@@ -43,9 +52,13 @@ type ProductFormDialogProps = {
 export function ProductFormDialog({
   open,
   onOpenChange,
+  mode,
   quantityMode,
-  template,
-  formHint,
+  variantsEnabled,
+  onVariantsEnabledChange,
+  dictionary,
+  onOpenDictionary,
+  productSku,
   name,
   onNameChange,
   priceEgp,
@@ -56,175 +69,143 @@ export function ProductFormDialog({
   onStockQuantityChange,
   listingAvailable,
   onListingAvailableChange,
-  templateValues,
-  onTemplateValuesChange,
-  customRows,
-  onCustomRowsChange,
+  variantAxes,
+  onVariantAxesChange,
+  variantSkus,
+  onSkuChange,
+  onApplyDefaults,
   isPending,
   onSubmit,
 }: ProductFormDialogProps) {
   const { t } = useLocale();
+  const isEdit = mode === 'edit';
+  const hasVariants = variantsEnabled && variantSkus.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[min(94vh,960px)] max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{t('addProductTitle')}</DialogTitle>
-          <DialogDescription>{t('addProductHint')}</DialogDescription>
+          <DialogTitle>
+            {isEdit ? t('editProductTitle') : t('addProductTitle')}
+          </DialogTitle>
+          <DialogDescription>
+            {isEdit ? t('editProductHint') : t('addProductHint')}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-          <DialogBody className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <InputField
-                id="productName"
-                label={t('productName')}
-                value={name}
-                onChange={(e) => onNameChange(e.target.value)}
-                placeholder={t('productNamePlaceholder')}
-                containerClassName="sm:col-span-2"
-              />
-              <InputField
-                id="productPrice"
-                type="number"
-                label={t('productPrice')}
-                value={priceEgp}
-                onChange={(e) => onPriceChange(e.target.value)}
-                placeholder="599"
-              />
-              {quantityMode ? (
+          <DialogBody className="space-y-5">
+            <section className="space-y-3">
+              <div className="grid gap-3">
                 <InputField
-                  id="stockQuantity"
-                  type="number"
-                  label={t('stockQuantity')}
-                  value={stockQuantity}
-                  onChange={(e) => onStockQuantityChange(e.target.value)}
-                  placeholder={t('stockQuantityPlaceholder')}
+                  id="productName"
+                  label={t('productName')}
+                  value={name}
+                  onChange={(e) => onNameChange(e.target.value)}
+                  placeholder={t('productNamePlaceholder')}
+                  required
                 />
-              ) : (
-                <div className="space-y-1.5">
-                  <p className="text-ink text-sm font-semibold">
-                    {t('availabilityLabel')}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={listingAvailable ? 'default' : 'outline'}
-                      onClick={() => onListingAvailableChange(true)}
-                    >
-                      {t('availableListing')}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={!listingAvailable ? 'default' : 'outline'}
-                      onClick={() => onListingAvailableChange(false)}
-                    >
-                      {t('unavailableListing')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              <InputField
-                id="productDescription"
-                label={t('productDescription')}
-                value={description}
-                onChange={(e) => onDescriptionChange(e.target.value)}
-                placeholder={t('productDescriptionPlaceholder')}
-                containerClassName="sm:col-span-2"
-              />
-            </div>
 
-            <div className="border-border bg-page/50 space-y-3 rounded-xl border p-4">
-              <div>
-                <p className="text-ink text-sm font-semibold">
-                  {t('productDetails')}
-                </p>
-                <p className="text-muted mt-0.5 text-xs">{formHint}</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {template.map((field) => (
-                  <InputField
-                    key={field.key}
-                    id={`attr-${field.key}`}
-                    type={field.kind === 'number' ? 'number' : 'text'}
-                    label={t(field.labelKey)}
-                    value={templateValues[field.key] ?? ''}
-                    onChange={(e) =>
-                      onTemplateValuesChange((prev) => ({
-                        ...prev,
-                        [field.key]: e.target.value,
-                      }))
-                    }
-                    placeholder={
-                      field.placeholderKey ? t(field.placeholderKey) : undefined
-                    }
-                  />
-                ))}
-              </div>
-
-              {customRows.map((row, index) => (
                 <div
-                  key={`custom-${index}`}
-                  className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"
+                  className={cn(
+                    'grid gap-3',
+                    quantityMode && !hasVariants
+                      ? 'sm:grid-cols-3'
+                      : !quantityMode
+                        ? 'sm:grid-cols-3'
+                        : 'sm:grid-cols-2',
+                  )}
                 >
                   <InputField
-                    id={`custom-key-${index}`}
-                    label={t('attrCustomKey')}
-                    value={row.key}
-                    onChange={(e) =>
-                      onCustomRowsChange((prev) =>
-                        prev.map((item, i) =>
-                          i === index ? { ...item, key: e.target.value } : item,
-                        ),
-                      )
-                    }
+                    id="productSku"
+                    label={t('attrSku')}
+                    value={productSku}
+                    readOnly
+                    className="bg-page text-muted cursor-default"
                   />
                   <InputField
-                    id={`custom-value-${index}`}
-                    label={t('attrCustomValue')}
-                    value={row.value}
-                    onChange={(e) =>
-                      onCustomRowsChange((prev) =>
-                        prev.map((item, i) =>
-                          i === index
-                            ? { ...item, value: e.target.value }
-                            : item,
-                        ),
-                      )
+                    id="productPrice"
+                    type="number"
+                    min={0}
+                    step="1"
+                    label={
+                      hasVariants ? t('productBasePrice') : t('productPrice')
                     }
+                    value={priceEgp}
+                    onChange={(e) => onPriceChange(e.target.value)}
+                    placeholder="599"
+                    required
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="self-end"
-                    onClick={() =>
-                      onCustomRowsChange((prev) =>
-                        prev.filter((_, i) => i !== index),
-                      )
-                    }
-                  >
-                    {t('delete')}
-                  </Button>
+                  {quantityMode && !hasVariants ? (
+                    <InputField
+                      id="stockQuantity"
+                      type="number"
+                      min={0}
+                      label={t('stockQuantity')}
+                      value={stockQuantity}
+                      onChange={(e) => onStockQuantityChange(e.target.value)}
+                      placeholder={t('stockQuantityPlaceholder')}
+                    />
+                  ) : !quantityMode ? (
+                    <div className="space-y-1.5">
+                      <p className="text-ink text-sm font-semibold">
+                        {t('availabilityLabel')}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={listingAvailable ? 'default' : 'outline'}
+                          onClick={() => onListingAvailableChange(true)}
+                        >
+                          {t('availableListing')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={!listingAvailable ? 'default' : 'outline'}
+                          onClick={() => onListingAvailableChange(false)}
+                        >
+                          {t('unavailableListing')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              ))}
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  onCustomRowsChange((prev) => [
-                    ...prev,
-                    { key: '', value: '' },
-                  ])
-                }
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {t('attrAddCustom')}
-              </Button>
-            </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="productDescription">
+                    {t('productDescription')}
+                  </Label>
+                  <textarea
+                    id="productDescription"
+                    value={description}
+                    onChange={(e) => onDescriptionChange(e.target.value)}
+                    placeholder={t('productDescriptionPlaceholder')}
+                    rows={3}
+                    className={cn(
+                      'border-border bg-surface text-ink placeholder:text-muted',
+                      'focus-visible:border-brand focus-visible:ring-brand/20',
+                      'min-h-20 w-full rounded-xl border px-3.5 py-2.5 text-sm leading-6',
+                      'outline-none focus-visible:ring-2',
+                    )}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <ProductVariantsEditor
+              enabled={variantsEnabled}
+              onEnabledChange={onVariantsEnabledChange}
+              dictionary={dictionary}
+              axes={variantAxes}
+              onAxesChange={(next) => onVariantAxesChange(next)}
+              skus={variantSkus}
+              onSkuChange={onSkuChange}
+              onApplyDefaults={onApplyDefaults}
+              onOpenDictionary={onOpenDictionary}
+              quantityMode={quantityMode}
+            />
           </DialogBody>
 
           <DialogFooter>
@@ -236,7 +217,11 @@ export function ProductFormDialog({
               {t('cancel')}
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? t('saving') : t('addProduct')}
+              {isPending
+                ? t('saving')
+                : isEdit
+                  ? t('saveProduct')
+                  : t('addProduct')}
             </Button>
           </DialogFooter>
         </form>
