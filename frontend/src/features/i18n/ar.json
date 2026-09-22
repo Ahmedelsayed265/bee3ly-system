@@ -192,7 +192,6 @@
   "variantAxisNamePlaceholder": "مقاس / لون / نكهة...",
   "variantAxisValues": "القيم",
   "variantAxisValuesPlaceholder": "اكتب قيمة واضغط Enter",
-  "variantAxisValuesHint": "Enter لإضافة قيمة · Backspace لحذف آخر قيمة",
   "variantNoAxes": "أضف متغير واحد على الأقل عشان تبني التركيبات.",
   "variantMatrixTitle": "{count} تركيبة",
   "variantApplyBasePrice": "تطبيق السعر الأساسي على الكل",

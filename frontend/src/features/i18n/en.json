@@ -192,7 +192,6 @@
   "variantAxisNamePlaceholder": "Size / Color / Flavor...",
   "variantAxisValues": "Values",
   "variantAxisValuesPlaceholder": "Type a value and press Enter",
-  "variantAxisValuesHint": "Enter to add · Backspace to remove the last value",
   "variantNoAxes": "Add at least one option to build combinations.",
   "variantMatrixTitle": "{count} combinations",
   "variantApplyBasePrice": "Apply base price to all",

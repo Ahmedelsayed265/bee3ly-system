@@ -136,23 +136,34 @@ export function VariantDictionaryDialog({
 
         <DialogBody className="space-y-4">
           {rows.map((row, index) => (
-            <div
-              key={row.id}
-              className="grid gap-3 sm:grid-cols-[minmax(0,9rem)_1fr_auto]"
-            >
-              <InputField
-                id={`dict-name-${row.id}`}
-                label={t('variantAxisName')}
-                value={row.name}
-                onChange={(e) =>
-                  setRows((prev) =>
-                    prev.map((item, i) =>
-                      i === index ? { ...item, name: e.target.value } : item,
-                    ),
-                  )
-                }
-                placeholder={t('variantAxisNamePlaceholder')}
-              />
+            <div key={row.id} className="space-y-3">
+              <div className="flex items-end gap-1">
+                <InputField
+                  id={`dict-name-${row.id}`}
+                  containerClassName="min-w-0 flex-1"
+                  label={t('variantAxisName')}
+                  value={row.name}
+                  onChange={(e) =>
+                    setRows((prev) =>
+                      prev.map((item, i) =>
+                        i === index ? { ...item, name: e.target.value } : item,
+                      ),
+                    )
+                  }
+                  placeholder={t('variantAxisNamePlaceholder')}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-danger px-3 not-first:cursor-pointer hover:bg-danger/10 hover:text-danger shrink-0"
+                  onClick={() =>
+                    setRows((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  aria-label={t('delete')}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
               <TagsInput
                 id={`dict-values-${row.id}`}
                 label={t('variantAxisValues')}
@@ -165,19 +176,7 @@ export function VariantDictionaryDialog({
                   )
                 }
                 placeholder={t('variantAxisValuesPlaceholder')}
-                hint={t('variantAxisValuesHint')}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-danger hover:bg-danger/10 hover:text-danger self-end"
-                onClick={() =>
-                  setRows((prev) => prev.filter((_, i) => i !== index))
-                }
-                aria-label={t('delete')}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
             </div>
           ))}
 

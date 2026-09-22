@@ -68,7 +68,8 @@ export function TagsInput({
             key={`${value}-${index}`}
             className="border-border bg-surface text-ink inline-flex max-w-full items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium"
           >
-            <span className="truncate">{value}</span>
+            <span className="truncate leading-normal">{value}</span>
+       
             <button
               type="button"
               className="text-muted hover:text-danger shrink-0 rounded p-0.5 transition"
