@@ -37,12 +37,14 @@ export class MetaOauthService {
     const state = Buffer.from(JSON.stringify({ businessId, userId })).toString(
       'base64url',
     );
+    // Phase 1 (feed comment webhooks): pages_manage_metadata + pages_show_list.
+    // pages_read_engagement / pages_manage_engagement are real Graph permissions but
+    // Meta Login rejects them until added to the App's use case / App Review —
+    // add them back for public comment reply (Phase 2+).
     const scopes = [
       'pages_show_list',
       'pages_messaging',
       'pages_manage_metadata',
-      'pages_read_engagement',
-      'pages_manage_engagement',
     ].join(',');
     return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}`;
   }
