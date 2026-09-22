@@ -241,6 +241,10 @@ export const messages = {
       'رسائل العملاء من فيسبوك وإنستجرام. استلم المحادثة عشان ترد بنفسك.',
     noConversations: 'لا توجد محادثات بعد.',
     inboxEmptyHint: 'اختار محادثة من القائمة.',
+    deleteConversation: 'حذف',
+    confirmDeleteConversationTitle: 'حذف المحادثة؟',
+    confirmDeleteConversationBody:
+      'هتحذف محادثة {name} مع كل الرسائل. مش هتقدر ترجّعها.',
     typeCustomerMessage: 'اكتب رسالة العميل...',
     typeYourReply: 'اكتب ردك...',
     speakerYou: 'رد سريع',
@@ -738,6 +742,10 @@ export const messages = {
       'Customer messages from Facebook and Instagram. Take over to reply yourself.',
     noConversations: 'No conversations yet.',
     inboxEmptyHint: 'Pick a conversation from the list.',
+    deleteConversation: 'Delete',
+    confirmDeleteConversationTitle: 'Delete this conversation?',
+    confirmDeleteConversationBody:
+      'Delete the chat with {name} and all its messages. This cannot be undone.',
     typeCustomerMessage: 'Type customer message...',
     typeYourReply: 'Write your reply...',
     speakerYou: 'Quick reply',

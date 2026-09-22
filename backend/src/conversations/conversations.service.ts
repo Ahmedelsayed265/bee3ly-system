@@ -68,6 +68,19 @@ export class ConversationsService {
     return { conversation, orders };
   }
 
+  async remove(userId: string, id: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id, businessId },
+      select: { id: true },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+
+    await this.prisma.conversation.delete({ where: { id } });
+    this.realtime.notifyConversationUpdated(businessId, id);
+    return { success: true };
+  }
+
   async listLeads(userId: string, page = 1, limit = 10) {
     const businessId = await this.access.requireBusinessId(userId);
     const window = pageWindow(page, limit);

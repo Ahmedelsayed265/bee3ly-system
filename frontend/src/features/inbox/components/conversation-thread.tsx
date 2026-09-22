@@ -30,6 +30,7 @@ type ConversationThreadProps = {
   onDraftChange: (value: string) => void;
   onSend: (content: string) => void;
   onSetMode: (mode: 'AI' | 'HUMAN') => void;
+  onDeleteRequest: () => void;
 };
 
 function channelLabel(t: (key: MessageKey) => string, channel: string) {
@@ -50,6 +51,7 @@ export function ConversationThread({
   onDraftChange,
   onSend,
   onSetMode,
+  onDeleteRequest,
 }: ConversationThreadProps) {
   const { t } = useLocale();
 
@@ -89,6 +91,9 @@ export function ConversationThread({
                 {t('takeOver')}
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={onDeleteRequest}>
+              {t('deleteConversation')}
+            </Button>
           </div>
         </div>
       ) : null}

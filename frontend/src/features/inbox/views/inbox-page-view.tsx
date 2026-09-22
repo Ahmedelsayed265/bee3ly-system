@@ -1,3 +1,4 @@
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ConversationList } from '@/features/inbox/components/conversation-list';
 import { ConversationThread } from '@/features/inbox/components/conversation-thread';
 import { useInbox } from '@/features/inbox/hooks/use-inbox';
@@ -19,6 +20,10 @@ export function InboxPageView() {
     isModePending,
     sendMessage,
     setMode,
+    pendingDelete,
+    setPendingDelete,
+    isDeleting,
+    confirmDelete,
   } = useInbox();
 
   return (
@@ -47,8 +52,24 @@ export function InboxPageView() {
           onDraftChange={setDraft}
           onSend={sendMessage}
           onSetMode={setMode}
+          onDeleteRequest={() => setPendingDelete(true)}
         />
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        title={t('confirmDeleteConversationTitle')}
+        description={t('confirmDeleteConversationBody', {
+          name: conversation?.customer.name ?? t('unknownCustomer'),
+        })}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+        pending={isDeleting}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(false);
+        }}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

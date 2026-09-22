@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
+  deleteConversation,
   fetchConversation,
   fetchConversations,
   sendHumanMessage,
@@ -12,6 +13,7 @@ export function useInbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
+  const [pendingDelete, setPendingDelete] = useState(false);
 
   const listQuery = useQuery({
     queryKey: ['conversations'],
@@ -69,6 +71,20 @@ export function useInbox() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: () => deleteConversation(activeId!),
+    onSuccess: async () => {
+      const deletedId = activeId;
+      setPendingDelete(false);
+      setSelectedId(null);
+      setDraft('');
+      if (deletedId) {
+        qc.removeQueries({ queryKey: ['conversation', deletedId] });
+      }
+      await invalidateAll();
+    },
+  });
+
   return {
     conversations: listQuery.data ?? [],
     selectedId: activeId,
@@ -83,5 +99,11 @@ export function useInbox() {
     isModePending: modeMut.isPending,
     sendMessage: (content: string) => sendMut.mutate(content),
     setMode: (mode: 'AI' | 'HUMAN') => modeMut.mutate(mode),
+    pendingDelete,
+    setPendingDelete,
+    isDeleting: deleteMut.isPending,
+    confirmDelete: () => {
+      if (activeId) deleteMut.mutate();
+    },
   };
 }

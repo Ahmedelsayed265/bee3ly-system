@@ -411,6 +411,13 @@ export async function sendHumanMessage(
   return data;
 }
 
+export async function deleteConversation(conversationId: string) {
+  const { data } = await api.delete<{ success: boolean }>(
+    `/conversations/${conversationId}`,
+  );
+  return data;
+}
+
 export async function updateLeadStatus(id: string, status: string) {
   const { data } = await api.patch(`/leads/${id}/status`, { status });
   return data;

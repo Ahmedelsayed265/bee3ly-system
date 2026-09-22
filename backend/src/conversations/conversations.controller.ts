@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -41,6 +42,11 @@ export class ConversationsController {
   @Get('conversations/:id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.conversations.getOne(user.id, id);
+  }
+
+  @Delete('conversations/:id')
+  remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.conversations.remove(user.id, id);
   }
 
   @Post('conversations/:id/human-message')
