@@ -1,5 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -49,14 +54,17 @@ export function useProducts() {
   const productsQuery = useQuery({
     queryKey: ['products', page, PAGE_SIZE],
     queryFn: () => fetchProducts(page, PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
   const products = productsQuery.data?.products ?? [];
   const total = productsQuery.data?.total ?? 0;
   const totalPages = productsQuery.data?.totalPages ?? 1;
 
-  if (page > totalPages) {
-    setPage(totalPages);
-  }
+  useEffect(() => {
+    if (productsQuery.isSuccess && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [productsQuery.isSuccess, page, totalPages]);
 
   const resetForm = () => {
     setName('');

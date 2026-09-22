@@ -201,6 +201,7 @@ export class MetaWebhookService {
         await this.markEvent(commentId, 'ERROR', 'NO_CONNECTED_ACCOUNT');
         return;
       }
+      await this.pageComments.ensureConversationFromComment(commentId);
       await this.markEvent(commentId, 'PROCESSED');
     } catch (e) {
       const err = e instanceof Error ? e.message : 'unknown';

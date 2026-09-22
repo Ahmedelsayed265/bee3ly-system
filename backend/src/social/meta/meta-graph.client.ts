@@ -205,4 +205,146 @@ export class MetaGraphClient {
     }
     return { sent: true as const };
   }
+
+  /**
+   * Messenger Private Reply to a Page comment (opens/continues Inbox thread).
+   * One private reply per comment within Meta's window.
+   */
+  async sendPrivateReplyToComment(
+    pageAccessToken: string,
+    commentId: string,
+    text: string,
+  ) {
+    const url = `${this.base()}/me/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+    if (!res.ok) {
+      const textBody = await res.text();
+      this.logger.warn(
+        `Private reply failed commentId=${commentId}: ${textBody.slice(0, 300)}`,
+      );
+      return { sent: false as const, error: textBody };
+    }
+    const json = (await res.json()) as { message_id?: string };
+    return { sent: true as const, messageId: json.message_id ?? null };
+  }
+
+  /**
+   * Recent Page posts + nested comments (Dev-mode polling fallback when
+   * feed webhooks are not delivered).
+   */
+  async listRecentPageComments(
+    pageId: string,
+    pageAccessToken: string,
+    opts?: { postLimit?: number; commentLimit?: number },
+  ) {
+    const postLimit = opts?.postLimit ?? 5;
+    const commentLimit = opts?.commentLimit ?? 25;
+    const url = new URL(`${this.base()}/${pageId}/feed`);
+    url.searchParams.set(
+      'fields',
+      `id,created_time,comments.limit(${commentLimit}){id,message,from,created_time}`,
+    );
+    url.searchParams.set('limit', String(postLimit));
+    url.searchParams.set('access_token', pageAccessToken);
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `List page comments failed pageId=${pageId}: ${text.slice(0, 300)}`,
+      );
+      return {
+        ok: false as const,
+        error: text,
+        comments: [] as Array<{
+          commentId: string;
+          postId: string;
+          pageId: string;
+          fromUserId: string;
+          fromName: string | null;
+          message: string;
+          commentedAt: Date;
+          raw: unknown;
+        }>,
+      };
+    }
+
+    const json = (await res.json()) as {
+      data?: Array<{
+        id?: string;
+        comments?: {
+          data?: Array<{
+            id?: string;
+            message?: string;
+            created_time?: string;
+            from?: { id?: string; name?: string };
+          }>;
+        };
+      }>;
+    };
+
+    const comments: Array<{
+      commentId: string;
+      postId: string;
+      pageId: string;
+      fromUserId: string;
+      fromName: string | null;
+      message: string;
+      commentedAt: Date;
+      raw: unknown;
+    }> = [];
+
+    for (const post of json.data ?? []) {
+      const postId = typeof post.id === 'string' ? post.id : '';
+      if (!postId) continue;
+      for (const c of post.comments?.data ?? []) {
+        const commentId = typeof c.id === 'string' ? c.id : '';
+        const fromUserId = c.from?.id;
+        if (!commentId || !fromUserId) continue;
+        if (fromUserId === pageId) continue;
+        comments.push({
+          commentId,
+          postId,
+          pageId,
+          fromUserId,
+          fromName: c.from?.name?.trim() || null,
+          message: typeof c.message === 'string' ? c.message : '',
+          commentedAt: c.created_time
+            ? new Date(c.created_time)
+            : new Date(),
+          raw: c,
+        });
+      }
+    }
+
+    return { ok: true as const, comments };
+  }
+
+  /** Public reply under a Page comment (requires pages_manage_engagement). */
+  async replyToComment(
+    commentId: string,
+    pageAccessToken: string,
+    message: string,
+  ) {
+    const url = new URL(`${this.base()}/${commentId}/comments`);
+    url.searchParams.set('message', message);
+    url.searchParams.set('access_token', pageAccessToken);
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `Reply to comment failed commentId=${commentId}: ${text.slice(0, 300)}`,
+      );
+      return { ok: false as const, error: text };
+    }
+    const json = (await res.json()) as { id?: string };
+    return { ok: true as const, replyId: json.id ?? null };
+  }
 }

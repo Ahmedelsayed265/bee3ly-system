@@ -1,5 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import {
   createCampaign,
   fetchCampaigns,
@@ -16,6 +21,7 @@ export function useCampaigns() {
   const listQuery = useQuery({
     queryKey: ['campaigns', page, PAGE_SIZE],
     queryFn: () => fetchCampaigns(page, PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
   const campaigns = listQuery.data?.campaigns ?? [];
   const total = listQuery.data?.total ?? 0;
@@ -33,9 +39,11 @@ export function useCampaigns() {
     status: 'ASSISTED_LAUNCH' | 'SIMULATED';
   } | null>(null);
 
-  if (page > totalPages) {
-    setPage(totalPages);
-  }
+  useEffect(() => {
+    if (listQuery.isSuccess && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [listQuery.isSuccess, page, totalPages]);
 
   const createMut = useMutation({
     mutationFn: createCampaign,

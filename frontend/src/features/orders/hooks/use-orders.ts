@@ -1,5 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import {
   fetchOrders,
   updateOrderStatus,
@@ -30,15 +35,18 @@ export function useOrders() {
   const ordersQuery = useQuery({
     queryKey: ['orders', page, PAGE_SIZE],
     queryFn: () => fetchOrders(page, PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
 
   const orders = ordersQuery.data?.orders ?? [];
   const total = ordersQuery.data?.total ?? 0;
   const totalPages = ordersQuery.data?.totalPages ?? 1;
 
-  if (page > totalPages) {
-    setPage(totalPages);
-  }
+  useEffect(() => {
+    if (ordersQuery.isSuccess && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [ordersQuery.isSuccess, page, totalPages]);
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>

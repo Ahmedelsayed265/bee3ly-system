@@ -1,5 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { fetchLeads, updateLeadStatus } from '@/features/business/api';
 import {
   LEADS_PAGE_SIZE,
@@ -17,14 +22,17 @@ export function useLeads() {
   const leadsQuery = useQuery({
     queryKey: ['leads', page, LEADS_PAGE_SIZE],
     queryFn: () => fetchLeads(page, LEADS_PAGE_SIZE),
+    placeholderData: keepPreviousData,
   });
   const leads = leadsQuery.data?.leads ?? [];
   const total = leadsQuery.data?.total ?? 0;
   const totalPages = leadsQuery.data?.totalPages ?? 1;
 
-  if (page > totalPages) {
-    setPage(totalPages);
-  }
+  useEffect(() => {
+    if (leadsQuery.isSuccess && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [leadsQuery.isSuccess, page, totalPages]);
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>

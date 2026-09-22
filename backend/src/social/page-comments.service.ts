@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import {
+  ConversationChannel,
+  MessageRole,
+  SocialConnectionStatus,
+  SocialPlatform,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
 
 export type CreatePageCommentFromWebhookInput = {
@@ -21,6 +27,7 @@ export class PageCommentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbound: MetaOutboundService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async createFromWebhook(input: CreatePageCommentFromWebhookInput) {
@@ -93,5 +100,90 @@ export class PageCommentsService {
       `Comment received commentId=${row.commentId} postId=${row.postId}`,
     );
     return row;
+  }
+
+  /**
+   * Open (or reuse) an Inbox FACEBOOK conversation for this comment and
+   * seed it with the comment text as a customer message.
+   */
+  async ensureConversationFromComment(commentId: string) {
+    const row = await this.prisma.pageComment.findUnique({
+      where: { commentId },
+    });
+    if (!row) return null;
+    if (row.conversationId) {
+      return this.prisma.conversation.findUnique({
+        where: { id: row.conversationId },
+      });
+    }
+
+    let conversation = await this.prisma.conversation.findFirst({
+      where: {
+        businessId: row.businessId,
+        customerId: row.customerId,
+        channel: ConversationChannel.FACEBOOK,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!conversation) {
+      conversation = await this.prisma.conversation.create({
+        data: {
+          businessId: row.businessId,
+          customerId: row.customerId,
+          channel: ConversationChannel.FACEBOOK,
+          mode: 'AI',
+          status: 'OPEN',
+          lastMessageAt: row.commentedAt,
+        },
+      });
+      this.logger.log(
+        `New conversation from comment conversationId=${conversation.id} commentId=${row.commentId}`,
+      );
+    }
+
+    const alreadySeeded = await this.prisma.message.findFirst({
+      where: {
+        conversationId: conversation.id,
+        meta: {
+          path: ['pageCommentId'],
+          equals: row.commentId,
+        },
+      },
+    });
+
+    if (!alreadySeeded) {
+      const content =
+        row.message?.trim() ||
+        `(تعليق على المنشور ${row.postId})`;
+      await this.prisma.message.create({
+        data: {
+          conversationId: conversation.id,
+          role: MessageRole.CUSTOMER,
+          content,
+          meta: {
+            source: 'page_comment',
+            pageCommentId: row.commentId,
+            postId: row.postId,
+            pageId: row.pageId,
+          },
+        },
+      });
+      await this.prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { lastMessageAt: new Date() },
+      });
+    }
+
+    await this.prisma.pageComment.update({
+      where: { id: row.id },
+      data: { conversationId: conversation.id },
+    });
+
+    this.realtime.notifyConversationUpdated(
+      row.businessId,
+      conversation.id,
+    );
+    return conversation;
   }
 }

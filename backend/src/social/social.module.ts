@@ -6,6 +6,7 @@ import { MetaGraphClient } from './meta/meta-graph.client';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
 import { MetaWebhookService } from './meta/meta-webhook.service';
+import { PageCommentsPollerService } from './page-comments-poller.service';
 import { PageCommentsService } from './page-comments.service';
 import { SocialController } from './social.controller';
 import { SocialService } from './social.service';
@@ -20,9 +21,16 @@ import { SocialService } from './social.service';
     MetaOutboundService,
     MetaWebhookService,
     PageCommentsService,
+    PageCommentsPollerService,
     InboundMessageService,
     AiEngineAdapter,
   ],
-  exports: [SocialService, MetaOutboundService, InboundMessageService],
+  exports: [
+    SocialService,
+    MetaOutboundService,
+    InboundMessageService,
+    PageCommentsService,
+    PageCommentsPollerService,
+  ],
 })
 export class SocialModule {}

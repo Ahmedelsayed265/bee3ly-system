@@ -274,6 +274,7 @@ model Conversation {
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   messages Message[]
   leads    Lead[]
+  pageComments PageComment[]
 
   @@index([businessId, lastMessageAt])
   @@index([campaignId])
@@ -417,25 +418,31 @@ model WebhookEvent {
 }
 
 model PageComment {
-  id          String   @id @default(uuid())
-  commentId   String   @unique
-  postId      String
-  pageId      String
-  fromUserId  String
-  message     String
-  commentedAt DateTime
-  businessId  String
-  customerId  String
-  rawPayload  Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(uuid())
+  commentId       String    @unique
+  postId          String
+  pageId          String
+  fromUserId      String
+  message         String
+  commentedAt     DateTime
+  businessId      String
+  customerId      String
+  conversationId  String?
+  rawPayload      Json?
+  publicReplyId   String?
+  publicRepliedAt DateTime?
+  privateRepliedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
 
   @@index([businessId])
   @@index([postId])
   @@index([customerId])
+  @@index([conversationId])
   @@map("page_comments")
 }
 
