@@ -18,16 +18,12 @@ export function useInbox() {
     queryFn: fetchConversations,
   });
 
-  useEffect(() => {
-    if (!selectedId && listQuery.data?.[0]?.id) {
-      setSelectedId(listQuery.data[0].id);
-    }
-  }, [listQuery.data, selectedId]);
+  const activeId = selectedId ?? listQuery.data?.[0]?.id ?? null;
 
   const detailQuery = useQuery({
-    queryKey: ['conversation', selectedId],
-    queryFn: () => fetchConversation(selectedId!),
-    enabled: Boolean(selectedId),
+    queryKey: ['conversation', activeId],
+    queryFn: () => fetchConversation(activeId!),
+    enabled: Boolean(activeId),
   });
 
   const conversation = detailQuery.data?.conversation;
@@ -37,7 +33,7 @@ export function useInbox() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' });
-  }, [selectedId, messages.length]);
+  }, [activeId, messages.length]);
 
   const invalidateAll = async (conversationId?: string) => {
     await qc.invalidateQueries({ queryKey: ['conversations'] });
@@ -54,11 +50,11 @@ export function useInbox() {
 
   const sendMut = useMutation({
     mutationFn: async (content: string) => {
-      if (!selectedId || !isHumanMode) {
+      if (!activeId || !isHumanMode) {
         throw new Error('HUMAN_MODE_REQUIRED');
       }
-      await sendHumanMessage(selectedId, content);
-      return { conversationId: selectedId };
+      await sendHumanMessage(activeId, content);
+      return { conversationId: activeId };
     },
     onSuccess: async (data) => {
       setDraft('');
@@ -67,16 +63,15 @@ export function useInbox() {
   });
 
   const modeMut = useMutation({
-    mutationFn: (mode: 'AI' | 'HUMAN') =>
-      setConversationMode(selectedId!, mode),
+    mutationFn: (mode: 'AI' | 'HUMAN') => setConversationMode(activeId!, mode),
     onSuccess: async () => {
-      await invalidateAll(selectedId ?? undefined);
+      await invalidateAll(activeId ?? undefined);
     },
   });
 
   return {
     conversations: listQuery.data ?? [],
-    selectedId,
+    selectedId: activeId,
     setSelectedId,
     conversation,
     messages,

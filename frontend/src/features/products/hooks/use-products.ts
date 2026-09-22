@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -54,9 +54,9 @@ export function useProducts() {
   const total = productsQuery.data?.total ?? 0;
   const totalPages = productsQuery.data?.totalPages ?? 1;
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  if (page > totalPages) {
+    setPage(totalPages);
+  }
 
   const resetForm = () => {
     setName('');

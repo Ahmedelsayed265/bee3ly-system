@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { InboundMessageService } from '../../channels/inbound-message.service';
 import type { InboundMessageEvent } from '../../channels/channel.types';
+import { PageCommentsService } from '../page-comments.service';
 
 @Injectable()
 export class MetaWebhookService {
@@ -18,6 +19,7 @@ export class MetaWebhookService {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly inbound: InboundMessageService,
+    private readonly pageComments: PageCommentsService,
   ) {}
 
   verify(mode?: string, token?: string, challenge?: string) {
@@ -128,18 +130,83 @@ export class MetaWebhookService {
         }
       }
 
-      // Comments — architecture hook only (App Review often required)
       const changes =
         (item.changes as Array<Record<string, unknown>> | undefined) ?? [];
       for (const change of changes) {
         if (change.field !== 'feed') continue;
-        this.logger.debug(
-          `Feed change received (comment→DM deferred): ${JSON.stringify(change).slice(0, 200)}`,
-        );
+        await this.handleFeedComment(pageId, change);
       }
     }
 
     return { success: true };
+  }
+
+  private async handleFeedComment(
+    pageId: string,
+    change: Record<string, unknown>,
+  ) {
+    const value = (change.value as Record<string, unknown> | undefined) ?? {};
+    const item = typeof value.item === 'string' ? value.item : '';
+    const verb = typeof value.verb === 'string' ? value.verb : '';
+    if (item !== 'comment' || verb !== 'add') {
+      this.logger.debug(
+        `Ignoring feed change item=${item} verb=${verb} pageId=${pageId}`,
+      );
+      return;
+    }
+
+    const from = value.from as { id?: string; name?: string } | undefined;
+    const fromUserId = from?.id;
+    if (!fromUserId) return;
+    // Ignore the Page commenting on itself
+    if (fromUserId === pageId) return;
+
+    const commentId =
+      typeof value.comment_id === 'string' ? value.comment_id : '';
+    if (!commentId) return;
+
+    const postId =
+      (typeof value.post_id === 'string' && value.post_id) ||
+      (typeof value.parent_id === 'string' && value.parent_id) ||
+      '';
+    if (!postId) return;
+
+    const message = typeof value.message === 'string' ? value.message : '';
+    const createdRaw = value.created_time;
+    const commentedAt =
+      typeof createdRaw === 'number'
+        ? new Date(createdRaw * (createdRaw < 1e12 ? 1000 : 1))
+        : typeof createdRaw === 'string' && /^\d+$/.test(createdRaw)
+          ? new Date(Number(createdRaw) * (Number(createdRaw) < 1e12 ? 1000 : 1))
+          : new Date();
+
+    const created = await this.claimEvent('META', commentId, change);
+    if (!created) {
+      this.logger.debug(`Duplicate comment webhook ${commentId}`);
+      return;
+    }
+
+    try {
+      const row = await this.pageComments.createFromWebhook({
+        pageId,
+        commentId,
+        postId,
+        fromUserId,
+        fromName: from?.name ?? null,
+        message,
+        commentedAt,
+        rawPayload: change,
+      });
+      if (!row) {
+        await this.markEvent(commentId, 'ERROR', 'NO_CONNECTED_ACCOUNT');
+        return;
+      }
+      await this.markEvent(commentId, 'PROCESSED');
+    } catch (e) {
+      const err = e instanceof Error ? e.message : 'unknown';
+      await this.markEvent(commentId, 'ERROR', err);
+      this.logger.warn(`PageComment save failed: ${err}`);
+    }
   }
 
   private async claimEvent(

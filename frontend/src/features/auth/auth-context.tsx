@@ -4,7 +4,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -40,24 +39,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [bootstrapped, setBootstrapped] = useState(!getAccessToken());
+  const hasToken = Boolean(getAccessToken());
 
   const meQuery = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: fetchMe,
-    enabled: Boolean(getAccessToken()),
+    enabled: hasToken,
     retry: false,
   });
-
-  useEffect(() => {
-    if (!getAccessToken()) {
-      setBootstrapped(true);
-      return;
-    }
-    if (!meQuery.isFetching) {
-      setBootstrapped(true);
-    }
-  }, [meQuery.isFetching]);
 
   useEffect(() => {
     if (meQuery.isError) {
@@ -68,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hydrateSession = useCallback(async () => {
     const me = await fetchMe();
     queryClient.setQueryData(['auth', 'me'], me);
-    setBootstrapped(true);
     return me;
   }, [queryClient]);
 
@@ -100,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       queryClient.setQueryData(['auth', 'me'], null);
       queryClient.clear();
-      setBootstrapped(true);
     }
   }, [queryClient]);
 
@@ -112,8 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user: meQuery.data?.user ?? null,
       business: meQuery.data?.business ?? null,
-      isLoading:
-        !bootstrapped || (Boolean(getAccessToken()) && meQuery.isLoading),
+      isLoading: hasToken && meQuery.isPending,
       isAuthenticated: Boolean(meQuery.data?.user),
       needsOnboarding: Boolean(
         meQuery.data?.user && !meQuery.data.business?.onboardingCompletedAt,
@@ -124,9 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
     }),
     [
-      bootstrapped,
+      hasToken,
       meQuery.data,
-      meQuery.isLoading,
+      meQuery.isPending,
       login,
       register,
       logout,

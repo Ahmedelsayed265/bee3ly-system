@@ -185,6 +185,7 @@ model Business {
   leads          Lead[]
   orders         Order[]
   socialAccounts SocialAccount[]
+  pageComments   PageComment[]
   aiAgent        AIAgent?
   notifications  Notification[]
   campaigns      Campaign[]
@@ -245,6 +246,7 @@ model Customer {
   conversations Conversation[]
   leads         Lead[]
   orders        Order[]
+  pageComments  PageComment[]
 
   @@index([businessId])
   @@index([businessId, phone])
@@ -412,6 +414,29 @@ model WebhookEvent {
   @@unique([provider, externalEventId])
   @@index([createdAt])
   @@map("webhook_events")
+}
+
+model PageComment {
+  id          String   @id @default(uuid())
+  commentId   String   @unique
+  postId      String
+  pageId      String
+  fromUserId  String
+  message     String
+  commentedAt DateTime
+  businessId  String
+  customerId  String
+  rawPayload  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([postId])
+  @@index([customerId])
+  @@map("page_comments")
 }
 
 model AIAgent {

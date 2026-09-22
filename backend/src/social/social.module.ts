@@ -6,6 +6,7 @@ import { MetaGraphClient } from './meta/meta-graph.client';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
 import { MetaWebhookService } from './meta/meta-webhook.service';
+import { PageCommentsService } from './page-comments.service';
 import { SocialController } from './social.controller';
 import { SocialService } from './social.service';
 
@@ -18,6 +19,7 @@ import { SocialService } from './social.service';
     MetaOauthService,
     MetaOutboundService,
     MetaWebhookService,
+    PageCommentsService,
     InboundMessageService,
     AiEngineAdapter,
   ],

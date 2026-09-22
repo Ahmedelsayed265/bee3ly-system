@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   fetchOrders,
   updateOrderStatus,
@@ -36,9 +36,9 @@ export function useOrders() {
   const total = ordersQuery.data?.total ?? 0;
   const totalPages = ordersQuery.data?.totalPages ?? 1;
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  if (page > totalPages) {
+    setPage(totalPages);
+  }
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>

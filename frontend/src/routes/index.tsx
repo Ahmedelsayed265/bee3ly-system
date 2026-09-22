@@ -10,14 +10,6 @@ import { WelcomePage } from '@/pages/welcome-page';
 import { appRoutes } from '@/routes/app-routes';
 import { paths } from '@/routes/paths';
 
-function OnboardingLayout() {
-  return (
-    <div className="bg-page min-h-svh px-4 py-10">
-      <OnboardingPage />
-    </div>
-  );
-}
-
 export const router = createBrowserRouter([
   {
     path: paths.home,
@@ -37,7 +29,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: 'app/onboarding',
-        element: <OnboardingLayout />,
+        element: (
+          <div className="bg-page min-h-svh px-4 py-10">
+            <OnboardingPage />
+          </div>
+        ),
       },
       {
         path: 'app',

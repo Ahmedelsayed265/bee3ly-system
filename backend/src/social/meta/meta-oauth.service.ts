@@ -41,6 +41,8 @@ export class MetaOauthService {
       'pages_show_list',
       'pages_messaging',
       'pages_manage_metadata',
+      'pages_read_engagement',
+      'pages_manage_engagement',
     ].join(',');
     return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}`;
   }
@@ -178,7 +180,7 @@ export class MetaOauthService {
         accessTokenEnc: this.encrypt(page.access_token),
         status: SocialConnectionStatus.CONNECTED,
         webhookSubscribedAt: subscribe.success ? new Date() : null,
-        capabilities: ['messages', 'send'],
+        capabilities: ['messages', 'send', 'feed'],
         metadata: {
           pageId: page.id,
           webhookSubscribed: subscribe.success,
@@ -190,7 +192,7 @@ export class MetaOauthService {
         accessTokenEnc: this.encrypt(page.access_token),
         status: SocialConnectionStatus.CONNECTED,
         webhookSubscribedAt: subscribe.success ? new Date() : null,
-        capabilities: ['messages', 'send'],
+        capabilities: ['messages', 'send', 'feed'],
         metadata: {
           pageId: page.id,
           webhookSubscribed: subscribe.success,

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   createCampaign,
   fetchCampaigns,
@@ -33,9 +33,9 @@ export function useCampaigns() {
     status: 'ASSISTED_LAUNCH' | 'SIMULATED';
   } | null>(null);
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  if (page > totalPages) {
+    setPage(totalPages);
+  }
 
   const createMut = useMutation({
     mutationFn: createCampaign,

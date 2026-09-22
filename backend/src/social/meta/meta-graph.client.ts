@@ -70,6 +70,7 @@ export class MetaGraphClient {
           'messages',
           'messaging_postbacks',
           'message_deliveries',
+          'feed',
         ],
         access_token: pageAccessToken,
       }),
@@ -80,6 +81,48 @@ export class MetaGraphClient {
       return { success: false, error: text };
     }
     return { success: true };
+  }
+
+  /**
+   * Re-register App-level Page webhook fields (callback + field list).
+   * Includes `feed` for comment webhooks alongside messaging fields.
+   */
+  async ensureAppPageSubscriptions(callbackUrl: string, verifyToken: string) {
+    const appId = this.config.get<string>('META_APP_ID');
+    const appSecret = this.config.get<string>('META_APP_SECRET');
+    if (!appId || !appSecret) {
+      return { success: false as const, error: 'META_APP_ID/SECRET missing' };
+    }
+    const token = `${appId}|${appSecret}`;
+    const fields = [
+      'messages',
+      'messaging_postbacks',
+      'messaging_optins',
+      'message_deliveries',
+      'message_reads',
+      'feed',
+    ].join(',');
+    const body = new URLSearchParams({
+      object: 'page',
+      callback_url: callbackUrl,
+      verify_token: verifyToken,
+      fields,
+      include_values: 'true',
+      access_token: token,
+    });
+    const res = await fetch(`${this.base()}/${appId}/subscriptions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `App page subscriptions failed: ${text.slice(0, 300)}`,
+      );
+      return { success: false as const, error: text };
+    }
+    return { success: true as const };
   }
 
   async getUserProfile(pageAccessToken: string, userId: string) {
