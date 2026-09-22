@@ -199,6 +199,7 @@
   "variantColCombo": "التركيبة",
   "variantColPrice": "السعر",
   "variantColQty": "الكمية",
+  "variantMatrixNote": "كل صف هو SKU بسعر ومخزون مستقل.",
   "variantCountBadge": "{count} نوع",
   "variantEditStockHint": "عدّل الكمية من شاشة التعديل",
   "priceFrom": "من",
