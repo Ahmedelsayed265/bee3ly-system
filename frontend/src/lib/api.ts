@@ -22,6 +22,10 @@ export function setAccessToken(token: string | null) {
   } else {
     localStorage.removeItem('bee3ly_access_token')
   }
+  // Lazy import avoids circular dependency with features/realtime/socket
+  void import('@/features/realtime/socket').then(({ reconnectRealtimeWithToken }) => {
+    reconnectRealtimeWithToken(token)
+  })
 }
 
 export function getAccessToken() {

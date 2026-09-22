@@ -7,6 +7,7 @@ import { ConversionStage, LeadStatus, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { ContextBuilderService } from './context/context-builder.service';
 import { LlmEngine } from './engines/llm.engine';
 import { RulesEngine } from './engines/rules.engine';
@@ -23,6 +24,7 @@ export class AiService {
     private readonly contextBuilder: ContextBuilderService,
     private readonly rules: RulesEngine,
     private readonly llm: LlmEngine,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async getAgent(userId: string) {
@@ -172,6 +174,11 @@ export class AiService {
       },
     });
 
+    this.realtime.notifyConversationUpdated(
+      input.businessId,
+      conversation.id,
+    );
+
     return { reply: result.reply, mode: 'dev_fallback' as const };
   }
 
@@ -213,6 +220,10 @@ export class AiService {
         where: { id: conversation.id },
         data: { lastMessageAt: new Date() },
       });
+      this.realtime.notifyConversationUpdated(
+        input.businessId,
+        conversation.id,
+      );
       return {
         conversationId: conversation.id,
         intent: intentGuess,
@@ -232,6 +243,10 @@ export class AiService {
         where: { id: conversation.id },
         data: { lastMessageAt: new Date() },
       });
+      this.realtime.notifyConversationUpdated(
+        input.businessId,
+        conversation.id,
+      );
       return {
         conversationId: conversation.id,
         intent: intentGuess,
@@ -320,6 +335,11 @@ export class AiService {
 
     this.logger.debug(`AI reply via ${result.mode} intent=${result.intent}`);
 
+    this.realtime.notifyConversationUpdated(
+      input.businessId,
+      conversation.id,
+    );
+
     return {
       conversationId: conversation.id,
       intent: result.intent,
@@ -360,6 +380,7 @@ export class AiService {
         handoffReason: mode === 'AI' ? null : conversation.handoffReason,
       },
     });
+    this.realtime.notifyConversationUpdated(businessId, conversationId);
     return { conversation: updated };
   }
 }

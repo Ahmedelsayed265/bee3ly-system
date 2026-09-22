@@ -18,7 +18,6 @@ export function DashboardTopBar() {
   const notifQuery = useQuery({
     queryKey: ["notifications"],
     queryFn: fetchNotifications,
-    refetchInterval: 15_000,
   });
 
   const markReadMut = useMutation({

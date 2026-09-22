@@ -11,6 +11,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { SocialModule } from './social/social.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { SocialModule } from './social/social.module';
     }),
     PrismaModule,
     CommonModule,
+    RealtimeModule,
     AuthModule,
     BusinessesModule,
     ProductsModule,

@@ -2,12 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType, Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async list(userId: string) {
@@ -54,7 +56,7 @@ export class NotificationsService {
       data?: Prisma.InputJsonValue;
     },
   ) {
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         businessId,
         type: input.type,
@@ -63,5 +65,7 @@ export class NotificationsService {
         data: input.data,
       },
     });
+    this.realtime.notifyNotificationCreated(businessId, notification);
+    return notification;
   }
 }

@@ -8,6 +8,7 @@ import { ConversationChannel, MessageRole } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class ConversationsService {
     private readonly access: BusinessAccessService,
     @Inject(forwardRef(() => MetaOutboundService))
     private readonly outbound: MetaOutboundService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async list(userId: string) {
@@ -148,6 +150,7 @@ export class ConversationsService {
       }
     }
 
+    this.realtime.notifyConversationUpdated(businessId, conversationId);
     return { message };
   }
 

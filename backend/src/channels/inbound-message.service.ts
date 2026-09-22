@@ -6,6 +6,7 @@ import {
   SocialPlatform,
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { AiEngineAdapter } from './ai-engine.adapter';
 import type { InboundIngestResult, InboundMessageEvent } from './channel.types';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
@@ -18,6 +19,7 @@ export class InboundMessageService {
     private readonly prisma: PrismaService,
     private readonly aiEngine: AiEngineAdapter,
     private readonly outbound: MetaOutboundService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async ingest(event: InboundMessageEvent): Promise<InboundIngestResult> {
@@ -192,6 +194,11 @@ export class InboundMessageService {
         }
       }
     }
+
+    this.realtime.notifyConversationUpdated(
+      account.businessId,
+      conversation.id,
+    );
 
     return {
       businessId: account.businessId,

@@ -331,7 +331,7 @@ export class AuthService {
     return {
       httpOnly: true,
       secure: secureCookie,
-      sameSite: secureCookie ? 'none' : 'lax',
+      sameSite: secureCookie ? ('none' as const) : ('lax' as const),
       path: '/auth',
     };
   }

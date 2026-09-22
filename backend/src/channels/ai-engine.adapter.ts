@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { MessageRole } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import type {
   AiEngineInboundPayload,
   AiEngineInboundResponse,
@@ -23,6 +24,7 @@ export class AiEngineAdapter {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly ai: AiService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async handleInbound(
@@ -51,6 +53,7 @@ export class AiEngineAdapter {
         const data = (await res.json()) as { reply?: string };
         if (data.reply) {
           await this.persistAiReply(
+            payload.businessId,
             payload.conversationId,
             data.reply,
             'external',
@@ -88,6 +91,7 @@ export class AiEngineAdapter {
   }
 
   private async persistAiReply(
+    businessId: string,
     conversationId: string,
     content: string,
     source: string,
@@ -104,5 +108,6 @@ export class AiEngineAdapter {
       where: { id: conversationId },
       data: { lastMessageAt: new Date() },
     });
+    this.realtime.notifyConversationUpdated(businessId, conversationId);
   }
 }

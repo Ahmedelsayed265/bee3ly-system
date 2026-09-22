@@ -18,8 +18,6 @@ export function InboxPage() {
   const listQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: fetchConversations,
-    refetchInterval: 3_000,
-    staleTime: 0,
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -34,8 +32,6 @@ export function InboxPage() {
     queryKey: ['conversation', selectedId],
     queryFn: () => fetchConversation(selectedId!),
     enabled: Boolean(selectedId),
-    refetchInterval: 3_000,
-    staleTime: 0,
   })
 
   const conversation = detailQuery.data?.conversation
