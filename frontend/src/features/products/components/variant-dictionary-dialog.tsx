@@ -155,7 +155,7 @@ export function VariantDictionaryDialog({
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-danger px-3 not-first:cursor-pointer hover:bg-danger/10 hover:text-danger shrink-0"
+                  className="text-danger hover:bg-danger/10 hover:text-danger shrink-0 px-3 not-first:cursor-pointer"
                   onClick={() =>
                     setRows((prev) => prev.filter((_, i) => i !== index))
                   }
