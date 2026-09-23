@@ -76,6 +76,14 @@ export class MetaOutboundService {
     if (!token || !account) {
       return { sent: false as const };
     }
+    if (account.platform === 'WHATSAPP') {
+      return this.graph.sendWhatsAppText(
+        token,
+        account.externalId,
+        recipientId,
+        text,
+      );
+    }
     const pageId = account.parentExternalId || account.externalId;
     if (pageId) {
       await this.graph.takeThreadControl(pageId, token, recipientId);

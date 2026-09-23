@@ -519,7 +519,6 @@
   "connectionError": "Error",
   "connectRealMeta": "Connect channel",
   "connectFacebookInstagram": "Channels",
-  "metaConnectHint": "After approval you’ll pick a Facebook Page. Instagram connects automatically when linked to that Page.",
   "selectFacebookPage": "Select your Facebook Page",
   "selectFacebookPageHint": "Choose the Page Bee3ly should use to talk to customers.",
   "pageHasInstagram": "Has Instagram",

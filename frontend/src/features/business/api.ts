@@ -396,7 +396,9 @@ export async function connectSocialDemo(platform: 'FACEBOOK' | 'INSTAGRAM') {
   return data;
 }
 
-export async function disconnectSocial(platform: 'FACEBOOK' | 'INSTAGRAM') {
+export async function disconnectSocial(
+  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP',
+) {
   const { data } = await api.delete('/social/disconnect', {
     data: { platform },
   });

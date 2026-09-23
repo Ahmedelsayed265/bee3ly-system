@@ -8,6 +8,7 @@ export type InboundMessageEvent = {
   externalAccountId: string;
   externalSenderId: string;
   externalMessageId?: string;
+  senderName?: string;
   text: string;
   timestamp?: number;
   raw?: unknown;

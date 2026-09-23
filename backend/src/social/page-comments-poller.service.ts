@@ -13,7 +13,7 @@ import { PageCommentsService } from './page-comments.service';
  * webhooks while the App is Unpublished. Poll Graph for new comments and
  * persist via the same PageCommentsService path as webhooks.
  *
- * Interval: META_COMMENT_POLL_INTERVAL_MS (default 120000 = 2 minutes)
+ * Interval: META_COMMENT_POLL_INTERVAL_MS (default 60000 = 1 minute)
  * Disable: META_COMMENT_POLLING_ENABLED=false
  */
 @Injectable()
@@ -53,9 +53,9 @@ export class PageCommentsPollerService implements OnModuleInit {
 
   private pollIntervalMs() {
     const raw = Number(
-      this.config.get<string>('META_COMMENT_POLL_INTERVAL_MS', '6000'),
+      this.config.get<string>('META_COMMENT_POLL_INTERVAL_MS', '60000'),
     );
-    if (!Number.isFinite(raw) || raw < 10_000) return 120_000;
+    if (!Number.isFinite(raw) || raw < 10_000) return 60_000;
     return Math.floor(raw);
   }
 

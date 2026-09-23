@@ -80,12 +80,12 @@ export function useSocialSettings() {
 
   const facebook = accountsByPlatform.get('FACEBOOK');
   const instagram = accountsByPlatform.get('INSTAGRAM');
+  const whatsapp = accountsByPlatform.get('WHATSAPP');
   const metaReady = Boolean(socialQuery.data?.metaConfigured);
   const metaBusy = metaConnectMut.isPending;
 
   const connectMeta = () => metaConnectMut.mutate();
   const disconnect = (platform: ChannelId) => {
-    if (platform === 'WHATSAPP') return;
     disconnectMut.mutate(platform);
   };
 
@@ -96,6 +96,7 @@ export function useSocialSettings() {
     pendingError: pendingQuery.isError,
     facebook,
     instagram,
+    whatsapp,
     metaReady,
     metaBusy,
     isDisconnecting: disconnectMut.isPending,

@@ -17,6 +17,7 @@ type SocialChannelsSectionProps = {
   pendingError: boolean;
   facebook?: SocialAccount;
   instagram?: SocialAccount;
+  whatsapp?: SocialAccount;
   metaReady: boolean;
   metaBusy: boolean;
   isDisconnecting: boolean;
@@ -33,6 +34,7 @@ export function SocialChannelsSection({
   pendingError,
   facebook,
   instagram,
+  whatsapp,
   metaReady,
   metaBusy,
   isDisconnecting,
@@ -50,9 +52,7 @@ export function SocialChannelsSection({
         <p className="text-muted mt-1 text-sm">{t('socialAccountsHint')}</p>
         {!metaReady ? (
           <p className="text-muted mt-2 text-xs">{t('metaNotConfigured')}</p>
-        ) : (
-          <p className="text-muted mt-2 text-xs">{t('metaConnectHint')}</p>
-        )}
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -147,7 +147,20 @@ export function SocialChannelsSection({
           iconClassName="bg-[#25D366]/10 text-[#25D366]"
           title={t('channelWhatsApp')}
           description={t('channelWhatsAppHint')}
-          comingSoon
+          account={whatsapp}
+          action={
+            whatsapp && whatsapp.status !== 'DISCONNECTED' ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-danger hover:bg-danger/10 hover:text-danger"
+                disabled={isDisconnecting}
+                onClick={() => onDisconnect('WHATSAPP')}
+              >
+                {t('disconnectAccount')}
+              </Button>
+            ) : null
+          }
         />
 
         <ChannelCard

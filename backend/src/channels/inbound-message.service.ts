@@ -70,11 +70,15 @@ export class InboundMessageService {
     const platform =
       event.channel === 'INSTAGRAM'
         ? SocialPlatform.INSTAGRAM
-        : SocialPlatform.FACEBOOK;
+        : event.channel === 'WHATSAPP'
+          ? SocialPlatform.WHATSAPP
+          : SocialPlatform.FACEBOOK;
     const channel =
       event.channel === 'INSTAGRAM'
         ? ConversationChannel.INSTAGRAM
-        : ConversationChannel.FACEBOOK;
+        : event.channel === 'WHATSAPP'
+          ? ConversationChannel.WHATSAPP
+          : ConversationChannel.FACEBOOK;
 
     let customer = await this.prisma.customer.findFirst({
       where: {
@@ -88,11 +92,33 @@ export class InboundMessageService {
           businessId: account.businessId,
           externalId: event.externalSenderId,
           platform,
+          name: event.senderName ?? null,
+          phone: event.channel === 'WHATSAPP' ? event.externalSenderId : null,
         },
       });
     }
 
-    if (!customer.name && account.status === SocialConnectionStatus.CONNECTED) {
+    if (event.channel === 'WHATSAPP' && !customer.phone) {
+      customer = await this.prisma.customer.update({
+        where: { id: customer.id },
+        data: { phone: event.externalSenderId },
+      });
+    }
+
+    if (
+      !customer.name &&
+      event.senderName &&
+      event.channel === 'WHATSAPP'
+    ) {
+      customer = await this.prisma.customer.update({
+        where: { id: customer.id },
+        data: { name: event.senderName },
+      });
+    } else if (
+      !customer.name &&
+      account.status === SocialConnectionStatus.CONNECTED &&
+      event.channel !== 'WHATSAPP'
+    ) {
       const senderName = await this.outbound.getSenderName(
         account.id,
         event.externalSenderId,

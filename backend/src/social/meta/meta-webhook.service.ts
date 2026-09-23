@@ -90,6 +90,10 @@ export class MetaWebhookService {
       const changes =
         (item.changes as Array<Record<string, unknown>> | undefined) ?? [];
       for (const change of changes) {
+        if (objectType === 'whatsapp_business_account') {
+          await this.handleWhatsAppChange(change);
+          continue;
+        }
         if (objectType === 'instagram' && change.field === 'comments') {
           await this.handleInstagramComment(pageId, change);
           continue;
@@ -158,6 +162,68 @@ export class MetaWebhookService {
       const err = e instanceof Error ? e.message : 'unknown';
       await this.markEvent(externalEventId, 'ERROR', err);
       this.logger.warn(`Inbound ingest failed: ${err}`);
+    }
+  }
+
+  private async handleWhatsAppChange(change: Record<string, unknown>) {
+    if (change.field !== 'messages') return;
+    const value = (change.value as Record<string, unknown> | undefined) ?? {};
+    const metadata =
+      (value.metadata as { phone_number_id?: string } | undefined) ?? {};
+    const phoneNumberId = metadata.phone_number_id;
+    if (!phoneNumberId) return;
+
+    const contacts =
+      (value.contacts as Array<{
+        wa_id?: string;
+        profile?: { name?: string };
+      }> | undefined) ?? [];
+    const nameByWaId = new Map<string, string>();
+    for (const contact of contacts) {
+      const name = contact.profile?.name?.trim();
+      if (contact.wa_id && name) nameByWaId.set(contact.wa_id, name);
+    }
+
+    const messages =
+      (value.messages as Array<Record<string, unknown>> | undefined) ?? [];
+    for (const message of messages) {
+      const from = typeof message.from === 'string' ? message.from : '';
+      const messageId = typeof message.id === 'string' ? message.id : '';
+      const text = message.text as { body?: string } | undefined;
+      const body = text?.body?.trim() ?? '';
+      if (!from || !body) {
+        const type = typeof message.type === 'string' ? message.type : 'unknown';
+        this.logger.log(`Ignoring WhatsApp message type=${type} from=${from}`);
+        continue;
+      }
+
+      const externalEventId = messageId || `${phoneNumberId}:${from}:${body.slice(0, 24)}`;
+      const created = await this.claimEvent('META', externalEventId, message);
+      if (!created) {
+        this.logger.debug(`Duplicate WhatsApp event ${externalEventId}`);
+        continue;
+      }
+
+      const inbound: InboundMessageEvent = {
+        provider: 'META',
+        channel: 'WHATSAPP',
+        externalAccountId: phoneNumberId,
+        externalSenderId: from,
+        externalMessageId: messageId || undefined,
+        senderName: nameByWaId.get(from),
+        text: body,
+        timestamp: Number(message.timestamp) || Date.now(),
+        raw: message,
+      };
+
+      try {
+        await this.inbound.ingest(inbound);
+        await this.markEvent(externalEventId, 'PROCESSED');
+      } catch (e) {
+        const err = e instanceof Error ? e.message : 'unknown';
+        await this.markEvent(externalEventId, 'ERROR', err);
+        this.logger.warn(`WhatsApp inbound failed: ${err}`);
+      }
     }
   }
 

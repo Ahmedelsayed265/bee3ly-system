@@ -47,6 +47,7 @@ export function SettingsPageView() {
           pendingError={social.pendingError}
           facebook={social.facebook}
           instagram={social.instagram}
+          whatsapp={social.whatsapp}
           metaReady={social.metaReady}
           metaBusy={social.metaBusy}
           isDisconnecting={social.isDisconnecting}

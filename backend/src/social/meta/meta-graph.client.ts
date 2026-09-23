@@ -370,6 +370,35 @@ export class MetaGraphClient {
     return null;
   }
 
+  async sendWhatsAppText(
+    accessToken: string,
+    phoneNumberId: string,
+    to: string,
+    text: string,
+  ) {
+    const url = `${this.base()}/${phoneNumberId}/messages`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to,
+        type: 'text',
+        text: { preview_url: false, body: text },
+      }),
+    });
+    if (!res.ok) {
+      const textBody = await res.text();
+      this.logger.warn(`WhatsApp send failed: ${textBody.slice(0, 300)}`);
+      return { sent: false as const, error: textBody };
+    }
+    return { sent: true as const };
+  }
+
   async sendTextMessage(
     pageAccessToken: string,
     recipientId: string,

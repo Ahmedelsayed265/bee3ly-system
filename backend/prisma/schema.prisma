@@ -29,6 +29,7 @@ enum BusinessGoal {
 enum SocialPlatform {
   FACEBOOK
   INSTAGRAM
+  WHATSAPP
 }
 
 enum ConversationChannel {
