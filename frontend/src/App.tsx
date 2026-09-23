@@ -23,7 +23,7 @@ export default function App() {
         <LocaleProvider>
           <AuthProvider>
             <RealtimeSync />
-            <Toaster richColors position="bottom-left"/>
+            <Toaster richColors position="bottom-left" />
             <RouterProvider router={router} />
           </AuthProvider>
         </LocaleProvider>

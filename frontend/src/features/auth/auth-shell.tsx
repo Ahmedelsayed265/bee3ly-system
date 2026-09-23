@@ -23,7 +23,7 @@ export function AuthShell({
         aria-hidden
       />
 
-      <div className="md:absolute relative z-10 mb-4 flex shrink-0 items-center justify-end">
+      <div className="relative z-10 mb-4 flex shrink-0 items-center justify-end md:absolute">
         <PrefsControls />
       </div>
 
