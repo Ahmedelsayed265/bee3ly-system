@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useLocale } from '@/features/i18n/locale-context';
 import { ChannelCard } from '@/features/settings/components/channel-card';
 import { MetaPagePicker } from '@/features/settings/components/meta-page-picker';
-import type { SocialAccount } from '@/features/settings/types';
+import type { ChannelId, SocialAccount } from '@/features/settings/types';
 
 type SocialChannelsSectionProps = {
   pendingId: string | null;
@@ -23,7 +23,7 @@ type SocialChannelsSectionProps = {
   isDisconnecting: boolean;
   isSelectingPage: boolean;
   onConnectMeta: () => void;
-  onDisconnect: (platform: 'FACEBOOK' | 'INSTAGRAM') => void;
+  onDisconnect: (platform: ChannelId) => void;
   onSelectPage: (pageId: string) => void;
 };
 
