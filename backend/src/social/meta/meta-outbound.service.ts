@@ -63,7 +63,12 @@ export class MetaOutboundService {
     return null;
   }
 
-  async sendText(socialAccountId: string, recipientId: string, text: string) {
+  async sendText(
+    socialAccountId: string,
+    recipientId: string,
+    text: string,
+    quickReplies?: Array<{ title: string; payload: string }>,
+  ) {
     const account = await this.prisma.socialAccount.findUnique({
       where: { id: socialAccountId },
     });
@@ -75,6 +80,15 @@ export class MetaOutboundService {
     if (pageId) {
       await this.graph.takeThreadControl(pageId, token, recipientId);
     }
-    return this.graph.sendTextMessage(token, recipientId, text);
+    const sent = await this.graph.sendTextMessage(
+      token,
+      recipientId,
+      text,
+      quickReplies,
+    );
+    if (!sent.sent && quickReplies?.length) {
+      return this.graph.sendTextMessage(token, recipientId, text);
+    }
+    return sent;
   }
 }

@@ -1,4 +1,5 @@
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useAuth } from '@/features/auth/auth-context';
 import { ConversationList } from '@/features/inbox/components/conversation-list';
 import { ConversationThread } from '@/features/inbox/components/conversation-thread';
 import { useInbox } from '@/features/inbox/hooks/use-inbox';
@@ -6,11 +7,13 @@ import { useLocale } from '@/features/i18n/locale-context';
 
 export function InboxPageView() {
   const { t } = useLocale();
+  const { business } = useAuth();
   const {
     conversations,
     selectedId,
     setSelectedId,
     conversation,
+    latestOrder,
     messages,
     isHumanMode,
     draft,
@@ -49,6 +52,12 @@ export function InboxPageView() {
           draft={draft}
           isSending={isSending}
           messagesEndRef={messagesEndRef}
+          replyContext={{
+            businessName: business?.name ?? '',
+            customerName: conversation?.customer.name ?? null,
+            customerPhone: conversation?.customer.phone ?? null,
+            order: latestOrder,
+          }}
           onDraftChange={setDraft}
           onSend={sendMessage}
           onSetMode={setMode}

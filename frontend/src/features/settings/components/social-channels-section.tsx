@@ -1,6 +1,7 @@
 import {
   FacebookIcon,
   InstagramIcon,
+  TikTokIcon,
   WhatsAppIcon,
 } from '@/components/brand/channel-icons';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ export function SocialChannelsSection({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <ChannelCard
           icon={<FacebookIcon className="h-5 w-5" />}
           iconClassName="bg-[#1877F2]/10 text-[#1877F2]"
@@ -146,11 +147,15 @@ export function SocialChannelsSection({
           iconClassName="bg-[#25D366]/10 text-[#25D366]"
           title={t('channelWhatsApp')}
           description={t('channelWhatsAppHint')}
-          action={
-            <Button size="sm" variant="outline" disabled>
-              {t('channelComingSoon')}
-            </Button>
-          }
+          comingSoon
+        />
+
+        <ChannelCard
+          icon={<TikTokIcon className="h-5 w-5" />}
+          iconClassName="bg-ink/5 text-ink"
+          title={t('channelTikTok')}
+          description={t('channelTikTokHint')}
+          comingSoon
         />
       </div>
     </section>

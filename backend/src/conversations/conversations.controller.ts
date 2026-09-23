@@ -9,7 +9,17 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsIn, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import {
   CurrentUser,
   type AuthUser,
@@ -23,10 +33,29 @@ class LeadStatusDto {
   status!: string;
 }
 
+class QuickReplyDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(20)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  payload!: string;
+}
+
 class HumanMessageDto {
   @IsString()
   @MinLength(1)
   content!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ValidateNested({ each: true })
+  @Type(() => QuickReplyDto)
+  quickReplies?: QuickReplyDto[];
 }
 
 @Controller()
@@ -55,7 +84,12 @@ export class ConversationsController {
     @Param('id') id: string,
     @Body() dto: HumanMessageDto,
   ) {
-    return this.conversations.sendHumanMessage(user.id, id, dto.content);
+    return this.conversations.sendHumanMessage(
+      user.id,
+      id,
+      dto.content,
+      dto.quickReplies,
+    );
   }
 
   @Get('leads')

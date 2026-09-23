@@ -242,6 +242,7 @@ export async function fetchConversation(id: string) {
         content: string;
         intent: string | null;
         createdAt: string;
+        meta?: { quickReplies?: Array<{ title: string; payload: string }> } | null;
       }>;
       leads?: Array<{ id: string; status: string; intent: string | null }>;
     };
@@ -250,6 +251,9 @@ export async function fetchConversation(id: string) {
       orderNumber: number;
       status: string;
       totalEgp: number;
+      customerName: string | null;
+      customerPhone: string | null;
+      items?: Array<{ name: string; quantity: number }>;
     }>;
   }>(`/conversations/${id}`);
   return data;
@@ -439,10 +443,14 @@ export async function setConversationMode(
 export async function sendHumanMessage(
   conversationId: string,
   content: string,
+  quickReplies?: Array<{ title: string; payload: string }>,
 ) {
   const { data } = await api.post(
     `/conversations/${conversationId}/human-message`,
-    { content },
+    {
+      content,
+      ...(quickReplies?.length ? { quickReplies } : {}),
+    },
   );
   return data;
 }

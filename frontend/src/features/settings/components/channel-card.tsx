@@ -41,8 +41,9 @@ type ChannelCardProps = {
   title: string;
   description: string;
   account?: SocialAccount | null;
-  action: ReactNode;
+  action?: ReactNode;
   footer?: ReactNode;
+  comingSoon?: boolean;
 };
 
 export function ChannelCard({
@@ -53,13 +54,19 @@ export function ChannelCard({
   account,
   action,
   footer,
+  comingSoon = false,
 }: ChannelCardProps) {
   const { t } = useLocale();
   const connected =
     account?.status === 'CONNECTED' || account?.status === 'CONNECTING';
 
   return (
-    <article className="border-border bg-surface flex h-full flex-col gap-4 rounded-2xl border p-5">
+    <article
+      className={cn(
+        'border-border bg-surface flex h-full flex-col gap-4 rounded-2xl border p-5',
+        comingSoon && 'border-dashed',
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span
@@ -78,10 +85,14 @@ export function ChannelCard({
         <span
           className={cn(
             'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold',
-            statusTone(account?.status),
+            comingSoon ? 'bg-brand/10 text-brand' : statusTone(account?.status),
           )}
         >
-          {account ? statusLabel(account.status, t) : t('channelNotLinked')}
+          {comingSoon
+            ? t('channelComingSoon')
+            : account
+              ? statusLabel(account.status, t)
+              : t('channelNotLinked')}
         </span>
       </div>
 
@@ -94,7 +105,9 @@ export function ChannelCard({
         </div>
       ) : null}
 
-      <div className="mt-auto flex flex-wrap items-center gap-2">{action}</div>
+      {action ? (
+        <div className="mt-auto flex flex-wrap items-center gap-2">{action}</div>
+      ) : null}
       {footer}
     </article>
   );

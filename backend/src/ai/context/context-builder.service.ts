@@ -10,6 +10,7 @@ import {
   formatVariantsSummary,
   hasVariantMatrix,
 } from '../../products/product-variants';
+import { presentKnowledge } from '../../businesses/knowledge-text';
 import type { BusinessContext } from '../types';
 
 @Injectable()
@@ -65,10 +66,10 @@ export class ContextBuilderService {
         type: business.type,
         description: business.description,
         operatingArea: business.operatingArea,
-        workingHours: business.workingHours,
-        deliveryInfo: business.deliveryInfo,
-        paymentInfo: business.paymentInfo,
-        faqs: business.faqs,
+        workingHours: presentKnowledge(business.workingHours),
+        deliveryInfo: presentKnowledge(business.deliveryInfo),
+        paymentInfo: presentKnowledge(business.paymentInfo),
+        faqs: presentKnowledge(business.faqs),
         primaryGoal: business.primaryGoal,
       },
       agent: {

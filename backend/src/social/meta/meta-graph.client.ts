@@ -374,14 +374,30 @@ export class MetaGraphClient {
     pageAccessToken: string,
     recipientId: string,
     text: string,
+    quickReplies?: Array<{ title: string; payload: string }>,
   ) {
     const url = `${this.base()}/me/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
+    const message: {
+      text: string;
+      quick_replies?: Array<{
+        content_type: 'text';
+        title: string;
+        payload: string;
+      }>;
+    } = { text };
+    if (quickReplies?.length) {
+      message.quick_replies = quickReplies.slice(0, 13).map((item) => ({
+        content_type: 'text',
+        title: item.title.slice(0, 20),
+        payload: item.payload.slice(0, 1000),
+      }));
+    }
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         recipient: { id: recipientId },
-        message: { text },
+        message,
         messaging_type: 'RESPONSE',
       }),
     });

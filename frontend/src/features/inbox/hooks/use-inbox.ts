@@ -29,6 +29,7 @@ export function useInbox() {
   });
 
   const conversation = detailQuery.data?.conversation;
+  const latestOrder = detailQuery.data?.orders?.[0] ?? null;
   const isHumanMode =
     conversation?.mode === 'HUMAN' || conversation?.needsHuman;
   const messages = conversation?.messages ?? [];
@@ -51,11 +52,14 @@ export function useInbox() {
   };
 
   const sendMut = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async (input: {
+      content: string;
+      quickReplies?: Array<{ title: string; payload: string }>;
+    }) => {
       if (!activeId || !isHumanMode) {
         throw new Error('HUMAN_MODE_REQUIRED');
       }
-      await sendHumanMessage(activeId, content);
+      await sendHumanMessage(activeId, input.content, input.quickReplies);
       return { conversationId: activeId };
     },
     onSuccess: async (data) => {
@@ -90,6 +94,7 @@ export function useInbox() {
     selectedId: activeId,
     setSelectedId,
     conversation,
+    latestOrder,
     messages,
     isHumanMode,
     draft,
@@ -97,7 +102,10 @@ export function useInbox() {
     messagesEndRef,
     isSending: sendMut.isPending,
     isModePending: modeMut.isPending,
-    sendMessage: (content: string) => sendMut.mutate(content),
+    sendMessage: (
+      content: string,
+      quickReplies?: Array<{ title: string; payload: string }>,
+    ) => sendMut.mutate({ content, quickReplies }),
     setMode: (mode: 'AI' | 'HUMAN') => modeMut.mutate(mode),
     pendingDelete,
     setPendingDelete,

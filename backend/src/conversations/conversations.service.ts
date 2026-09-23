@@ -118,6 +118,7 @@ export class ConversationsService {
     userId: string,
     conversationId: string,
     content: string,
+    quickReplies?: Array<{ title: string; payload: string }>,
   ) {
     const businessId = await this.access.requireBusinessId(userId);
     const conversation = await this.prisma.conversation.findFirst({
@@ -131,6 +132,7 @@ export class ConversationsService {
         conversationId,
         role: MessageRole.HUMAN,
         content,
+        meta: quickReplies?.length ? { quickReplies } : undefined,
       },
     });
     await this.prisma.conversation.update({
@@ -159,6 +161,7 @@ export class ConversationsService {
           account.id,
           conversation.customer.externalId,
           content,
+          quickReplies,
         );
       }
     }

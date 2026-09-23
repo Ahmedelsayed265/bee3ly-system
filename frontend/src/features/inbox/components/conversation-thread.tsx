@@ -5,11 +5,13 @@ import { MessageBubble } from '@/features/inbox/components/message-bubble';
 import { MessageComposer } from '@/features/inbox/components/message-composer';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import type { QuickReply, ReplyContext } from '@/features/inbox/reply-kit';
 
 type Message = {
   id: string;
   role: string;
   content: string;
+  meta?: { quickReplies?: QuickReply[] } | null;
 };
 
 type Conversation = {
@@ -28,8 +30,9 @@ type ConversationThreadProps = {
   draft: string;
   isSending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
+  replyContext: ReplyContext;
   onDraftChange: (value: string) => void;
-  onSend: (content: string) => void;
+  onSend: (content: string, quickReplies?: QuickReply[]) => void;
   onSetMode: (mode: 'AI' | 'HUMAN') => void;
   onDeleteRequest: () => void;
 };
@@ -49,6 +52,7 @@ export function ConversationThread({
   draft,
   isSending,
   messagesEndRef,
+  replyContext,
   onDraftChange,
   onSend,
   onSetMode,
@@ -107,6 +111,7 @@ export function ConversationThread({
             role={m.role}
             content={m.content}
             customerName={conversation?.customer.name}
+            quickReplies={m.meta?.quickReplies}
           />
         ))}
         {!selectedId ? (
@@ -119,6 +124,7 @@ export function ConversationThread({
         draft={draft}
         isHumanMode={isHumanMode}
         isPending={isSending}
+        replyContext={replyContext}
         onDraftChange={onDraftChange}
         onSend={onSend}
       />

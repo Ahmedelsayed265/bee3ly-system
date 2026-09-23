@@ -6,12 +6,14 @@ type MessageBubbleProps = {
   role: string;
   content: string;
   customerName?: string | null;
+  quickReplies?: Array<{ title: string; payload: string }>;
 };
 
 export function MessageBubble({
   role,
   content,
   customerName,
+  quickReplies,
 }: MessageBubbleProps) {
   const { t } = useLocale();
   const isCustomer = role === 'CUSTOMER';
@@ -65,7 +67,19 @@ export function MessageBubble({
               : 'bg-lavender text-ink rounded-ss-md',
         )}
       >
-        {content}
+        <p className="whitespace-pre-wrap">{content}</p>
+        {quickReplies?.length ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {quickReplies.map((item) => (
+              <span
+                key={item.payload}
+                className="border-brand/30 text-brand rounded-full border bg-white/70 px-2.5 py-1 text-[11px] font-semibold"
+              >
+                {item.title}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
