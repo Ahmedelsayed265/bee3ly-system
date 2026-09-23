@@ -53,7 +53,7 @@ export class PageCommentsPollerService implements OnModuleInit {
 
   private pollIntervalMs() {
     const raw = Number(
-      this.config.get<string>('META_COMMENT_POLL_INTERVAL_MS', '120000'),
+      this.config.get<string>('META_COMMENT_POLL_INTERVAL_MS', '6000'),
     );
     if (!Number.isFinite(raw) || raw < 10_000) return 120_000;
     return Math.floor(raw);
@@ -80,6 +80,7 @@ export class PageCommentsPollerService implements OnModuleInit {
     this.running = true;
     try {
       await this.pollAllConnectedPages();
+      await this.pollInstagramAccounts();
     } catch (e) {
       const err = e instanceof Error ? e.message : 'unknown';
       this.logger.warn(`Comment poll failed: ${err}`);
@@ -305,5 +306,60 @@ export class PageCommentsPollerService implements OnModuleInit {
       privateReplies,
       pages: accounts.length,
     };
+  }
+
+  /** Same Dev-mode fallback for Instagram comments when webhooks do not arrive. */
+  private async pollInstagramAccounts() {
+    const accounts = await this.prisma.socialAccount.findMany({
+      where: {
+        platform: SocialPlatform.INSTAGRAM,
+        status: SocialConnectionStatus.CONNECTED,
+        accessTokenEnc: { not: null },
+      },
+    });
+
+    for (const account of accounts) {
+      if (!account.accessTokenEnc || !account.externalId) continue;
+      let token: string;
+      try {
+        token = this.oauth.decrypt(account.accessTokenEnc);
+      } catch (e) {
+        this.logger.warn(
+          `Decrypt failed for instagram=${account.id}: ${
+            e instanceof Error ? e.message : 'unknown'
+          }`,
+        );
+        continue;
+      }
+
+      const result = await this.graph.listRecentInstagramComments(
+        account.externalId,
+        token,
+      );
+      if (!result.ok) continue;
+
+      for (const comment of result.comments) {
+        const existing = await this.prisma.pageComment.findUnique({
+          where: { commentId: comment.commentId },
+        });
+        if (existing?.publicRepliedAt && existing.privateRepliedAt) continue;
+
+        const row = await this.pageComments.handleInstagramComment({
+          pageId: account.externalId,
+          commentId: comment.commentId,
+          postId: comment.postId,
+          fromUserId: comment.fromUserId,
+          fromName: comment.fromName,
+          message: comment.message,
+          commentedAt: comment.commentedAt,
+          rawPayload: { source: 'polling', comment: comment.raw },
+        });
+        if (row && !existing) {
+          this.logger.log(
+            `New Instagram comment received (poll): ${row.commentId}`,
+          );
+        }
+      }
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ConversationChannel,
   MessageRole,
@@ -7,6 +8,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { MetaGraphClient } from './meta/meta-graph.client';
+import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
 
 export type CreatePageCommentFromWebhookInput = {
@@ -18,6 +21,7 @@ export type CreatePageCommentFromWebhookInput = {
   message: string;
   commentedAt: Date;
   rawPayload: unknown;
+  platform?: SocialPlatform;
 };
 
 @Injectable()
@@ -28,19 +32,23 @@ export class PageCommentsService {
     private readonly prisma: PrismaService,
     private readonly outbound: MetaOutboundService,
     private readonly realtime: RealtimeService,
+    private readonly graph: MetaGraphClient,
+    private readonly oauth: MetaOauthService,
+    private readonly config: ConfigService,
   ) {}
 
   async createFromWebhook(input: CreatePageCommentFromWebhookInput) {
+    const platform = input.platform ?? SocialPlatform.FACEBOOK;
     const account = await this.prisma.socialAccount.findFirst({
       where: {
         externalId: input.pageId,
-        platform: SocialPlatform.FACEBOOK,
+        platform,
         status: SocialConnectionStatus.CONNECTED,
       },
     });
     if (!account) {
       this.logger.warn(
-        `No CONNECTED Facebook SocialAccount for pageId=${input.pageId}`,
+        `No CONNECTED ${platform} SocialAccount for id=${input.pageId}`,
       );
       return null;
     }
@@ -56,7 +64,7 @@ export class PageCommentsService {
         data: {
           businessId: account.businessId,
           externalId: input.fromUserId,
-          platform: SocialPlatform.FACEBOOK,
+          platform,
           name: input.fromName?.trim() || null,
         },
       });
@@ -117,11 +125,12 @@ export class PageCommentsService {
       });
     }
 
+    const channel = await this.channelForComment(row.pageId);
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         businessId: row.businessId,
         customerId: row.customerId,
-        channel: ConversationChannel.FACEBOOK,
+        channel,
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -131,7 +140,7 @@ export class PageCommentsService {
         data: {
           businessId: row.businessId,
           customerId: row.customerId,
-          channel: ConversationChannel.FACEBOOK,
+          channel,
           mode: 'AI',
           status: 'OPEN',
           lastMessageAt: row.commentedAt,
@@ -185,5 +194,154 @@ export class PageCommentsService {
       conversation.id,
     );
     return conversation;
+  }
+
+  /**
+   * Instagram comment webhook: save, open an INSTAGRAM inbox thread,
+   * then send the fixed public reply and a private DM.
+   */
+  async handleInstagramComment(input: CreatePageCommentFromWebhookInput) {
+    const created = await this.createFromWebhook({
+      ...input,
+      platform: SocialPlatform.INSTAGRAM,
+    });
+    if (!created) return null;
+    if (created.publicRepliedAt && created.privateRepliedAt) return created;
+
+    await this.ensureConversationFromComment(created.commentId);
+    let row = await this.prisma.pageComment.findUnique({
+      where: { id: created.id },
+    });
+    if (!row) return created;
+
+    const account = await this.prisma.socialAccount.findFirst({
+      where: {
+        externalId: input.pageId,
+        platform: SocialPlatform.INSTAGRAM,
+        status: SocialConnectionStatus.CONNECTED,
+      },
+      include: {
+        business: {
+          select: {
+            name: true,
+            aiAgent: { select: { commentFixedReply: true } },
+          },
+        },
+      },
+    });
+    if (!account?.accessTokenEnc) return row;
+
+    let token: string;
+    try {
+      token = this.oauth.decrypt(account.accessTokenEnc);
+    } catch {
+      this.logger.warn(`IG comment token decrypt failed ig=${input.pageId}`);
+      return row;
+    }
+
+    const replyText = this.fixedReply(
+      account.business?.name,
+      account.business?.aiAgent?.commentFixedReply,
+    );
+
+    if (!row.publicRepliedAt) {
+      const reply = await this.graph.replyToInstagramComment(
+        row.commentId,
+        token,
+        replyText,
+      );
+      if (reply.ok) {
+        row = await this.prisma.pageComment.update({
+          where: { id: row.id },
+          data: {
+            publicReplyId: reply.replyId,
+            publicRepliedAt: new Date(),
+          },
+        });
+        this.logger.log(
+          `IG public reply sent commentId=${row.commentId} replyId=${reply.replyId}`,
+        );
+      }
+    }
+
+    if (!row.privateRepliedAt) {
+      const pageId = account.parentExternalId || input.pageId;
+      const priv = await this.graph.sendInstagramPrivateReply(
+        pageId,
+        token,
+        row.commentId,
+        replyText,
+      );
+      const alreadyReplied =
+        !priv.sent &&
+        typeof priv.error === 'string' &&
+        priv.error.includes('already has a reply');
+      if (priv.sent || alreadyReplied) {
+        row = await this.prisma.pageComment.update({
+          where: { id: row.id },
+          data: { privateRepliedAt: new Date() },
+        });
+        this.logger.log(
+          priv.sent
+            ? `IG private reply sent commentId=${row.commentId} messageId=${priv.messageId}`
+            : `IG private reply already sent commentId=${row.commentId}`,
+        );
+        if (row.conversationId) {
+          const seeded = await this.prisma.message.findFirst({
+            where: {
+              conversationId: row.conversationId,
+              meta: {
+                path: ['pageCommentId'],
+                equals: row.commentId,
+              },
+            },
+          });
+          if (!seeded) {
+            await this.prisma.message.create({
+              data: {
+                conversationId: row.conversationId,
+                role: MessageRole.AI,
+                content: replyText,
+                meta: {
+                  source: 'ig_comment_private_reply',
+                  pageCommentId: row.commentId,
+                  metaMessageId: priv.sent ? priv.messageId : null,
+                },
+              },
+            });
+            await this.prisma.conversation.update({
+              where: { id: row.conversationId },
+              data: { lastMessageAt: new Date() },
+            });
+            this.realtime.notifyConversationUpdated(
+              row.businessId,
+              row.conversationId,
+            );
+          }
+        }
+      }
+    }
+
+    return row;
+  }
+
+  private fixedReply(businessName?: string | null, businessReply?: string | null) {
+    const fromBusiness = businessReply?.trim();
+    if (fromBusiness) return fromBusiness;
+    const fromEnv = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
+    if (fromEnv) return fromEnv;
+    const shop = businessName?.trim() || 'المتجر';
+    return `أهلاً بيك! تعليقك وصل لـ ${shop}. هنبعتلك التفاصيل في رسالة خاصة قريب 💬`;
+  }
+
+  private async channelForComment(pageId: string) {
+    const ig = await this.prisma.socialAccount.findFirst({
+      where: {
+        externalId: pageId,
+        platform: SocialPlatform.INSTAGRAM,
+      },
+      select: { id: true },
+    });
+    return ig ? ConversationChannel.INSTAGRAM : ConversationChannel.FACEBOOK;
   }
 }

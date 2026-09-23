@@ -539,6 +539,98 @@ export class MetaGraphClient {
     return { ok: true as const, comments };
   }
 
+  /**
+   * Recent Instagram media comments. Dev-mode fallback when the `comments`
+   * webhook is not delivered.
+   */
+  async listRecentInstagramComments(
+    igUserId: string,
+    pageAccessToken: string,
+    opts?: { postLimit?: number; commentLimit?: number },
+  ) {
+    const postLimit = opts?.postLimit ?? 5;
+    const commentLimit = opts?.commentLimit ?? 15;
+    const url = new URL(`${this.base()}/${igUserId}/media`);
+    url.searchParams.set(
+      'fields',
+      `id,comments.limit(${commentLimit}){id,text,username,timestamp,from}`,
+    );
+    url.searchParams.set('limit', String(postLimit));
+    url.searchParams.set('access_token', pageAccessToken);
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `List IG comments failed ig=${igUserId}: ${text.slice(0, 300)}`,
+      );
+      return {
+        ok: false as const,
+        error: text,
+        comments: [] as Array<{
+          commentId: string;
+          postId: string;
+          pageId: string;
+          fromUserId: string;
+          fromName: string | null;
+          message: string;
+          commentedAt: Date;
+          raw: unknown;
+        }>,
+      };
+    }
+
+    const json = (await res.json()) as {
+      data?: Array<{
+        id?: string;
+        comments?: {
+          data?: Array<{
+            id?: string;
+            text?: string;
+            username?: string;
+            timestamp?: string;
+            from?: { id?: string; username?: string };
+          }>;
+        };
+      }>;
+    };
+
+    const comments: Array<{
+      commentId: string;
+      postId: string;
+      pageId: string;
+      fromUserId: string;
+      fromName: string | null;
+      message: string;
+      commentedAt: Date;
+      raw: unknown;
+    }> = [];
+
+    for (const media of json.data ?? []) {
+      const postId = typeof media.id === 'string' ? media.id : '';
+      if (!postId) continue;
+      for (const c of media.comments?.data ?? []) {
+        const commentId = typeof c.id === 'string' ? c.id : '';
+        const fromUserId = c.from?.id;
+        if (!commentId || !fromUserId) continue;
+        if (fromUserId === igUserId) continue;
+        const username = c.username?.trim() || c.from?.username?.trim() || null;
+        comments.push({
+          commentId,
+          postId,
+          pageId: igUserId,
+          fromUserId,
+          fromName: username,
+          message: typeof c.text === 'string' ? c.text : '',
+          commentedAt: c.timestamp ? new Date(c.timestamp) : new Date(),
+          raw: c,
+        });
+      }
+    }
+
+    return { ok: true as const, comments };
+  }
+
   /** Public reply under a Page comment (requires pages_manage_engagement). */
   async replyToComment(
     commentId: string,
@@ -558,5 +650,57 @@ export class MetaGraphClient {
     }
     const json = (await res.json()) as { id?: string };
     return { ok: true as const, replyId: json.id ?? null };
+  }
+
+  /** Public reply under an Instagram comment (instagram_manage_comments). */
+  async replyToInstagramComment(
+    commentId: string,
+    pageAccessToken: string,
+    message: string,
+  ) {
+    const url = new URL(`${this.base()}/${commentId}/replies`);
+    url.searchParams.set('message', message);
+    url.searchParams.set('access_token', pageAccessToken);
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `IG comment reply failed commentId=${commentId}: ${text.slice(0, 300)}`,
+      );
+      return { ok: false as const, error: text };
+    }
+    const json = (await res.json()) as { id?: string };
+    return { ok: true as const, replyId: json.id ?? null };
+  }
+
+  /**
+   * Private reply that opens an Instagram DM from a comment.
+   * Must be posted to the Facebook Page id. The IG user id returns
+   * "(#3) Application does not have the capability".
+   */
+  async sendInstagramPrivateReply(
+    pageId: string,
+    pageAccessToken: string,
+    commentId: string,
+    text: string,
+  ) {
+    const url = `${this.base()}/${pageId}/messages?access_token=${encodeURIComponent(pageAccessToken)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+    if (!res.ok) {
+      const textBody = await res.text();
+      this.logger.warn(
+        `IG private reply failed commentId=${commentId}: ${textBody.slice(0, 300)}`,
+      );
+      return { sent: false as const, error: textBody };
+    }
+    const json = (await res.json()) as { message_id?: string };
+    return { sent: true as const, messageId: json.message_id ?? null };
   }
 }

@@ -90,6 +90,10 @@ export class MetaWebhookService {
       const changes =
         (item.changes as Array<Record<string, unknown>> | undefined) ?? [];
       for (const change of changes) {
+        if (objectType === 'instagram' && change.field === 'comments') {
+          await this.handleInstagramComment(pageId, change);
+          continue;
+        }
         if (change.field !== 'feed') continue;
         await this.handleFeedComment(pageId, change);
       }
@@ -154,6 +158,58 @@ export class MetaWebhookService {
       const err = e instanceof Error ? e.message : 'unknown';
       await this.markEvent(externalEventId, 'ERROR', err);
       this.logger.warn(`Inbound ingest failed: ${err}`);
+    }
+  }
+
+  private async handleInstagramComment(
+    igUserId: string,
+    change: Record<string, unknown>,
+  ) {
+    const value = (change.value as Record<string, unknown> | undefined) ?? {};
+    const from = value.from as
+      | { id?: string; username?: string; name?: string }
+      | undefined;
+    const fromUserId = from?.id;
+    if (!fromUserId || fromUserId === igUserId) return;
+    if (typeof value.parent_id === 'string' && value.parent_id) return;
+
+    const commentId = typeof value.id === 'string' ? value.id : '';
+    if (!commentId) return;
+    const media = value.media as { id?: string } | undefined;
+    const postId = typeof media?.id === 'string' ? media.id : '';
+    if (!postId) return;
+    const message = typeof value.text === 'string' ? value.text : '';
+
+    const created = await this.claimEvent('META', `ig-comment:${commentId}`, change);
+    if (!created) {
+      this.logger.debug(`Duplicate IG comment webhook ${commentId}`);
+      return;
+    }
+
+    try {
+      const row = await this.pageComments.handleInstagramComment({
+        pageId: igUserId,
+        commentId,
+        postId,
+        fromUserId,
+        fromName: from?.username ?? from?.name ?? null,
+        message,
+        commentedAt: new Date(),
+        rawPayload: change,
+      });
+      if (!row) {
+        await this.markEvent(
+          `ig-comment:${commentId}`,
+          'ERROR',
+          'NO_CONNECTED_ACCOUNT',
+        );
+        return;
+      }
+      await this.markEvent(`ig-comment:${commentId}`, 'PROCESSED');
+    } catch (e) {
+      const err = e instanceof Error ? e.message : 'unknown';
+      await this.markEvent(`ig-comment:${commentId}`, 'ERROR', err);
+      this.logger.warn(`Instagram comment handling failed: ${err}`);
     }
   }
 
