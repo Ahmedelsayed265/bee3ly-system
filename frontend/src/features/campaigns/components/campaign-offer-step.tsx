@@ -16,8 +16,10 @@ export function CampaignOfferStep({
   const { t } = useLocale();
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted text-sm">{t('campaignStepOffer')}</p>
+    <div className="space-y-5">
+      <h2 className="text-ink text-lg font-semibold">
+        {t('campaignStepOffer')}
+      </h2>
       <InputField
         id="offer"
         label={t('campaignOfferLabel')}

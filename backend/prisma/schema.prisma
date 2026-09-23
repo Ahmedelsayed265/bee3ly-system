@@ -81,6 +81,10 @@ enum CampaignObjective {
   MORE_LEADS
   MORE_BOOKINGS
   MORE_MESSAGES
+  AWARENESS
+  TRAFFIC
+  ENGAGEMENT
+  RETARGETING
 }
 
 enum CampaignStatus {

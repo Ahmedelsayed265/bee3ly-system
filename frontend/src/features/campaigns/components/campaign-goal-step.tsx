@@ -23,8 +23,10 @@ export function CampaignGoalStep({
   const { t } = useLocale();
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted text-sm">{t('campaignStepGoal')}</p>
+    <div className="space-y-5">
+      <h2 className="text-ink text-lg font-semibold">
+        {t('campaignStepGoal')}
+      </h2>
       <div className="grid gap-2 sm:grid-cols-2">
         {OBJECTIVES.map((o) => (
           <button
@@ -38,7 +40,14 @@ export function CampaignGoalStep({
                 : 'border-border hover:bg-lavender',
             )}
           >
-            {t(`campaignObj_${o}` as MessageKey)}
+            <span className="text-ink font-semibold">
+              {t(`campaignObj_${o}` as MessageKey)}
+            </span>
+            {objective === o ? (
+              <span className="text-muted mt-1 block text-xs">
+                {t(`campaignMetrics_${o}` as MessageKey)}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>

@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { CampaignObjective, CampaignStatus, NotificationType } from '@prisma/client';
+import { AttributionService } from '../analytics/attribution.service';
 import {
-  CampaignObjective,
-  CampaignStatus,
-  NotificationType,
-} from '@prisma/client';
+  computeMetrics,
+  EMPTY_DELIVERY,
+  type CampaignObjectiveId,
+  type ChainInput,
+} from '../analytics/campaign-metrics';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -16,13 +19,14 @@ export class CampaignsService {
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
     private readonly notifications: NotificationsService,
+    private readonly attribution: AttributionService,
   ) {}
 
   async list(userId: string, page = 1, limit = 10) {
     const businessId = await this.access.requireBusinessId(userId);
     const window = pageWindow(page, limit);
     const where = { businessId };
-    const [campaigns, total] = await Promise.all([
+    const [campaigns, total, chains] = await Promise.all([
       this.prisma.campaign.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -30,8 +34,14 @@ export class CampaignsService {
         take: window.limit,
       }),
       this.prisma.campaign.count({ where }),
+      this.attribution.chains(businessId),
     ]);
-    return { campaigns, ...pageMeta(total, window.page, window.limit) };
+    return {
+      campaigns: campaigns.map((campaign) =>
+        this.withMetrics(campaign, chains.forCampaign(campaign.id)),
+      ),
+      ...pageMeta(total, window.page, window.limit),
+    };
   }
 
   async getOne(userId: string, id: string) {
@@ -40,7 +50,10 @@ export class CampaignsService {
       where: { id, businessId },
     });
     if (!campaign) throw new NotFoundException('Campaign not found');
-    return { campaign };
+    const chains = await this.attribution.chains(businessId);
+    return {
+      campaign: this.withMetrics(campaign, chains.forCampaign(campaign.id)),
+    };
   }
 
   async create(userId: string, dto: CreateCampaignDto) {
@@ -75,7 +88,11 @@ export class CampaignsService {
       data: { campaignId: campaign.id },
     });
 
-    return { campaign, recommendation };
+    const chains = await this.attribution.chains(businessId);
+    return {
+      campaign: this.withMetrics(campaign, chains.forCampaign(campaign.id)),
+      recommendation,
+    };
   }
 
   async launch(
@@ -121,13 +138,34 @@ export class CampaignsService {
       data: { campaignId: campaign.id, status: safeStatus },
     });
 
+    const chains = await this.attribution.chains(businessId);
     return {
-      campaign,
+      campaign: this.withMetrics(campaign, chains.forCampaign(campaign.id)),
       published: false,
       notice:
         safeStatus === CampaignStatus.SIMULATED
           ? 'Simulation only — no real Meta ad was created.'
           : 'Assisted launch — bee3ly team/process will help publish; not auto-published via Ads API.',
+    };
+  }
+
+  private withMetrics<T extends { id: string; objective: CampaignObjective }>(
+    campaign: T,
+    chain: ChainInput,
+  ) {
+    const measured = computeMetrics(
+      chain,
+      EMPTY_DELIVERY,
+      campaign.objective as CampaignObjectiveId,
+    );
+    return {
+      ...campaign,
+      conversations: chain.conversations,
+      leads: chain.leads,
+      orders: chain.orders,
+      revenueEgp: chain.revenueEgp,
+      headline: measured.headline,
+      metrics: measured.metrics,
     };
   }
 
@@ -137,13 +175,21 @@ export class CampaignsService {
       MORE_LEADS: 'عملاء مهتمين',
       MORE_BOOKINGS: 'حجوزات',
       MORE_MESSAGES: 'رسائل',
+      AWARENESS: 'وصول',
+      TRAFFIC: 'زيارات',
+      ENGAGEMENT: 'تفاعل',
+      RETARGETING: 'إعادة استهداف',
     };
     const name = `${businessName} · ${dto.offer.slice(0, 28)}`;
     const ctaMap: Record<CampaignObjective, string> = {
       MORE_ORDERS: 'اطلب دلوقتي',
-      MORE_LEADS: 'كلمينا على الخاص',
+      MORE_LEADS: 'سيب بياناتك',
       MORE_BOOKINGS: 'احجز موعدك',
-      MORE_MESSAGES: 'اسأل دلوقتي',
+      MORE_MESSAGES: 'ابعت رسالة',
+      AWARENESS: 'تابعونا',
+      TRAFFIC: 'شوف التفاصيل',
+      ENGAGEMENT: 'قولّنا رأيك',
+      RETARGETING: 'العرض لسه متاح',
     };
     return {
       name,

@@ -6,6 +6,12 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AttributionService } from './attribution.service';
+import {
+  computeMetrics,
+  EMPTY_DELIVERY,
+  type CampaignObjectiveId,
+} from './campaign-metrics';
 
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
@@ -13,6 +19,7 @@ export class AnalyticsController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    private readonly attribution: AttributionService,
   ) {}
 
   @Get('overview')
@@ -21,23 +28,19 @@ export class AnalyticsController {
     const since = new Date();
     since.setDate(since.getDate() - 7);
 
+    const chains = await this.attribution.chains(businessId);
+    const report = computeMetrics(chains.business, EMPTY_DELIVERY, null);
+    const leadToOrder = report.metrics.find(
+      (metric) => metric.id === 'leadToOrderRate',
+    );
+
     const [
-      orders,
-      leads,
-      conversations,
-      revenueAgg,
       unreadNotifications,
       aiHandled,
       humanHandoffs,
-      convertedLeads,
+      recentOrders,
+      campaigns,
     ] = await Promise.all([
-      this.prisma.order.count({ where: { businessId } }),
-      this.prisma.lead.count({ where: { businessId } }),
-      this.prisma.conversation.count({ where: { businessId } }),
-      this.prisma.order.aggregate({
-        where: { businessId },
-        _sum: { totalEgp: true },
-      }),
       this.prisma.notification.count({
         where: { businessId, readAt: null },
       }),
@@ -47,81 +50,75 @@ export class AnalyticsController {
       this.prisma.conversation.count({
         where: { businessId, needsHuman: true },
       }),
-      this.prisma.lead.count({
-        where: { businessId, status: 'CONVERTED' },
+      this.prisma.order.findMany({
+        where: {
+          businessId,
+          status: { not: 'CANCELLED' },
+          createdAt: { gte: since },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { totalEgp: true, createdAt: true },
+      }),
+      this.prisma.campaign.findMany({
+        where: { businessId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          objective: true,
+          budget: true,
+        },
       }),
     ]);
-
-    const recentOrders = await this.prisma.order.findMany({
-      where: { businessId, createdAt: { gte: since } },
-      orderBy: { createdAt: 'asc' },
-      select: { totalEgp: true, createdAt: true, campaignId: true },
-    });
 
     const salesByDay = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (6 - i));
       const key = d.toISOString().slice(0, 10);
       const total = recentOrders
-        .filter((o) => o.createdAt.toISOString().slice(0, 10) === key)
-        .reduce((sum, o) => sum + o.totalEgp, 0);
+        .filter((order) => order.createdAt.toISOString().slice(0, 10) === key)
+        .reduce((sum, order) => sum + order.totalEgp, 0);
       return { day: String(d.getDate()).padStart(2, '0'), value: total };
     });
 
-    const campaigns = await this.prisma.campaign.findMany({
-      where: { businessId },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        objective: true,
-        budget: true,
-      },
-    });
-
-    const campaignStats = await Promise.all(
-      campaigns.map(async (c) => {
-        const [cConversations, cLeads, cOrders, cRevenue] = await Promise.all([
-          this.prisma.conversation.count({ where: { campaignId: c.id } }),
-          this.prisma.lead.count({ where: { campaignId: c.id } }),
-          this.prisma.order.count({ where: { campaignId: c.id } }),
-          this.prisma.order.aggregate({
-            where: { campaignId: c.id },
-            _sum: { totalEgp: true },
-          }),
-        ]);
-        return {
-          ...c,
-          conversations: cConversations,
-          leads: cLeads,
-          orders: cOrders,
-          revenueEgp: cRevenue._sum.totalEgp ?? 0,
-        };
-      }),
-    );
-
-    const conversionRate =
-      conversations > 0
-        ? Math.round(((orders + convertedLeads) / conversations) * 1000) / 10
-        : null;
-
     return {
       metrics: {
-        salesEgp: revenueAgg._sum.totalEgp ?? 0,
-        orders,
-        leads,
-        conversations,
+        salesEgp: chains.business.revenueEgp,
+        orders: chains.business.orders,
+        leads: chains.business.leads,
+        conversations: chains.business.conversations,
         unreadNotifications,
         aiHandled,
         humanHandoffs,
-        conversions: orders + convertedLeads,
-        conversionRate,
+        conversions: chains.business.orders,
+        conversionRate: leadToOrder?.value ?? null,
       },
+      report,
+      unattributed: chains.unattributed,
       salesByDay,
-      campaigns: campaignStats,
-      enoughData: conversations > 0 || orders > 0 || leads > 0,
+      campaigns: campaigns.map((campaign) => {
+        const measured = computeMetrics(
+          chains.forCampaign(campaign.id),
+          EMPTY_DELIVERY,
+          campaign.objective as CampaignObjectiveId,
+        );
+        const chain = chains.forCampaign(campaign.id);
+        return {
+          ...campaign,
+          conversations: chain.conversations,
+          leads: chain.leads,
+          orders: chain.orders,
+          revenueEgp: chain.revenueEgp,
+          headline: measured.headline,
+          metrics: measured.metrics,
+        };
+      }),
+      enoughData:
+        chains.business.conversations > 0 ||
+        chains.business.orders > 0 ||
+        chains.business.leads > 0,
     };
   }
 }

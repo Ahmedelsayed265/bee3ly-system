@@ -20,8 +20,10 @@ export function CampaignValueStep({
   const { t } = useLocale();
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted text-sm">{t('campaignStepValue')}</p>
+    <div className="space-y-5">
+      <h2 className="text-ink text-lg font-semibold">
+        {t('campaignStepValue')}
+      </h2>
       <InputField
         id="valueProp"
         label={t('campaignValueLabel')}

@@ -18,8 +18,10 @@ export function CampaignBudgetStep({
   const { t } = useLocale();
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted text-sm">{t('campaignStepBudget')}</p>
+    <div className="space-y-5">
+      <h2 className="text-ink text-lg font-semibold">
+        {t('campaignStepBudget')}
+      </h2>
       <InputField
         id="budget"
         type="number"
@@ -27,6 +29,7 @@ export function CampaignBudgetStep({
         value={budget}
         onChange={(e) => onBudgetChange(e.target.value)}
       />
+      <p className="text-muted text-xs">{t('campaignBudgetNotice')}</p>
       <div className="flex gap-2">
         <Button variant="outline" onClick={onBack}>
           {t('back')}

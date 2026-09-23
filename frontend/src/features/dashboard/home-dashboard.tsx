@@ -9,7 +9,8 @@ import {
   fetchOrders,
   fetchOverview,
 } from '@/features/business/api';
-import { campaigns, recentChats } from '@/features/dashboard/mock-data';
+import { formatMetricValue } from '@/features/analytics/format-metric';
+import { recentChats } from '@/features/dashboard/mock-data';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 import { cn } from '@/lib/utils';
@@ -37,21 +38,6 @@ function greetingKey() {
 
 function firstName(name?: string) {
   return name?.trim().split(/\s+/)[0] ?? '';
-}
-
-function statusLabel(
-  status: 'excellent' | 'attention' | 'good',
-  t: (k: MessageKey) => string,
-) {
-  if (status === 'excellent') return t('statusExcellent');
-  if (status === 'attention') return t('statusAttention');
-  return t('statusGood');
-}
-
-function statusClass(status: 'excellent' | 'attention' | 'good') {
-  if (status === 'excellent') return 'bg-trust/15 text-trust';
-  if (status === 'attention') return 'bg-alert/25 text-[#8a5a00]';
-  return 'bg-brand/10 text-brand';
 }
 
 function orderStatusTone(status: string) {
@@ -422,7 +408,7 @@ type MetricCard = {
 
 export function HomeDashboard() {
   const { user } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const overviewQuery = useQuery({
     queryKey: ['overview'],
     queryFn: fetchOverview,
@@ -437,32 +423,38 @@ export function HomeDashboard() {
   });
 
   const metrics = overviewQuery.data?.metrics;
+  const roas = overviewQuery.data?.report?.metrics.find(
+    (metric) => metric.id === 'roas',
+  );
   const cards: MetricCard[] = [
     {
       label: t('metricSales'),
       value: `${(metrics?.salesEgp ?? 0).toLocaleString()}`,
-      delta: '+18.4%',
+      delta: '',
       icon: Wallet,
       tone: 'bg-brand/12 text-brand',
     },
     {
       label: t('metricOrders'),
       value: String(metrics?.orders ?? 0),
-      delta: '+22.1%',
+      delta: '',
       icon: ShoppingBag,
       tone: 'bg-trust/15 text-trust',
     },
     {
       label: t('metricLeads'),
       value: String(metrics?.leads ?? 0),
-      delta: '+34.7%',
+      delta: '',
       icon: Users,
       tone: 'bg-alert/25 text-brand',
     },
     {
       label: t('metricRoas'),
-      value: '3.8x',
-      delta: '+12.3%',
+      value:
+        roas?.value != null
+          ? formatMetricValue(roas.value, roas.unit, locale)
+          : '—',
+      delta: '',
       icon: TrendingUp,
       tone: 'bg-ink/10 text-ink',
     },
@@ -470,7 +462,7 @@ export function HomeDashboard() {
 
   const latestOrders = ordersQuery.data?.orders ?? [];
   const latestChats = (convQuery.data ?? []).slice(0, 4);
-  const campaignSwatches = ['#6366F1', '#4F46E5', '#818CF8'];
+  const liveCampaigns = (overviewQuery.data?.campaigns ?? []).slice(0, 3);
 
   const quickActions = [
     { to: paths.products, label: t('actionAddProduct'), icon: PackagePlus },
@@ -529,10 +521,12 @@ export function HomeDashboard() {
                 >
                   <Icon className="h-5 w-5" strokeWidth={2.2} />
                 </span>
-                <span className="text-trust inline-flex items-center gap-0.5 text-[11px] font-semibold">
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                  {card.delta}
-                </span>
+                {card.delta ? (
+                  <span className="text-trust inline-flex items-center gap-0.5 text-[11px] font-semibold">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                    {card.delta}
+                  </span>
+                ) : null}
               </div>
               <p className="text-muted mt-4 text-xs font-medium">
                 {card.label}
@@ -545,7 +539,6 @@ export function HomeDashboard() {
                   </span>
                 ) : null}
               </p>
-              <p className="text-muted mt-1 text-[11px]">{t('vsYesterday')}</p>
             </div>
           );
         })}
@@ -618,38 +611,38 @@ export function HomeDashboard() {
             </span>
           </div>
           <div className="space-y-3">
-            {campaigns.map((c, i) => (
+            {liveCampaigns.map((campaign) => (
               <div
-                key={c.id}
-                className="bg-page/80 hover:bg-lavender/80 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors"
+                key={campaign.id}
+                className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
               >
-                <span
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
-                  style={{ background: campaignSwatches[i % 3] }}
-                >
-                  {c.platform === 'facebook' ? 'Fb' : 'Ig'}
-                </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-ink truncate text-sm font-semibold">
-                    {t(c.nameKey)}
+                    {campaign.name}
                   </p>
                   <p className="text-muted text-[11px]">
-                    {t('spendLabel')} {c.spend} ج.م
+                    {t('plannedBudget')} {campaign.budget.toLocaleString()}{' '}
+                    {t('egp')}
+                  </p>
+                  <p className="text-muted text-[11px]">
+                    {campaign.conversations} {t('metricConversations')} ·{' '}
+                    {campaign.orders} {t('metricOrders')}
                   </p>
                 </div>
-                <div className="text-end">
-                  <p className="text-ink text-sm font-bold">{c.roas}</p>
-                  <span
-                    className={cn(
-                      'mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                      statusClass(c.status),
-                    )}
-                  >
-                    {statusLabel(c.status, t)}
-                  </span>
-                </div>
+                <p className="text-ink text-sm font-bold">
+                  {campaign.headline
+                    ? formatMetricValue(
+                        campaign.headline.value,
+                        campaign.headline.unit,
+                        locale,
+                      )
+                    : '—'}
+                </p>
               </div>
             ))}
+            {liveCampaigns.length === 0 ? (
+              <p className="text-muted text-sm">{t('campaignEmpty')}</p>
+            ) : null}
           </div>
         </section>
 

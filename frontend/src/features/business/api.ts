@@ -317,6 +317,36 @@ export async function markAllNotificationsRead() {
   await api.post('/notifications/read-all');
 }
 
+export type MeasuredMetric = {
+  id: string;
+  value: number | null;
+  unit: 'count' | 'egp' | 'percent' | 'multiple';
+  gap:
+    | 'missing_spend'
+    | 'missing_impressions'
+    | 'missing_clicks'
+    | 'missing_reach'
+    | 'missing_engagements'
+    | 'missing_landing_page_views'
+    | 'missing_cost'
+    | 'divide_by_zero'
+    | null;
+  primary: boolean;
+};
+
+export type MetricHeadline = {
+  id: string;
+  value: number;
+  unit: MeasuredMetric['unit'];
+} | null;
+
+export type CampaignChain = {
+  conversations: number;
+  leads: number;
+  orders: number;
+  revenueEgp: number;
+};
+
 export async function fetchOverview() {
   const { data } = await api.get<{
     metrics: {
@@ -330,18 +360,23 @@ export async function fetchOverview() {
       conversions?: number;
       conversionRate?: number | null;
     };
+    report?: {
+      metrics: MeasuredMetric[];
+      headline: MetricHeadline;
+    };
+    unattributed?: CampaignChain & { costOfGoodsEgp: number | null };
     salesByDay: Array<{ day: string; value: number }>;
-    campaigns?: Array<{
-      id: string;
-      name: string;
-      status: string;
-      objective: string;
-      budget: number;
-      conversations: number;
-      leads: number;
-      orders: number;
-      revenueEgp: number;
-    }>;
+    campaigns?: Array<
+      CampaignChain & {
+        id: string;
+        name: string;
+        status: string;
+        objective: string;
+        budget: number;
+        headline: MetricHeadline;
+        metrics: MeasuredMetric[];
+      }
+    >;
     enoughData?: boolean;
   }>('/analytics/overview');
   return data;
@@ -486,6 +521,12 @@ export type Campaign = {
   suggestedCreative: string | null;
   channel: string | null;
   createdAt: string;
+  conversations?: number;
+  leads?: number;
+  orders?: number;
+  revenueEgp?: number;
+  headline?: MetricHeadline;
+  metrics?: MeasuredMetric[];
 };
 
 export async function fetchCampaigns(page = 1, limit = 10) {

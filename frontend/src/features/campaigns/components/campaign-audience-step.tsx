@@ -18,8 +18,10 @@ export function CampaignAudienceStep({
   const { t } = useLocale();
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted text-sm">{t('campaignStepAudience')}</p>
+    <div className="space-y-5">
+      <h2 className="text-ink text-lg font-semibold">
+        {t('campaignStepAudience')}
+      </h2>
       <InputField
         id="audience"
         label={t('campaignAudienceLabel')}
@@ -27,6 +29,7 @@ export function CampaignAudienceStep({
         onChange={(e) => onAudienceChange(e.target.value)}
         placeholder={t('campaignAudiencePlaceholder')}
       />
+      <p className="text-muted text-xs">{t('campaignAudienceNotice')}</p>
       <div className="flex gap-2">
         <Button variant="outline" onClick={onBack}>
           {t('back')}

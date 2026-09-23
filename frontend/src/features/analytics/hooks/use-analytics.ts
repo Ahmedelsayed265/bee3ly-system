@@ -9,26 +9,14 @@ export function useAnalytics() {
     queryFn: fetchOverview,
   });
 
-  const m = overviewQuery.data?.metrics;
-  const enough = overviewQuery.data?.enoughData;
-
-  const cards = [
-    { label: t('metricConversations'), value: m?.conversations ?? 0 },
-    { label: t('metricLeads'), value: m?.leads ?? 0 },
-    { label: t('metricOrders'), value: m?.orders ?? 0 },
-    {
-      label: t('metricConversions'),
-      value: m?.conversions ?? 0,
-    },
-    { label: t('metricAiHandled'), value: m?.aiHandled ?? 0 },
-    { label: t('metricHandoffs'), value: m?.humanHandoffs ?? 0 },
-  ];
+  const metrics = overviewQuery.data?.metrics;
 
   return {
     overviewQuery,
-    metrics: m,
-    enough,
-    cards,
+    metrics,
+    report: overviewQuery.data?.report ?? null,
+    unattributed: overviewQuery.data?.unattributed ?? null,
+    enough: overviewQuery.data?.enoughData,
     campaigns: overviewQuery.data?.campaigns ?? [],
     t,
   };

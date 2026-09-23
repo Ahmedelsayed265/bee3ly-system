@@ -47,13 +47,7 @@ export function CampaignReadyStep({
             {campaign.suggestedMessaging}
           </p>
         ) : null}
-        {campaign.suggestedCta ? (
-          <p>
-            <span className="text-muted">CTA: </span>
-            {campaign.suggestedCta}
-          </p>
-        ) : null}
-        <p className="text-muted text-xs">{t('campaignNoFakePublish')}</p>
+        <p className="text-muted text-xs">{t('campaignPublishNotice')}</p>
       </div>
       {notice ? <p className="text-muted text-sm">{notice}</p> : null}
       <div className="flex flex-wrap gap-2">

@@ -7,6 +7,9 @@ import { CampaignValueStep } from '@/features/campaigns/components/campaign-valu
 import type { CampaignObjective } from '@/features/campaigns/constants';
 import type { Campaign } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
+import { cn } from '@/lib/utils';
+
+const STEP_COUNT = 6;
 
 type CampaignWizardProps = {
   step: number;
@@ -54,10 +57,26 @@ export function CampaignWizard({
   const { t } = useLocale();
 
   return (
-    <section className="border-border bg-surface rounded-2xl border p-5">
-      <p className="text-ink mb-4 text-sm font-semibold">
-        {t('campaignWizardTitle')}
-      </p>
+    <section className="border-border bg-surface w-full rounded-2xl border p-5 sm:p-6">
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex flex-1 gap-1.5">
+          {Array.from({ length: STEP_COUNT }, (_, index) => (
+            <span
+              key={index}
+              className={cn(
+                'h-1.5 flex-1 rounded-full',
+                index <= step ? 'bg-brand' : 'bg-border',
+              )}
+            />
+          ))}
+        </div>
+        <p className="text-muted shrink-0 text-xs">
+          {t('campaignStepCount', {
+            step: String(step + 1),
+            total: String(STEP_COUNT),
+          })}
+        </p>
+      </div>
 
       {step === 0 ? (
         <CampaignOfferStep
