@@ -37,15 +37,24 @@ export class MetaOauthService {
     const state = Buffer.from(JSON.stringify({ businessId, userId })).toString(
       'base64url',
     );
-    // Page feed comments need engagement permissions (Ready for testing in Meta App).
-    const scopes = [
+    // Page / messaging scopes. Do NOT add instagram_basic until the Meta App has
+    // Instagram Graph API (Facebook Login) product + that permission available;
+    // otherwise Meta returns "Invalid Scopes: instagram_basic" for developers.
+    // Optional extra IG scopes via META_OAUTH_EXTRA_SCOPES (comma-separated).
+    const baseScopes = [
       'pages_show_list',
       'pages_messaging',
       'pages_manage_metadata',
       'pages_read_engagement',
       'pages_manage_engagement',
-    ].join(',');
-    return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}`;
+      'business_management',
+    ];
+    const extra = (this.config.get<string>('META_OAUTH_EXTRA_SCOPES') ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const scopes = [...new Set([...baseScopes, ...extra])].join(',');
+    return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}&auth_type=rerequest`;
   }
 
   async handleCallback(code?: string, state?: string) {
@@ -65,10 +74,29 @@ export class MetaOauthService {
     }
 
     const token = await this.graph.exchangeCode(code);
+    this.logger.log(
+      `Meta OAuth token exchanged for business=${businessId} user=${userId}`,
+    );
     const pages = await this.graph.listPages(token.access_token);
     if (pages.length === 0) {
-      throw new BadRequestException('No Facebook Pages found for this account');
+      try {
+        const diag = await this.graph.diagnoseUserAccess(token.access_token);
+        this.logger.warn(
+          `No Facebook Pages for business=${businessId} user=${userId} me=${diag.meId ?? '?'} (${diag.meName ?? '?'}) granted=[${diag.grantedPageScopes.join(',') || 'none'}] all=[${diag.permissions.join(',') || 'none'}] meErr=${diag.rawMeError ?? '-'} permErr=${diag.rawPermError ?? '-'}`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `No Facebook Pages + diagnose failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      throw new BadRequestException(
+        'No Facebook Pages found for this account. Grant business_management, select Hillix pharm in the Meta dialog, and ensure the Page is linked to a Business you admin.',
+      );
     }
+
+    this.logger.log(
+      `Meta pending pages ready: ${pages.map((p) => `${p.name}(${p.id})${p.instagram_business_account?.id ? '+ig' : ''}`).join(', ')}`,
+    );
 
     const pending = await this.prisma.pendingMetaConnection.create({
       data: {
@@ -165,6 +193,14 @@ export class MetaOauthService {
       this.logger.warn(`Webhook subscribe failed for page ${page.id}`);
     }
 
+    let igAccount = page.instagram_business_account ?? null;
+    if (!igAccount?.id) {
+      igAccount = await this.graph.getPageInstagramAccount(
+        page.id,
+        page.access_token,
+      );
+    }
+
     const fb = await this.prisma.socialAccount.upsert({
       where: {
         businessId_platform: {
@@ -202,7 +238,7 @@ export class MetaOauthService {
     });
 
     let ig = null;
-    if (page.instagram_business_account?.id) {
+    if (igAccount?.id) {
       ig = await this.prisma.socialAccount.upsert({
         where: {
           businessId_platform: {
@@ -214,7 +250,7 @@ export class MetaOauthService {
           businessId,
           provider: 'META',
           platform: SocialPlatform.INSTAGRAM,
-          externalId: page.instagram_business_account.id,
+          externalId: igAccount.id,
           displayName: `${page.name} · Instagram`,
           accessTokenEnc: this.encrypt(page.access_token),
           status: SocialConnectionStatus.CONNECTED,
@@ -223,11 +259,11 @@ export class MetaOauthService {
           capabilities: ['messages', 'send'],
           metadata: {
             pageId: page.id,
-            igBusinessId: page.instagram_business_account.id,
+            igBusinessId: igAccount.id,
           },
         },
         update: {
-          externalId: page.instagram_business_account.id,
+          externalId: igAccount.id,
           displayName: `${page.name} · Instagram`,
           accessTokenEnc: this.encrypt(page.access_token),
           status: SocialConnectionStatus.CONNECTED,
@@ -236,7 +272,7 @@ export class MetaOauthService {
           capabilities: ['messages', 'send'],
           metadata: {
             pageId: page.id,
-            igBusinessId: page.instagram_business_account.id,
+            igBusinessId: igAccount.id,
           },
         },
       });
@@ -262,7 +298,7 @@ export class MetaOauthService {
         : null,
       notice: ig
         ? 'Facebook & Instagram connected'
-        : 'Facebook Page connected (no Instagram Business account on this Page)',
+        : 'Facebook Page connected (no Instagram on this Page). In Meta App add Instagram Graph API with Facebook Login, then set META_OAUTH_EXTRA_SCOPES=instagram_basic and reconnect.',
     };
   }
 

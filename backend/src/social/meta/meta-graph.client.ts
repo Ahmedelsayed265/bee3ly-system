@@ -6,7 +6,19 @@ export type MetaPage = {
   name: string;
   access_token: string;
   instagram_business_account?: { id: string };
+  connected_instagram_account?: { id: string };
 };
+
+function resolveIgAccountId(page: {
+  instagram_business_account?: { id: string } | null;
+  connected_instagram_account?: { id: string } | null;
+}): string | null {
+  return (
+    page.instagram_business_account?.id ||
+    page.connected_instagram_account?.id ||
+    null
+  );
+}
 
 @Injectable()
 export class MetaGraphClient {
@@ -49,15 +61,188 @@ export class MetaGraphClient {
   }
 
   async listPages(userAccessToken: string): Promise<MetaPage[]> {
-    const url = `${this.base()}/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${encodeURIComponent(userAccessToken)}`;
+    const fields =
+      'id,name,access_token,instagram_business_account,connected_instagram_account';
+    const url = `${this.base()}/me/accounts?fields=${fields}&limit=100&access_token=${encodeURIComponent(userAccessToken)}`;
     const res = await fetch(url);
     if (!res.ok) {
       const text = await res.text();
       this.logger.warn(`List pages failed: ${text.slice(0, 300)}`);
       throw new Error('META_LIST_PAGES_FAILED');
     }
-    const json = (await res.json()) as { data?: MetaPage[] };
-    return json.data ?? [];
+    const json = (await res.json()) as { data?: MetaPage[]; paging?: unknown };
+    let pages = (json.data ?? []).filter((p) => p.id && p.access_token);
+
+    if (pages.length === 0) {
+      this.logger.warn(
+        'me/accounts empty — trying Business Manager owned_pages fallback',
+      );
+      pages = await this.listPagesViaBusinesses(userAccessToken);
+    }
+
+    pages = pages.map((p) => this.normalizePageIg(p));
+
+    this.logger.log(
+      `List pages ok: count=${pages.length} withIg=${pages.filter((p) => p.instagram_business_account?.id).length}`,
+    );
+    return pages;
+  }
+
+  /** Re-read IG linkage with a Page token (needs instagram_basic on the user grant). */
+  async getPageInstagramAccount(
+    pageId: string,
+    pageAccessToken: string,
+  ): Promise<{ id: string } | null> {
+    const url = `${this.base()}/${pageId}?fields=instagram_business_account,connected_instagram_account&access_token=${encodeURIComponent(pageAccessToken)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      this.logger.warn(
+        `IG lookup failed for page ${pageId}: ${(await res.text()).slice(0, 200)}`,
+      );
+      return null;
+    }
+    const json = (await res.json()) as {
+      instagram_business_account?: { id: string };
+      connected_instagram_account?: { id: string };
+    };
+    const id = resolveIgAccountId(json);
+    this.logger.log(
+      `IG lookup page=${pageId} ig=${id ?? 'none'} biz=${json.instagram_business_account?.id ?? '-'} connected=${json.connected_instagram_account?.id ?? '-'}`,
+    );
+    return id ? { id } : null;
+  }
+
+  private normalizePageIg(page: MetaPage): MetaPage {
+    const igId = resolveIgAccountId(page);
+    return {
+      ...page,
+      instagram_business_account: igId
+        ? { id: igId }
+        : page.instagram_business_account,
+    };
+  }
+
+  /**
+   * Pages linked to a Meta Business often omit from /me/accounts unless
+   * business_management is granted. Fallback: businesses → owned_pages → page token.
+   */
+  private async listPagesViaBusinesses(
+    userAccessToken: string,
+  ): Promise<MetaPage[]> {
+    const bizUrl = `${this.base()}/me/businesses?fields=id,name&access_token=${encodeURIComponent(userAccessToken)}`;
+    const bizRes = await fetch(bizUrl);
+    const bizText = await bizRes.text();
+    if (!bizRes.ok) {
+      this.logger.warn(`List businesses failed: ${bizText.slice(0, 300)}`);
+      return [];
+    }
+
+    let businesses: Array<{ id: string; name?: string }> = [];
+    try {
+      businesses =
+        (
+          JSON.parse(bizText) as {
+            data?: Array<{ id: string; name?: string }>;
+          }
+        ).data ?? [];
+    } catch {
+      return [];
+    }
+
+    this.logger.log(
+      `Businesses found: ${businesses.map((b) => `${b.name ?? '?'}(${b.id})`).join(', ') || 'none'}`,
+    );
+
+    const byId = new Map<string, MetaPage>();
+    for (const biz of businesses) {
+      const ownedUrl = `${this.base()}/${biz.id}/owned_pages?fields=id,name&limit=100&access_token=${encodeURIComponent(userAccessToken)}`;
+      const ownedRes = await fetch(ownedUrl);
+      if (!ownedRes.ok) {
+        this.logger.warn(
+          `owned_pages failed for business ${biz.id}: ${(await ownedRes.text()).slice(0, 200)}`,
+        );
+        continue;
+      }
+      const ownedJson = (await ownedRes.json()) as {
+        data?: Array<{ id: string; name?: string }>;
+      };
+      for (const row of ownedJson.data ?? []) {
+        if (!row.id || byId.has(row.id)) continue;
+        const page = await this.fetchPageWithToken(row.id, userAccessToken);
+        if (page) byId.set(page.id, page);
+      }
+    }
+
+    return [...byId.values()];
+  }
+
+  private async fetchPageWithToken(
+    pageId: string,
+    userAccessToken: string,
+  ): Promise<MetaPage | null> {
+    const url = `${this.base()}/${pageId}?fields=id,name,access_token,instagram_business_account,connected_instagram_account&access_token=${encodeURIComponent(userAccessToken)}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      this.logger.warn(
+        `Page token fetch failed for ${pageId}: ${(await res.text()).slice(0, 200)}`,
+      );
+      return null;
+    }
+    const page = (await res.json()) as MetaPage & { error?: unknown };
+    if (!page.id || !page.access_token) return null;
+    return this.normalizePageIg({
+      id: page.id,
+      name: page.name,
+      access_token: page.access_token,
+      instagram_business_account: page.instagram_business_account,
+      connected_instagram_account: page.connected_instagram_account,
+    });
+  }
+
+  /** Safe diagnostics for empty /me/accounts (no tokens logged). */
+  async diagnoseUserAccess(userAccessToken: string) {
+    const meUrl = `${this.base()}/me?fields=id,name&access_token=${encodeURIComponent(userAccessToken)}`;
+    const permUrl = `${this.base()}/me/permissions?access_token=${encodeURIComponent(userAccessToken)}`;
+
+    const [meRes, permRes] = await Promise.all([fetch(meUrl), fetch(permUrl)]);
+    const meText = await meRes.text();
+    const permText = await permRes.text();
+
+    let me: { id?: string; name?: string; error?: unknown } = {};
+    let permissions: Array<{ permission: string; status: string }> = [];
+    try {
+      me = JSON.parse(meText) as typeof me;
+    } catch {
+      me = { error: meText.slice(0, 200) };
+    }
+    try {
+      const parsed = JSON.parse(permText) as {
+        data?: Array<{ permission: string; status: string }>;
+        error?: unknown;
+      };
+      permissions = parsed.data ?? [];
+      if (parsed.error) me = { ...me, error: parsed.error };
+    } catch {
+      /* keep empty */
+    }
+
+    return {
+      meOk: meRes.ok,
+      meId: me.id ?? null,
+      meName: me.name ?? null,
+      permissions: permissions.map((p) => `${p.permission}:${p.status}`),
+      grantedPageScopes: permissions
+        .filter(
+          (p) =>
+            p.status === 'granted' &&
+            (p.permission.startsWith('pages_') ||
+              p.permission === 'business_management' ||
+              p.permission.includes('instagram')),
+        )
+        .map((p) => p.permission),
+      rawMeError: meRes.ok ? null : meText.slice(0, 300),
+      rawPermError: permRes.ok ? null : permText.slice(0, 300),
+    };
   }
 
   async subscribeApp(pageId: string, pageAccessToken: string) {
