@@ -92,9 +92,7 @@ function to24h(hour: number, suffix: string) {
 }
 
 function parseArabicClock(text: string) {
-  const matches = [
-    ...text.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(ص|م)/g),
-  ];
+  const matches = [...text.matchAll(/(\d{1,2})(?::(\d{2}))?\s*(ص|م)/g)];
   if (matches.length < 2) return { open: '', close: '' };
   const [open, close] = matches.slice(0, 2).map((match) => {
     const hour = Number(match[1]);

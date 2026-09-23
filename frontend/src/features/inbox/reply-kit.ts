@@ -40,7 +40,8 @@ export function buildTemplates(t: Translate, ctx: ReplyContext) {
     t('unknownCustomer');
   const phone =
     ctx.order?.customerPhone?.trim() || ctx.customerPhone?.trim() || '—';
-  const items = ctx.order?.items?.map((item) => item.name).filter(Boolean) ?? [];
+  const items =
+    ctx.order?.items?.map((item) => item.name).filter(Boolean) ?? [];
   const itemLabel = items.length ? ` ${items.join('، ')}` : '';
   const order = ctx.order ? String(ctx.order.orderNumber) : '—';
   const total = ctx.order ? String(ctx.order.totalEgp) : '—';

@@ -106,7 +106,9 @@ export function ChannelCard({
       ) : null}
 
       {action ? (
-        <div className="mt-auto flex flex-wrap items-center gap-2">{action}</div>
+        <div className="mt-auto flex flex-wrap items-center gap-2">
+          {action}
+        </div>
       ) : null}
       {footer}
     </article>

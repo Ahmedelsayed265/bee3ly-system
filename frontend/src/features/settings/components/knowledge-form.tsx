@@ -104,7 +104,9 @@ export function KnowledgeForm({
   onSave,
 }: KnowledgeFormProps) {
   const { t } = useLocale();
-  const [hours, setHours] = useState<HoursDraft>(() => parseHours(workingHours));
+  const [hours, setHours] = useState<HoursDraft>(() =>
+    parseHours(workingHours),
+  );
   const [delivery, setDelivery] = useState<DeliveryDraft>(() =>
     parseDelivery(deliveryInfo),
   );
@@ -180,7 +182,9 @@ export function KnowledgeForm({
                 id="hours-open"
                 type="time"
                 value={hours.open}
-                onChange={(e) => updateHours({ ...hours, open: e.target.value })}
+                onChange={(e) =>
+                  updateHours({ ...hours, open: e.target.value })
+                }
               />
             </div>
             <div>
@@ -256,7 +260,9 @@ export function KnowledgeForm({
               />
             </div>
             <div>
-              <MiniLabel htmlFor="delivery-free">{t('deliveryFreeAbove')}</MiniLabel>
+              <MiniLabel htmlFor="delivery-free">
+                {t('deliveryFreeAbove')}
+              </MiniLabel>
               <Input
                 id="delivery-free"
                 inputMode="numeric"

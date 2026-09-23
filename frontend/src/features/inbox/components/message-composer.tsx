@@ -36,9 +36,10 @@ export function MessageComposer({
   const emojiBtnRef = useRef<HTMLButtonElement>(null);
   const templateBtnRef = useRef<HTMLButtonElement>(null);
   const [panel, setPanel] = useState<'emoji' | 'templates' | null>(null);
-  const [panelStyle, setPanelStyle] = useState<{ left: number; bottom: number } | null>(
-    null,
-  );
+  const [panelStyle, setPanelStyle] = useState<{
+    left: number;
+    bottom: number;
+  } | null>(null);
   const [attached, setAttached] = useState<QuickReply[]>([]);
 
   const quickSends = buildQuickSends(t);
@@ -206,7 +207,9 @@ export function MessageComposer({
             ref={emojiBtnRef}
             type="button"
             aria-label={t('composerEmoji')}
-            onClick={() => setPanel((current) => (current === 'emoji' ? null : 'emoji'))}
+            onClick={() =>
+              setPanel((current) => (current === 'emoji' ? null : 'emoji'))
+            }
             className={cn(
               'text-muted hover:text-ink mb-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
               panel === 'emoji' && 'bg-brand/10 text-brand',
@@ -219,7 +222,9 @@ export function MessageComposer({
             type="button"
             aria-label={t('composerTemplates')}
             onClick={() =>
-              setPanel((current) => (current === 'templates' ? null : 'templates'))
+              setPanel((current) =>
+                current === 'templates' ? null : 'templates',
+              )
             }
             className={cn(
               'text-muted hover:text-ink mb-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
@@ -232,7 +237,9 @@ export function MessageComposer({
             ref={inputRef}
             rows={1}
             value={draft}
-            placeholder={isHumanMode ? t('typeYourReply') : t('inboxTakeoverHint')}
+            placeholder={
+              isHumanMode ? t('typeYourReply') : t('inboxTakeoverHint')
+            }
             onChange={(e) => onDraftChange(e.target.value)}
             onInput={(e) => {
               const el = e.currentTarget;

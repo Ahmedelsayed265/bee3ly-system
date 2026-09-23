@@ -242,7 +242,9 @@ export async function fetchConversation(id: string) {
         content: string;
         intent: string | null;
         createdAt: string;
-        meta?: { quickReplies?: Array<{ title: string; payload: string }> } | null;
+        meta?: {
+          quickReplies?: Array<{ title: string; payload: string }>;
+        } | null;
       }>;
       leads?: Array<{ id: string; status: string; intent: string | null }>;
     };
