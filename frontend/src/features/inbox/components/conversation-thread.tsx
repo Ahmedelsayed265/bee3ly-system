@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { Button } from '@/components/ui/button';
+import { ChannelMark } from '@/components/brand/channel-icons';
 import { MessageBubble } from '@/features/inbox/components/message-bubble';
 import { MessageComposer } from '@/features/inbox/components/message-composer';
 import { useLocale } from '@/features/i18n/locale-context';
@@ -60,7 +61,8 @@ export function ConversationThread({
       {conversation ? (
         <div className="border-border flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
           <div>
-            <p className="text-ink text-sm font-semibold">
+            <p className="text-ink flex items-center gap-1.5 text-sm font-semibold">
+              <ChannelMark channel={conversation.channel} />
               {conversation.customer.name ?? t('unknownCustomer')}
             </p>
             <p className="text-muted text-[11px]">

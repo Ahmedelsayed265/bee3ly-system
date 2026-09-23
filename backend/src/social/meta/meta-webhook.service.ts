@@ -69,65 +69,22 @@ export class MetaWebhookService {
       const pageId = typeof item.id === 'string' ? item.id : '';
       const messaging =
         (item.messaging as Array<Record<string, unknown>> | undefined) ?? [];
+      const standby =
+        (item.standby as Array<Record<string, unknown>> | undefined) ?? [];
 
-      for (const event of messaging) {
-        const sender = event.sender as { id?: string } | undefined;
-        const recipient = event.recipient as { id?: string } | undefined;
-        const message = event.message as
-          | {
-              mid?: string;
-              text?: string;
-              is_echo?: boolean;
-            }
-          | undefined;
-        if (
-          !sender?.id ||
-          !recipient?.id ||
-          !message?.text ||
-          message.is_echo
-        ) {
-          continue;
-        }
+      if (!messaging.length && !standby.length) {
+        this.logger.log(
+          `Webhook entry id=${pageId} keys=${Object.keys(item).join(',')}`,
+        );
+      }
+      if (standby.length) {
+        this.logger.log(
+          `Standby events=${standby.length} entry=${pageId} object=${objectType}`,
+        );
+      }
 
-        const timestamp =
-          typeof event.timestamp === 'number' ||
-          typeof event.timestamp === 'string'
-            ? event.timestamp
-            : Date.now();
-        const externalEventId =
-          message.mid ??
-          `${pageId}:${sender.id}:${timestamp}:${message.text.slice(0, 24)}`;
-
-        const created = await this.claimEvent('META', externalEventId, event);
-        if (!created) {
-          this.logger.debug(`Duplicate webhook event ${externalEventId}`);
-          continue;
-        }
-
-        const channel =
-          objectType === 'instagram' || recipient.id.startsWith('ig_')
-            ? 'INSTAGRAM'
-            : 'FACEBOOK';
-
-        const inbound: InboundMessageEvent = {
-          provider: 'META',
-          channel,
-          externalAccountId: recipient.id,
-          externalSenderId: sender.id,
-          externalMessageId: message.mid,
-          text: message.text,
-          timestamp: Number(timestamp),
-          raw: event,
-        };
-
-        try {
-          await this.inbound.ingest(inbound);
-          await this.markEvent(externalEventId, 'PROCESSED');
-        } catch (e) {
-          const err = e instanceof Error ? e.message : 'unknown';
-          await this.markEvent(externalEventId, 'ERROR', err);
-          this.logger.warn(`Inbound ingest failed: ${err}`);
-        }
+      for (const event of [...messaging, ...standby]) {
+        await this.handleMessagingEvent(objectType, pageId, event);
       }
 
       const changes =
@@ -139,6 +96,65 @@ export class MetaWebhookService {
     }
 
     return { success: true };
+  }
+
+  private async handleMessagingEvent(
+    objectType: string,
+    pageId: string,
+    event: Record<string, unknown>,
+  ) {
+    const sender = event.sender as { id?: string } | undefined;
+    const recipient = event.recipient as { id?: string } | undefined;
+    const message = event.message as
+      | {
+          mid?: string;
+          text?: string;
+          is_echo?: boolean;
+        }
+      | undefined;
+    if (!sender?.id || !recipient?.id || !message?.text || message.is_echo) {
+      return;
+    }
+
+    const timestamp =
+      typeof event.timestamp === 'number' ||
+      typeof event.timestamp === 'string'
+        ? event.timestamp
+        : Date.now();
+    const externalEventId =
+      message.mid ??
+      `${pageId}:${sender.id}:${timestamp}:${message.text.slice(0, 24)}`;
+
+    const created = await this.claimEvent('META', externalEventId, event);
+    if (!created) {
+      this.logger.debug(`Duplicate webhook event ${externalEventId}`);
+      return;
+    }
+
+    const channel =
+      objectType === 'instagram' || recipient.id.startsWith('ig_')
+        ? 'INSTAGRAM'
+        : 'FACEBOOK';
+
+    const inbound: InboundMessageEvent = {
+      provider: 'META',
+      channel,
+      externalAccountId: recipient.id,
+      externalSenderId: sender.id,
+      externalMessageId: message.mid,
+      text: message.text,
+      timestamp: Number(timestamp),
+      raw: event,
+    };
+
+    try {
+      await this.inbound.ingest(inbound);
+      await this.markEvent(externalEventId, 'PROCESSED');
+    } catch (e) {
+      const err = e instanceof Error ? e.message : 'unknown';
+      await this.markEvent(externalEventId, 'ERROR', err);
+      this.logger.warn(`Inbound ingest failed: ${err}`);
+    }
   }
 
   private async handleFeedComment(

@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { ChannelMark } from '@/components/brand/channel-icons';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -719,8 +720,11 @@ export function HomeDashboard() {
                       {(c.customer.name ?? '?').slice(0, 2)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="text-ink block truncate text-sm font-semibold">
-                        {c.customer.name ?? t('unknownCustomer')}
+                      <span className="text-ink flex items-center gap-1.5 truncate text-sm font-semibold">
+                        <ChannelMark channel={c.channel} className="shrink-0" />
+                        <span className="truncate">
+                          {c.customer.name ?? t('unknownCustomer')}
+                        </span>
                       </span>
                       <span className="text-muted block truncate text-[11px]">
                         {c.messages?.[0]?.content ?? '—'}

@@ -255,6 +255,8 @@ export class MetaGraphClient {
           'messages',
           'messaging_postbacks',
           'message_deliveries',
+          'messaging_handovers',
+          'standby',
           'feed',
         ],
         access_token: pageAccessToken,
@@ -285,6 +287,8 @@ export class MetaGraphClient {
       'messaging_optins',
       'message_deliveries',
       'message_reads',
+      'messaging_handovers',
+      'standby',
       'feed',
     ].join(',');
     const body = new URLSearchParams({
@@ -312,18 +316,15 @@ export class MetaGraphClient {
 
   async getUserProfile(pageAccessToken: string, userId: string) {
     const url = new URL(`${this.base()}/${userId}`);
-    url.searchParams.set('fields', 'name,first_name,last_name');
+    url.searchParams.set('fields', 'name,username');
     url.searchParams.set('access_token', pageAccessToken);
     const res = await fetch(url);
     if (res.ok) {
       const json = (await res.json()) as {
         name?: string;
-        first_name?: string;
-        last_name?: string;
+        username?: string;
       };
-      const full =
-        json.name?.trim() ||
-        [json.first_name, json.last_name].filter(Boolean).join(' ').trim();
+      const full = json.name?.trim() || json.username?.trim();
       if (full) return full;
     } else {
       const text = await res.text();
@@ -337,32 +338,33 @@ export class MetaGraphClient {
     pageId: string,
     pageAccessToken: string,
     senderId: string,
+    platform: 'messenger' | 'instagram' = 'messenger',
   ) {
     const url = new URL(`${this.base()}/${pageId}/conversations`);
     url.searchParams.set('fields', 'participants');
     url.searchParams.set('user_id', senderId);
-    url.searchParams.set('platform', 'messenger');
+    url.searchParams.set('platform', platform);
     url.searchParams.set('access_token', pageAccessToken);
     const res = await fetch(url);
     if (!res.ok) {
       const text = await res.text();
       this.logger.warn(
-        `Conversations name lookup failed: ${text.slice(0, 300)}`,
+        `Conversations name lookup failed (${platform}): ${text.slice(0, 300)}`,
       );
       return null;
     }
     const json = (await res.json()) as {
       data?: Array<{
         participants?: {
-          data?: Array<{ id?: string; name?: string }>;
+          data?: Array<{ id?: string; name?: string; username?: string }>;
         };
       }>;
     };
     for (const thread of json.data ?? []) {
       for (const p of thread.participants?.data ?? []) {
-        if (p.id === senderId && p.name?.trim()) {
-          return p.name.trim();
-        }
+        if (p.id !== senderId) continue;
+        const label = p.name?.trim() || p.username?.trim();
+        if (label) return label;
       }
     }
     return null;
@@ -389,6 +391,31 @@ export class MetaGraphClient {
       return { sent: false as const, error: textBody };
     }
     return { sent: true as const };
+  }
+
+  /** Claim the thread when the Page Inbox currently owns it (standby). */
+  async takeThreadControl(
+    pageId: string,
+    pageAccessToken: string,
+    recipientId: string,
+  ) {
+    const url = `${this.base()}/${pageId}/take_thread_control?access_token=${encodeURIComponent(pageAccessToken)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: { id: recipientId } }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `take_thread_control page=${pageId} recipient=${recipientId}: ${text.slice(0, 240)}`,
+      );
+      return { ok: false as const };
+    }
+    this.logger.log(
+      `take_thread_control ok page=${pageId} recipient=${recipientId}`,
+    );
+    return { ok: true as const };
   }
 
   /**

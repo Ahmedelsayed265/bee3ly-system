@@ -1,3 +1,4 @@
+import { ChannelMark } from '@/components/brand/channel-icons';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 import { cn } from '@/lib/utils';
@@ -54,8 +55,11 @@ export function ConversationList({
             )}
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-ink truncate text-sm font-semibold">
-                {c.customer.name ?? t('unknownCustomer')}
+              <p className="text-ink flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold">
+                <ChannelMark channel={c.channel} className="shrink-0" />
+                <span className="truncate">
+                  {c.customer.name ?? t('unknownCustomer')}
+                </span>
               </p>
               <span className="text-muted text-[10px] font-semibold">
                 {c.mode === 'HUMAN' || c.needsHuman

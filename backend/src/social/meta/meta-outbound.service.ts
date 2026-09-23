@@ -44,17 +44,36 @@ export class MetaOutboundService {
     const fromProfile = await this.graph.getUserProfile(token, senderId);
     if (fromProfile) return fromProfile;
 
-    return this.graph.getSenderNameFromConversations(
+    const platform =
+      account.platform === 'INSTAGRAM' ? 'instagram' : 'messenger';
+    const ownerIds = [
       account.externalId,
-      token,
-      senderId,
-    );
+      account.parentExternalId,
+    ].filter((id): id is string => Boolean(id));
+
+    for (const ownerId of ownerIds) {
+      const name = await this.graph.getSenderNameFromConversations(
+        ownerId,
+        token,
+        senderId,
+        platform,
+      );
+      if (name) return name;
+    }
+    return null;
   }
 
   async sendText(socialAccountId: string, recipientId: string, text: string) {
+    const account = await this.prisma.socialAccount.findUnique({
+      where: { id: socialAccountId },
+    });
     const token = await this.resolveConnectedToken(socialAccountId);
-    if (!token) {
+    if (!token || !account) {
       return { sent: false as const };
+    }
+    const pageId = account.parentExternalId || account.externalId;
+    if (pageId) {
+      await this.graph.takeThreadControl(pageId, token, recipientId);
     }
     return this.graph.sendTextMessage(token, recipientId, text);
   }

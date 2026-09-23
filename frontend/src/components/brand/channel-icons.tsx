@@ -50,3 +50,39 @@ export function WhatsAppIcon({ className, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function TikTokIcon({ className, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      className={cn('h-5 w-5', className)}
+      {...props}
+    >
+      <path
+        fill="currentColor"
+        d="M14.5 3c.4 2.4 1.8 4.1 4.1 4.4v2.5c-1.4 0-2.7-.4-3.9-1.2v6.6c0 3.3-2.6 5.7-5.8 5.7A5.7 5.7 0 0 1 3.2 15c0-3.2 2.6-5.7 5.8-5.7.3 0 .7 0 1 .1v2.7a3.1 3.1 0 0 0-1-.2 3 3 0 1 0 3 3V3h2.5Z"
+      />
+    </svg>
+  );
+}
+
+export function ChannelMark({
+  channel,
+  className,
+}: {
+  channel: string;
+  className?: string;
+}) {
+  const iconClass = cn('h-3.5 w-3.5', className);
+  if (channel === 'INSTAGRAM') {
+    return <InstagramIcon className={cn(iconClass, 'text-[#E1306C]')} />;
+  }
+  if (channel === 'WHATSAPP') {
+    return <WhatsAppIcon className={cn(iconClass, 'text-[#25D366]')} />;
+  }
+  if (channel === 'TIKTOK') {
+    return <TikTokIcon className={cn(iconClass, 'text-ink')} />;
+  }
+  return <FacebookIcon className={cn(iconClass, 'text-[#1877F2]')} />;
+}
