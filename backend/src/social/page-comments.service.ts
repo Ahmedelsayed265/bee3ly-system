@@ -469,7 +469,7 @@ export class PageCommentsService {
         externalId: customer?.externalId ?? null,
       },
       history: historyRows.map((m) => ({
-        role: m.role as 'CUSTOMER' | 'AI' | 'HUMAN' | 'SYSTEM',
+        role: m.role,
         content: m.content,
         createdAt: m.createdAt.toISOString(),
       })),
@@ -510,16 +510,15 @@ export class PageCommentsService {
         select: { id: true, content: true, meta: true, createdAt: true },
       });
       if (latest && latest.createdAt.getTime() >= start - 1000) {
-        return latest as { id: string; content: string; meta: unknown };
+        return latest;
       }
-      if (latest)
-        return latest as { id: string; content: string; meta: unknown };
+      if (latest) return latest;
       await new Promise((r) => setTimeout(r, intervalMs));
     }
     return this.prisma.message.findFirst({
       where: { conversationId, role: MessageRole.AI },
       orderBy: { createdAt: 'desc' },
       select: { id: true, content: true, meta: true },
-    }) as Promise<{ id: string; content: string; meta: unknown } | null>;
+    });
   }
 }

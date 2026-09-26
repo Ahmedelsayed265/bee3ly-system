@@ -244,49 +244,63 @@ export class PageCommentsPollerService implements OnModuleInit {
           }
         }
 
-        // 3) Private Reply → Messenger thread + seed AI message in Bee3ly inbox
-        if (!row.privateRepliedAt) {
-          const priv = await this.graph.sendPrivateReplyToComment(
-            token,
-            row.commentId,
-            replyText,
+        // 3) Private Reply → handled by the AI engine through the inbox
+        // conversation. We do NOT send the canned public ack here as a DM —
+        // that canned text must only appear as the public comment reply.
+        // The AI-generated private response is picked up by:
+        //   a) ensureConversationFromComment (fires runAiForCommentConversation)
+        //   b) AiEngineAdapter persists the AI reply message in Bee3ly inbox
+        //   c) A separate Meta outbound pass delivers that AI reply as a DM.
+        // If we still need the "please check DMs" DM sent via Graph API, we
+        // reuse the same wait-for-AI pattern that the Instagram webhook uses.
+        if (!row.privateRepliedAt && row.conversationId) {
+          const latestAiMsg = await this.waitForLatestAiMessage(
+            row.conversationId,
+            4000,
           );
-          if (priv.sent) {
-            row = await this.prisma.pageComment.update({
-              where: { id: row.id },
-              data: { privateRepliedAt: new Date() },
-            });
-            privateReplies += 1;
-            this.logger.log(
-              `Private reply sent commentId=${row.commentId} messageId=${priv.messageId}`,
-            );
 
-            if (row.conversationId) {
-              await this.prisma.message.create({
-                data: {
-                  conversationId: row.conversationId,
-                  role: MessageRole.AI,
-                  content: replyText,
-                  meta: {
-                    source: 'page_comment_private_reply',
-                    pageCommentId: row.commentId,
-                    metaMessageId: priv.messageId,
+          if (latestAiMsg) {
+            const priv = await this.graph.sendPrivateReplyToComment(
+              token,
+              row.commentId,
+              latestAiMsg.content,
+            );
+            const alreadyReplied =
+              !priv.sent &&
+              typeof priv.error === 'string' &&
+              priv.error.includes('already has a reply');
+            if (priv.sent || alreadyReplied) {
+              row = await this.prisma.pageComment.update({
+                where: { id: row.id },
+                data: { privateRepliedAt: new Date() },
+              });
+              privateReplies += 1;
+              this.logger.log(
+                priv.sent
+                  ? `AI private reply sent commentId=${row.commentId} messageId=${priv.messageId}`
+                  : `AI private reply already sent commentId=${row.commentId}`,
+              );
+              const existingMeta = (latestAiMsg.meta ?? {}) as Record<
+                string,
+                unknown
+              >;
+              if (priv.sent && !existingMeta['metaMessageId']) {
+                await this.prisma.message.update({
+                  where: { id: latestAiMsg.id },
+                  data: {
+                    meta: {
+                      ...existingMeta,
+                      pageCommentId: row.commentId,
+                      metaMessageId: priv.messageId,
+                    },
                   },
-                },
-              });
-              await this.prisma.conversation.update({
-                where: { id: row.conversationId },
-                data: { lastMessageAt: new Date() },
-              });
-              this.realtime.notifyConversationUpdated(
-                row.businessId,
-                row.conversationId,
+                });
+              }
+            } else if (isNew) {
+              this.logger.warn(
+                `AI private reply skipped/failed commentId=${row.commentId} error=${typeof priv.error === 'string' ? priv.error : 'unknown'}`,
               );
             }
-          } else if (isNew) {
-            this.logger.warn(
-              `Private reply skipped/failed commentId=${row.commentId}`,
-            );
           }
         }
       }
@@ -370,5 +384,40 @@ export class PageCommentsPollerService implements OnModuleInit {
         }
       }
     }
+  }
+
+  /** Poll up to `timeoutMs` for the most recent AI reply in a conversation. */
+  private async waitForLatestAiMessage(
+    conversationId: string,
+    timeoutMs: number,
+  ): Promise<{ id: string; content: string; meta: unknown } | null> {
+    const start = Date.now();
+    const intervalMs = 250;
+    while (Date.now() - start < timeoutMs) {
+      const latest = await this.prisma.message.findFirst({
+        where: {
+          conversationId,
+          role: MessageRole.AI,
+          NOT: {
+            meta: {
+              path: ['source'],
+              equals: 'page_comment_private_reply',
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, content: true, meta: true, createdAt: true },
+      });
+      if (latest && latest.createdAt.getTime() >= start - 1000) {
+        return latest;
+      }
+      if (latest) return latest;
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+    return this.prisma.message.findFirst({
+      where: { conversationId, role: MessageRole.AI },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, content: true, meta: true },
+    });
   }
 }
