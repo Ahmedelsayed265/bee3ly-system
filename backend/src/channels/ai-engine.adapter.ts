@@ -1,9 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  forwardRef,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MessageRole } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
@@ -78,7 +73,35 @@ export class AiEngineAdapter {
     engineUrl: string,
     payload: AiEngineInboundPayload,
   ): Promise<AiEngineInboundResponse> {
-    const endpoint = `${engineUrl.replace(/\/$/, '')}/v1/inbound`;
+    // ---- Validate merchant authorization token ----------------------------
+    // CRITICAL: The AI Service MUST know which merchant/channel this request
+    // belongs to so it can fetch the correct product catalog. If no signed
+    // JWT is available we MUST NOT call the service — it will return 401
+    // "Not authenticated" anyway, and we save a wasted round-trip.
+    const token = (payload.authorizationToken ?? '').trim();
+    if (!token) {
+      this.logger.warn(
+        `AI Service skipped — missing authorizationToken for business=${payload.businessId} channel=${payload.channel}`,
+      );
+
+      console.log(
+        '[AI_SERVICE] ⚠️  SKIPPED: authorizationToken is empty/undefined for merchant',
+        payload.businessId,
+      );
+      return this.safeFixedFallback(payload, 'INVALID_TOKEN');
+    }
+
+    // ---- Build endpoint URL ------------------------------------------------
+    // Strategy:
+    //   1) If the env URL already has a full path ending with /chat or
+    //      /inbound (e.g. ".../api/v1/chat") — use it exactly as provided.
+    //   2) Otherwise ALWAYS default to "/api/v1/chat" — this is the contract
+    //      proven live by the deployed FastAPI/Swagger UI (uvicorn server).
+    //      The old "/v1/inbound" path was never wired up on the AI side.
+    const raw = engineUrl.replace(/\/$/, '');
+    const hasFullPath = /\/(chat|inbound)$/i.test(raw);
+    const endpoint = hasFullPath ? raw : `${raw}/api/v1/chat`;
+
     const timeoutMs = this.parseTimeout(
       this.config.get<string>('AI_SERVICE_TIMEOUT_MS', '15000'),
     );
@@ -90,22 +113,112 @@ export class AiEngineAdapter {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
+    // ---- Build request body ------------------------------------------------
+    //
+    // The deployed AI Service Swagger accepts:
+    //   POST /api/v1/chat  body = { "message": "string" }
+    //
+    // Bee3ly also sends the full normalized context so the AI Service can
+    // read merchant scope, history, customer, agent config if it chooses.
+    // Unknown extra keys are ignored by FastAPI by default, so the
+    // compatibility layer is non-breaking.
+    //
+    // NOTE: businessId / merchantId are DOUBLED — both in the signed JWT
+    // (claims: sub, businessId, merchantId, customer_id) AND mirrored here in
+    // the JSON body — so the AI Service has multiple ways to resolve the
+    // merchant scope regardless of which extraction strategy it uses.
+    const requestBody = {
+      message: payload.text,
+      businessId: payload.businessId,
+      merchantId: payload.businessId,
+      conversationId: payload.conversationId,
+      customerId: payload.customerId,
+      channel: payload.channel,
+      messageId: payload.messageId,
+      text: payload.text,
+      authorizationToken: token,
+      customer: payload.customer,
+      history: payload.history,
+      agent: payload.agent,
+    };
+
+    console.log(
+      '\n[AI_SERVICE] ==================================================',
+    );
+
+    console.log('[AI_SERVICE] → POST', endpoint);
+
+    console.log(
+      '[AI_SERVICE] → merchantId=',
+      payload.businessId,
+      'channel=',
+      payload.channel,
+      'conversationId=',
+      payload.conversationId,
+    );
+
+    console.log(
+      '[AI_SERVICE] → customer message:',
+      JSON.stringify(payload.text),
+    );
+
+    console.log(
+      '[AI_SERVICE] → Bearer token (first 40 chars):',
+      token.slice(0, 40) + '...',
+    );
+
+    console.log(
+      '[AI_SERVICE] → token length:',
+      token.length,
+      'history messages:',
+      payload.history?.length ?? 0,
+    );
+    if (apiKey) {
+      console.log('[AI_SERVICE] → X-Bee3ly-Api-Key header: SET');
+    }
+
     try {
-      const res = await fetch(endpoint, {
+      let res = await fetch(endpoint, {
         method: 'POST',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          // Merchant-scoped authorization: AI Service validates this JWT
-          // to confirm it is allowed to read this merchant's products.
-          Authorization: `Bearer ${payload.authorizationToken}`,
+          Authorization: `Bearer ${token}`,
           ...(apiKey ? { 'X-Bee3ly-Api-Key': apiKey } : {}),
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestBody),
       });
+
+      // Fallback path: if the first endpoint 404s, try the other common
+      // path. This shields us against env-var URL misconfigurations
+      // (e.g. bare host without /api/v1/chat vs host with a different path).
+      if (res.status === 404 && !hasFullPath) {
+        const fallbackEndpoint = `${raw}/v1/inbound`;
+        console.log(
+          '[AI_SERVICE] → 404 on primary, trying fallback endpoint',
+          fallbackEndpoint,
+        );
+        res = await fetch(fallbackEndpoint, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            ...(apiKey ? { 'X-Bee3ly-Api-Key': apiKey } : {}),
+          },
+          body: JSON.stringify(requestBody),
+        });
+      }
+
+      console.log('[AI_SERVICE] ← HTTP', res.status, res.statusText);
 
       if (res.status === 401 || res.status === 403) {
         const body = await this.safeReadText(res);
+
+        console.log(
+          '[AI_SERVICE] ⚠️  TOKEN REJECTED (401/403):',
+          body.slice(0, 240),
+        );
         this.logger.warn(
           `AI Service rejected token HTTP ${res.status}: ${body.slice(0, 120)}`,
         );
@@ -117,26 +230,80 @@ export class AiEngineAdapter {
       }
 
       if (res.status === 404) {
-        this.logger.warn(`AI Service 404 — channel/merchant lookup failed`);
-        return this.safeFixedFallback(payload, 'MERCHANT_NOT_FOUND');
+        console.log(
+          '[AI_SERVICE] ⚠️  404 NOT FOUND — check AI_SERVICE_URL path (should end with /api/v1/chat)',
+        );
+        this.logger.warn(
+          `AI Service 404 — endpoint unreachable at ${endpoint} — fix AI_SERVICE_URL or ensure the AI service exposes /api/v1/chat`,
+        );
+        return this.safeFixedFallback(payload, 'SERVICE_UNAVAILABLE');
       }
 
       if (!res.ok) {
         const body = await this.safeReadText(res);
+
+        console.log(
+          '[AI_SERVICE] ⚠️  NON-2XX:',
+          res.status,
+          'body:',
+          body.slice(0, 240),
+        );
         this.logger.warn(
           `AI Service HTTP ${res.status}: ${body.slice(0, 120)}`,
         );
         return this.safeFixedFallback(payload, 'SERVICE_UNAVAILABLE');
       }
 
-      const data = (await res.json()) as { reply?: unknown; error?: string };
+      const text = await this.safeReadText(res);
 
-      if (typeof data.reply !== 'string' || !data.reply.trim()) {
+      console.log('[AI_SERVICE] ← raw response body:', text.slice(0, 1000));
+
+      // Parse flexible response shapes:
+      //   Deployed FastAPI /api/v1/chat contract is likely:
+      //      { "reply": "..." }     (our contract)  OR
+      //      { "message": "..." }   (Swagger UI-style mirror)  OR
+      //      { "data": { "reply": "..." } } OR raw string
+      let reply: string | null = null;
+      try {
+        const json = JSON.parse(text) as
+          { reply?: unknown; message?: unknown; data?: unknown } | string;
+        if (typeof json === 'string') {
+          reply = json.trim() || null;
+        } else {
+          const r = json.reply ?? json.message;
+          if (typeof r === 'string' && r.trim()) {
+            reply = r.trim();
+          } else if (
+            json.data &&
+            typeof json.data === 'object' &&
+            json.data !== null
+          ) {
+            const inner = (json.data as { reply?: unknown; message?: unknown })
+              .reply;
+            const innerMsg = (
+              json.data as { reply?: unknown; message?: unknown }
+            ).message;
+            const pick = typeof inner === 'string' ? inner : innerMsg;
+            if (typeof pick === 'string' && pick.trim()) reply = pick.trim();
+          }
+        }
+      } catch {
+        // Not JSON — treat plain text body as reply directly
+        const trimmed = text.trim();
+        if (trimmed) reply = trimmed;
+      }
+
+      if (!reply) {
+        console.log('[AI_SERVICE] ⚠️  EMPTY / INVALID reply');
         this.logger.warn('AI Service returned empty reply');
         return this.safeFixedFallback(payload, 'INVALID_RESPONSE');
       }
 
-      const reply = data.reply.trim();
+      console.log('[AI_SERVICE] ✅ FINAL AI REPLY:', JSON.stringify(reply));
+
+      console.log(
+        '[AI_SERVICE] ==================================================\n',
+      );
 
       await this.persistAiReply(
         payload.businessId,
@@ -151,9 +318,16 @@ export class AiEngineAdapter {
         e instanceof Error &&
         (e.name === 'AbortError' || e.name === 'TimeoutError');
       if (aborted) {
+        console.log('[AI_SERVICE] ⏱️  TIMEOUT after', timeoutMs, 'ms');
         this.logger.warn(`AI Service timed out after ${timeoutMs}ms`);
         return this.safeFixedFallback(payload, 'TIMEOUT');
       }
+
+      console.log(
+        '[AI_SERVICE] ❌ NETWORK ERROR:',
+        e instanceof Error ? e.message : 'unknown',
+        e instanceof Error && e.stack ? '\n' + e.stack.slice(0, 300) : '',
+      );
       this.logger.warn(
         `AI Service unreachable: ${e instanceof Error ? e.message : 'unknown'}`,
       );
