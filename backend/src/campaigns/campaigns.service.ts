@@ -1,6 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CampaignObjective, CampaignStatus, NotificationType } from '@prisma/client';
+import {
+  CampaignObjective,
+  CampaignStatus,
+  NotificationType,
+} from '@prisma/client';
 import {
   AttributionService,
   type AttributionChain,

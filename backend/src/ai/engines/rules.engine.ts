@@ -29,9 +29,7 @@ export class RulesEngine {
     ) {
       return 'PRODUCT_QUESTION';
     }
-    if (
-      /متوفر|موجود|مخزون|مقاس|size|xl|availability|فى |فيه |في /.test(text)
-    ) {
+    if (/متوفر|موجود|مخزون|مقاس|size|xl|availability|فى |فيه |في /.test(text)) {
       return 'AVAILABILITY';
     }
     if (/توصيل|delivery|شحن/.test(text)) return 'DELIVERY_QUESTION';

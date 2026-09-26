@@ -83,11 +83,7 @@ export function asVariants(raw: unknown): ProductVariants {
       const row = item as Record<string, unknown>;
       const name = String(row.name ?? '').trim();
       const values = Array.isArray(row.values)
-        ? [
-            ...new Set(
-              row.values.map((v) => String(v).trim()).filter(Boolean),
-            ),
-          ]
+        ? [...new Set(row.values.map((v) => String(v).trim()).filter(Boolean))]
         : [];
       if (!name || !values.length) return null;
       return { name, values };
@@ -99,7 +95,9 @@ export function asVariants(raw: unknown): ProductVariants {
       if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
       const row = item as Record<string, unknown>;
       const optionsRaw =
-        row.options && typeof row.options === 'object' && !Array.isArray(row.options)
+        row.options &&
+        typeof row.options === 'object' &&
+        !Array.isArray(row.options)
           ? (row.options as Record<string, unknown>)
           : {};
       const options: Record<string, string> = {};
@@ -147,9 +145,15 @@ export function rebuildVariantSkus(input: {
   const max = input.maxCombinations ?? 100;
   const limited = combos.slice(0, max);
   const prevByKey = new Map(
-    (input.previousSkus ?? []).map((sku) => [sku.key || variantSkuKey(sku.options), sku]),
+    (input.previousSkus ?? []).map((sku) => [
+      sku.key || variantSkuKey(sku.options),
+      sku,
+    ]),
   );
-  const defaultPrice = Math.max(0, Math.floor(Number(input.defaultPriceEgp ?? 0)));
+  const defaultPrice = Math.max(
+    0,
+    Math.floor(Number(input.defaultPriceEgp ?? 0)),
+  );
   const defaultStock = Math.max(
     0,
     Math.floor(Number(input.defaultStockQuantity ?? 0)),

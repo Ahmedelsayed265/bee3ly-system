@@ -104,6 +104,8 @@ export function zonePrice(
   governorate: string | null | undefined,
 ): number | null {
   if (!governorate) return null;
-  const zone = zones.find((item) => item.governorates.includes(governorate as GovernorateId));
+  const zone = zones.find((item) =>
+    item.governorates.includes(governorate as GovernorateId),
+  );
   return zone ? zone.priceEgp : null;
 }

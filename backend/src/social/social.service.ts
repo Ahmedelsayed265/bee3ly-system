@@ -38,7 +38,8 @@ export class SocialService implements OnModuleInit {
       where: { platform: SocialPlatform.WHATSAPP, externalId: phoneNumberId },
       select: { businessId: true },
     });
-    const businessId = existing?.businessId ?? (await this.pickWhatsAppBusinessId());
+    const businessId =
+      existing?.businessId ?? (await this.pickWhatsAppBusinessId());
     if (!businessId) {
       this.logger.warn(
         'WhatsApp test token is set, but there is no business to attach it to',

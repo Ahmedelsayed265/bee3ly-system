@@ -212,7 +212,9 @@ function toChain(
     revenueEgp: bucket.revenueEgp,
     costOfGoodsEgp: bucket.cogsMissing ? null : bucket.cogs,
     shippingEgp: bucket.shippingMissing ? null : bucket.shipping,
-    returnShippingEgp: bucket.returnShippingMissing ? null : bucket.returnShipping,
+    returnShippingEgp: bucket.returnShippingMissing
+      ? null
+      : bucket.returnShipping,
     returnedOrders: bucket.returnedOrders,
     returnedRevenueEgp: bucket.returnedRevenueEgp,
   };

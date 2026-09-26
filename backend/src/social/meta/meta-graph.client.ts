@@ -306,9 +306,7 @@ export class MetaGraphClient {
     });
     if (!res.ok) {
       const text = await res.text();
-      this.logger.warn(
-        `App page subscriptions failed: ${text.slice(0, 300)}`,
-      );
+      this.logger.warn(`App page subscriptions failed: ${text.slice(0, 300)}`);
       return { success: false as const, error: text };
     }
     return { success: true as const };
@@ -573,9 +571,7 @@ export class MetaGraphClient {
           fromUserId,
           fromName: c.from?.name?.trim() || null,
           message: typeof c.message === 'string' ? c.message : '',
-          commentedAt: c.created_time
-            ? new Date(c.created_time)
-            : new Date(),
+          commentedAt: c.created_time ? new Date(c.created_time) : new Date(),
           raw: c,
         });
       }

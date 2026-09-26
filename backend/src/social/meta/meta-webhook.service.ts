@@ -125,8 +125,7 @@ export class MetaWebhookService {
     }
 
     const timestamp =
-      typeof event.timestamp === 'number' ||
-      typeof event.timestamp === 'string'
+      typeof event.timestamp === 'number' || typeof event.timestamp === 'string'
         ? event.timestamp
         : Date.now();
     const externalEventId =
@@ -174,10 +173,12 @@ export class MetaWebhookService {
     if (!phoneNumberId) return;
 
     const contacts =
-      (value.contacts as Array<{
-        wa_id?: string;
-        profile?: { name?: string };
-      }> | undefined) ?? [];
+      (value.contacts as
+        | Array<{
+            wa_id?: string;
+            profile?: { name?: string };
+          }>
+        | undefined) ?? [];
     const nameByWaId = new Map<string, string>();
     for (const contact of contacts) {
       const name = contact.profile?.name?.trim();
@@ -192,12 +193,14 @@ export class MetaWebhookService {
       const text = message.text as { body?: string } | undefined;
       const body = text?.body?.trim() ?? '';
       if (!from || !body) {
-        const type = typeof message.type === 'string' ? message.type : 'unknown';
+        const type =
+          typeof message.type === 'string' ? message.type : 'unknown';
         this.logger.log(`Ignoring WhatsApp message type=${type} from=${from}`);
         continue;
       }
 
-      const externalEventId = messageId || `${phoneNumberId}:${from}:${body.slice(0, 24)}`;
+      const externalEventId =
+        messageId || `${phoneNumberId}:${from}:${body.slice(0, 24)}`;
       const created = await this.claimEvent('META', externalEventId, message);
       if (!created) {
         this.logger.debug(`Duplicate WhatsApp event ${externalEventId}`);
@@ -233,8 +236,7 @@ export class MetaWebhookService {
   ) {
     const value = (change.value as Record<string, unknown> | undefined) ?? {};
     const from = value.from as
-      | { id?: string; username?: string; name?: string }
-      | undefined;
+      { id?: string; username?: string; name?: string } | undefined;
     const fromUserId = from?.id;
     if (!fromUserId || fromUserId === igUserId) return;
     if (typeof value.parent_id === 'string' && value.parent_id) return;
@@ -246,7 +248,11 @@ export class MetaWebhookService {
     if (!postId) return;
     const message = typeof value.text === 'string' ? value.text : '';
 
-    const created = await this.claimEvent('META', `ig-comment:${commentId}`, change);
+    const created = await this.claimEvent(
+      'META',
+      `ig-comment:${commentId}`,
+      change,
+    );
     if (!created) {
       this.logger.debug(`Duplicate IG comment webhook ${commentId}`);
       return;
@@ -315,7 +321,9 @@ export class MetaWebhookService {
       typeof createdRaw === 'number'
         ? new Date(createdRaw * (createdRaw < 1e12 ? 1000 : 1))
         : typeof createdRaw === 'string' && /^\d+$/.test(createdRaw)
-          ? new Date(Number(createdRaw) * (Number(createdRaw) < 1e12 ? 1000 : 1))
+          ? new Date(
+              Number(createdRaw) * (Number(createdRaw) < 1e12 ? 1000 : 1),
+            )
           : new Date();
 
     const created = await this.claimEvent('META', commentId, change);

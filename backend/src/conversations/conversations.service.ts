@@ -4,7 +4,12 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { ConversationChannel, LeadStatus, MessageRole, Prisma } from '@prisma/client';
+import {
+  ConversationChannel,
+  LeadStatus,
+  MessageRole,
+  Prisma,
+} from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -134,7 +139,12 @@ export class ConversationsService {
     const intents = intentRows
       .map((row) => row.intent)
       .filter((intent): intent is string => Boolean(intent));
-    return { leads, counts, intents, ...pageMeta(total, window.page, window.limit) };
+    return {
+      leads,
+      counts,
+      intents,
+      ...pageMeta(total, window.page, window.limit),
+    };
   }
 
   async updateLeadsStatus(userId: string, ids: string[], status: string) {

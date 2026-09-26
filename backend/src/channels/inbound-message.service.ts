@@ -8,7 +8,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AiEngineAdapter } from './ai-engine.adapter';
-import type { InboundIngestResult, InboundMessageEvent } from './channel.types';
+import type {
+  AiEngineInboundPayload,
+  ChannelType,
+  InboundIngestResult,
+  InboundMessageEvent,
+} from './channel.types';
+import { MerchantTokenService } from './merchant-token.service';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
 
 @Injectable()
@@ -18,11 +24,15 @@ export class InboundMessageService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiEngine: AiEngineAdapter,
+    private readonly tokens: MerchantTokenService,
     private readonly outbound: MetaOutboundService,
     private readonly realtime: RealtimeService,
   ) {}
 
   async ingest(event: InboundMessageEvent): Promise<InboundIngestResult> {
+    // ------------------------------------------------------------------
+    // Step 1: Resolve channel → SocialAccount → businessId (merchant)
+    // ------------------------------------------------------------------
     const account = await this.prisma.socialAccount.findFirst({
       where: {
         externalId: event.externalAccountId,
@@ -43,6 +53,8 @@ export class InboundMessageService {
       throw new Error('CHANNEL_ACCOUNT_NOT_FOUND');
     }
 
+    const businessId = account.businessId;
+
     // Idempotent message by external message id when present
     if (event.externalMessageId) {
       const existing = await this.prisma.message.findFirst({
@@ -58,7 +70,7 @@ export class InboundMessageService {
           where: { id: existing.conversationId },
         });
         return {
-          businessId: account.businessId,
+          businessId,
           conversationId: existing.conversationId,
           customerId: conv?.customerId ?? '',
           messageId: existing.id,
@@ -73,7 +85,7 @@ export class InboundMessageService {
         : event.channel === 'WHATSAPP'
           ? SocialPlatform.WHATSAPP
           : SocialPlatform.FACEBOOK;
-    const channel =
+    const channel: ConversationChannel =
       event.channel === 'INSTAGRAM'
         ? ConversationChannel.INSTAGRAM
         : event.channel === 'WHATSAPP'
@@ -82,14 +94,14 @@ export class InboundMessageService {
 
     let customer = await this.prisma.customer.findFirst({
       where: {
-        businessId: account.businessId,
+        businessId,
         externalId: event.externalSenderId,
       },
     });
     if (!customer) {
       customer = await this.prisma.customer.create({
         data: {
-          businessId: account.businessId,
+          businessId,
           externalId: event.externalSenderId,
           platform,
           name: event.senderName ?? null,
@@ -105,11 +117,7 @@ export class InboundMessageService {
       });
     }
 
-    if (
-      !customer.name &&
-      event.senderName &&
-      event.channel === 'WHATSAPP'
-    ) {
+    if (!customer.name && event.senderName && event.channel === 'WHATSAPP') {
       customer = await this.prisma.customer.update({
         where: { id: customer.id },
         data: { name: event.senderName },
@@ -133,7 +141,7 @@ export class InboundMessageService {
 
     let conversation = await this.prisma.conversation.findFirst({
       where: {
-        businessId: account.businessId,
+        businessId,
         customerId: customer.id,
         channel,
       },
@@ -142,7 +150,7 @@ export class InboundMessageService {
     if (!conversation) {
       conversation = await this.prisma.conversation.create({
         data: {
-          businessId: account.businessId,
+          businessId,
           customerId: customer.id,
           channel,
         },
@@ -168,46 +176,69 @@ export class InboundMessageService {
       data: { lastMessageAt: new Date() },
     });
 
-    // Integration point — no AI reasoning in webhook/controller
+    // ------------------------------------------------------------------
+    // Step 2: AI Engine path. Only when conversation is still in AI mode.
+    // Merchant token + full context are built here; AiEngineAdapter owns
+    // all error handling + safe fallback (so we don't double-fallback).
+    // ------------------------------------------------------------------
     if (conversation.mode !== 'HUMAN' && !conversation.needsHuman) {
-      const aiResult = await this.aiEngine.handleInbound({
-        businessId: account.businessId,
+      // Issue a short-lived signed JWT so the AI Service can securely
+      // identify + scope itself to this merchant.
+      const authorizationToken = await this.tokens.issueForMerchant(businessId);
+
+      const [historyRows, agentRow] = await Promise.all([
+        this.prisma.message.findMany({
+          where: { conversationId: conversation.id },
+          orderBy: { createdAt: 'asc' },
+          take: 40,
+          select: { role: true, content: true, createdAt: true },
+        }),
+        this.prisma.aIAgent.findUnique({
+          where: { businessId },
+          select: {
+            primaryGoal: true,
+            secondaryGoals: true,
+            tone: true,
+            instructions: true,
+          },
+        }),
+      ]);
+
+      const payload: AiEngineInboundPayload = {
+        businessId,
         conversationId: conversation.id,
         customerId: customer.id,
-        channel: conversation.channel,
+        channel: conversation.channel as ChannelType,
         messageId: message.id,
         text: event.text,
+        authorizationToken,
         customer: {
           name: customer.name,
           phone: customer.phone,
           externalId: customer.externalId,
         },
-      });
+        history: historyRows.map((m) => ({
+          role: m.role as 'CUSTOMER' | 'AI' | 'HUMAN' | 'SYSTEM',
+          content: m.content,
+          createdAt: m.createdAt.toISOString(),
+        })),
+        agent: agentRow
+          ? {
+              primaryGoal: agentRow.primaryGoal,
+              secondaryGoals: agentRow.secondaryGoals,
+              tone: agentRow.tone,
+              instructions: agentRow.instructions,
+            }
+          : undefined,
+      };
 
-      let reply = aiResult.reply;
-      if (!reply) {
-        const business = await this.prisma.business.findUnique({
-          where: { id: account.businessId },
-          select: { name: true },
-        });
-        const shop = business?.name?.trim() || 'المتجر';
-        // Fixed ack while AI Engine is offline / agent paused
-        reply = `أهلاً بيك! رسالتك وصلت لـ ${shop}. هنرد عليك حالاً.`;
-        await this.prisma.message.create({
-          data: {
-            conversationId: conversation.id,
-            role: MessageRole.AI,
-            content: reply,
-            meta: { source: 'fixed_reply' },
-          },
-        });
-        await this.prisma.conversation.update({
-          where: { id: conversation.id },
-          data: { lastMessageAt: new Date() },
-        });
-      }
+      const aiResult = await this.aiEngine.handleInbound(payload);
+      const reply = aiResult.reply ?? null;
 
-      if (account.status === SocialConnectionStatus.CONNECTED) {
+      // IMPORTANT: AiEngineAdapter is responsible for persisting the
+      // reply message. Here we only care about SENDING it through the
+      // original channel if the account is connected and a reply exists.
+      if (reply && account.status === SocialConnectionStatus.CONNECTED) {
         const sent = await this.outbound.sendText(
           account.id,
           event.externalSenderId,
@@ -221,13 +252,10 @@ export class InboundMessageService {
       }
     }
 
-    this.realtime.notifyConversationUpdated(
-      account.businessId,
-      conversation.id,
-    );
+    this.realtime.notifyConversationUpdated(businessId, conversation.id);
 
     return {
-      businessId: account.businessId,
+      businessId,
       conversationId: conversation.id,
       customerId: customer.id,
       messageId: message.id,

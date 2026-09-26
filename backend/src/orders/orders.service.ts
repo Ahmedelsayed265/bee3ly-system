@@ -3,10 +3,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  parseShippingZones,
-  zonePrice,
-} from '../businesses/shipping-zones';
+import { parseShippingZones, zonePrice } from '../businesses/shipping-zones';
 import {
   asVariants,
   findMatchingSku,
@@ -61,10 +58,16 @@ export class OrdersService {
     if (!existing) throw new NotFoundException('Order not found');
 
     const order = await this.prisma.$transaction(async (tx) => {
-      if (existing.status !== OrderStatus.RETURNED && status === OrderStatus.RETURNED) {
+      if (
+        existing.status !== OrderStatus.RETURNED &&
+        status === OrderStatus.RETURNED
+      ) {
         await this.adjustStock(tx, existing.items, 1);
       }
-      if (existing.status === OrderStatus.RETURNED && status !== OrderStatus.RETURNED) {
+      if (
+        existing.status === OrderStatus.RETURNED &&
+        status !== OrderStatus.RETURNED
+      ) {
         await this.adjustStock(tx, existing.items, -1);
       }
       return tx.order.update({

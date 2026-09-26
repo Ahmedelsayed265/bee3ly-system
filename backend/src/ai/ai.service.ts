@@ -1,9 +1,17 @@
 import {
+  Inject,
   Injectable,
   Logger,
   ServiceUnavailableException,
+  forwardRef,
 } from '@nestjs/common';
 import { ConversionStage, LeadStatus, MessageRole } from '@prisma/client';
+import { AiEngineAdapter } from '../channels/ai-engine.adapter';
+import { MerchantTokenService } from '../channels/merchant-token.service';
+import type {
+  AiEngineInboundPayload,
+  ChannelType,
+} from '../channels/channel.types';
 import { BusinessAccessService } from '../common/business-access.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -25,6 +33,10 @@ export class AiService {
     private readonly rules: RulesEngine,
     private readonly llm: LlmEngine,
     private readonly realtime: RealtimeService,
+    @Inject(forwardRef(() => AiEngineAdapter))
+    private readonly aiEngine: AiEngineAdapter,
+    @Inject(forwardRef(() => MerchantTokenService))
+    private readonly tokens: MerchantTokenService,
   ) {}
 
   async getAgent(userId: string) {
@@ -104,12 +116,181 @@ export class AiService {
       throw new ServiceUnavailableException('Conversation not found');
     }
 
-    return this.processCustomerMessage({
+    // Route simulation through the same AiEngineAdapter + merchant token
+    // pipeline used by real channels. The adapter internally picks:
+    //   1) External AI Service when AI_SERVICE_URL is set
+    //   2) Dev fallback (rules engine) when AI_ENGINE_DEV_FALLBACK=true
+    //   3) Safe generic ack fallback otherwise
+    // This way the sandbox accurately mirrors production behavior.
+    return this.runAiForSandboxMessage({
       businessId,
       conversationId: conversation.id,
       customerId: conversation.customerId,
       content,
     });
+  }
+
+  /**
+   * Route a sandbox/customer simulation message through AiEngineAdapter
+   * with the same token + context pipeline that real channels use.
+   */
+  private async runAiForSandboxMessage(input: {
+    businessId: string;
+    conversationId: string;
+    customerId: string;
+    content: string;
+  }) {
+    // 1) Persist the incoming CUSTOMER message exactly like a real channel
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: input.conversationId },
+    });
+    if (!conversation) {
+      throw new ServiceUnavailableException('Conversation not found');
+    }
+
+    // Human mode / needsHuman / paused agent -> skip AI, persist only
+    const agent = await this.prisma.aIAgent.findUnique({
+      where: { businessId: input.businessId },
+    });
+    const intentGuess = this.rules.detectIntent(input.content);
+
+    const customerMessage = await this.prisma.message.create({
+      data: {
+        conversationId: input.conversationId,
+        role: MessageRole.CUSTOMER,
+        content: input.content,
+        intent: intentGuess,
+      },
+    });
+
+    if (conversation.mode === 'HUMAN' || conversation.needsHuman) {
+      await this.prisma.conversation.update({
+        where: { id: input.conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+      this.realtime.notifyConversationUpdated(
+        input.businessId,
+        input.conversationId,
+      );
+      return {
+        conversationId: input.conversationId,
+        intent: intentGuess,
+        reply: null,
+        toolsUsed: [],
+        order: null,
+        lead: null,
+        message: customerMessage,
+        mode: 'human' as const,
+        paused: false,
+        needsHuman: true,
+      };
+    }
+
+    if (agent && !agent.isActive) {
+      await this.prisma.conversation.update({
+        where: { id: input.conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+      this.realtime.notifyConversationUpdated(
+        input.businessId,
+        input.conversationId,
+      );
+      return {
+        conversationId: input.conversationId,
+        intent: intentGuess,
+        reply: null,
+        toolsUsed: [],
+        order: null,
+        lead: null,
+        message: customerMessage,
+        mode: 'paused' as const,
+        paused: true,
+        needsHuman: false,
+        notice: 'المساعد الذكي مش متاح دلوقتي، تقدر تكمل المحادثة يدويًا.',
+      };
+    }
+
+    // 2) Issue merchant-scoped JWT and build adapter payload
+    const authorizationToken = await this.tokens.issueForMerchant(
+      input.businessId,
+    );
+
+    const [historyRows, customer] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { conversationId: input.conversationId },
+        orderBy: { createdAt: 'asc' },
+        take: 40,
+        select: { role: true, content: true, createdAt: true },
+      }),
+      this.prisma.customer.findUnique({
+        where: { id: input.customerId },
+        select: { name: true, phone: true, externalId: true },
+      }),
+    ]);
+
+    const payload: AiEngineInboundPayload = {
+      businessId: input.businessId,
+      conversationId: input.conversationId,
+      customerId: input.customerId,
+      channel: (conversation.channel as ChannelType) ?? 'FACEBOOK',
+      messageId: customerMessage.id,
+      text: input.content,
+      authorizationToken,
+      customer: {
+        name: customer?.name ?? null,
+        phone: customer?.phone ?? null,
+        externalId: customer?.externalId ?? null,
+      },
+      history: historyRows.map((m) => ({
+        role: m.role as 'CUSTOMER' | 'AI' | 'HUMAN' | 'SYSTEM',
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+      })),
+      agent: agent
+        ? {
+            primaryGoal: agent.primaryGoal,
+            secondaryGoals: agent.secondaryGoals,
+            tone: agent.tone,
+            instructions: agent.instructions,
+          }
+        : undefined,
+    };
+
+    // 3) Run through the central adapter (persists AI reply + events)
+    const adapterResult = await this.aiEngine.handleInbound(payload);
+    const reply = adapterResult.reply ?? null;
+
+    // 4) Surface a response shape compatible with the existing UI.
+    //    The adapter already persisted the AI message, so we just look it up
+    //    to return the same object the UI expects for display.
+    const latestAi = reply
+      ? await this.prisma.message.findFirst({
+          where: {
+            conversationId: input.conversationId,
+            role: MessageRole.AI,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+      : null;
+
+    return {
+      conversationId: input.conversationId,
+      intent: intentGuess,
+      reply,
+      toolsUsed: [],
+      order: null,
+      lead: null,
+      message: latestAi ?? customerMessage,
+      mode: (adapterResult.mode ?? 'none') as
+        | 'external'
+        | 'dev_fallback'
+        | 'fixed_fallback'
+        | 'none'
+        | 'paused'
+        | 'human',
+      paused: false,
+      needsHuman: false,
+    };
   }
 
   /**
@@ -212,10 +393,7 @@ export class AiService {
       alreadyCreatedOrder: Boolean(result.order),
     });
 
-    this.realtime.notifyConversationUpdated(
-      input.businessId,
-      conversation.id,
-    );
+    this.realtime.notifyConversationUpdated(input.businessId, conversation.id);
 
     return { reply: result.reply, mode: 'dev_fallback' as const };
   }
@@ -352,10 +530,7 @@ export class AiService {
 
     this.logger.debug(`AI reply via ${result.mode} intent=${result.intent}`);
 
-    this.realtime.notifyConversationUpdated(
-      input.businessId,
-      conversation.id,
-    );
+    this.realtime.notifyConversationUpdated(input.businessId, conversation.id);
 
     return {
       conversationId: conversation.id,

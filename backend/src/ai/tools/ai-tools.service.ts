@@ -1,5 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ActorType, LeadStatus, NotificationType, Prisma } from '@prisma/client';
+import {
+  ActorType,
+  LeadStatus,
+  NotificationType,
+  Prisma,
+} from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -117,9 +122,7 @@ export class AiToolsService {
       name: product.name,
       description: product.description,
       inStock: available,
-      stockQuantity: matched
-        ? matched.stockQuantity
-        : product.stockQuantity,
+      stockQuantity: matched ? matched.stockQuantity : product.stockQuantity,
       attributes,
       details: formatAttributesLine(attributes),
       sizes: legacy.sizes.length ? legacy.sizes : product.sizes,

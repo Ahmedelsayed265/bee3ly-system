@@ -1,12 +1,4 @@
-const WEEK_DAYS = [
-  'sat',
-  'sun',
-  'mon',
-  'tue',
-  'wed',
-  'thu',
-  'fri',
-] as const;
+const WEEK_DAYS = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'] as const;
 
 const DAY_LABEL: Record<(typeof WEEK_DAYS)[number], string> = {
   sat: 'السبت',
@@ -43,7 +35,9 @@ function formatClock(value: string) {
   const minutes = match[2];
   const suffix = hour < 12 ? 'ص' : 'م';
   const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  return minutes === '00' ? `${hour12} ${suffix}` : `${hour12}:${minutes} ${suffix}`;
+  return minutes === '00'
+    ? `${hour12} ${suffix}`
+    : `${hour12}:${minutes} ${suffix}`;
 }
 
 function formatDays(days: string[]) {
@@ -92,7 +86,9 @@ function formatKnowledge(data: Record<string, unknown>) {
 
   if (data.kind === 'payment' && Array.isArray(data.methods)) {
     return data.methods
-      .map((method) => (typeof method === 'string' ? PAYMENT_LABEL[method] : ''))
+      .map((method) =>
+        typeof method === 'string' ? PAYMENT_LABEL[method] : '',
+      )
       .filter(Boolean)
       .join('، ');
   }

@@ -1,7 +1,11 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SchedulerRegistry } from '@nestjs/schedule';
-import { MessageRole, SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import {
+  MessageRole,
+  SocialConnectionStatus,
+  SocialPlatform,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { MetaGraphClient } from './meta/meta-graph.client';
@@ -33,7 +37,9 @@ export class PageCommentsPollerService implements OnModuleInit {
 
   onModuleInit() {
     if (!this.enabled()) {
-      this.logger.log('Comment polling disabled (META_COMMENT_POLLING_ENABLED)');
+      this.logger.log(
+        'Comment polling disabled (META_COMMENT_POLLING_ENABLED)',
+      );
       return;
     }
     const ms = this.pollIntervalMs();
@@ -74,7 +80,9 @@ export class PageCommentsPollerService implements OnModuleInit {
   async syncFacebookComments() {
     if (!this.enabled()) return;
     if (this.running) {
-      this.logger.debug('Comment poll skipped — previous run still in progress');
+      this.logger.debug(
+        'Comment poll skipped — previous run still in progress',
+      );
       return;
     }
     this.running = true;
@@ -203,8 +211,9 @@ export class PageCommentsPollerService implements OnModuleInit {
 
         // 1) Inbox conversation
         if (!row.conversationId) {
-          const conv =
-            await this.pageComments.ensureConversationFromComment(row.commentId);
+          const conv = await this.pageComments.ensureConversationFromComment(
+            row.commentId,
+          );
           if (conv) {
             conversations += 1;
             row = (await this.prisma.pageComment.findUnique({

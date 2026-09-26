@@ -64,9 +64,7 @@ export class BusinessesService {
   }
 }
 
-function assertUniqueGovernorates(
-  zones: Array<{ governorates: string[] }>,
-) {
+function assertUniqueGovernorates(zones: Array<{ governorates: string[] }>) {
   const seen = new Set<string>();
   for (const zone of zones) {
     for (const governorate of zone.governorates) {

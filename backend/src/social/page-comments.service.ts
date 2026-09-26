@@ -8,6 +8,12 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { AiEngineAdapter } from '../channels/ai-engine.adapter';
+import { MerchantTokenService } from '../channels/merchant-token.service';
+import type {
+  AiEngineInboundPayload,
+  ChannelType,
+} from '../channels/channel.types';
 import { MetaGraphClient } from './meta/meta-graph.client';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
@@ -35,6 +41,8 @@ export class PageCommentsService {
     private readonly graph: MetaGraphClient,
     private readonly oauth: MetaOauthService,
     private readonly config: ConfigService,
+    private readonly aiEngine: AiEngineAdapter,
+    private readonly tokens: MerchantTokenService,
   ) {}
 
   async createFromWebhook(input: CreatePageCommentFromWebhookInput) {
@@ -111,8 +119,10 @@ export class PageCommentsService {
   }
 
   /**
-   * Open (or reuse) an Inbox FACEBOOK conversation for this comment and
-   * seed it with the comment text as a customer message.
+   * Open (or reuse) an Inbox FACEBOOK/INSTAGRAM conversation for this comment,
+   * seed it with the comment text as a customer message, then run the AI
+   * engine to generate a reply so the merchant inbox + DM flow works the
+   * same way as any other channel inbound message.
    */
   async ensureConversationFromComment(commentId: string) {
     const row = await this.prisma.pageComment.findUnique({
@@ -161,11 +171,11 @@ export class PageCommentsService {
       },
     });
 
+    let seededMessageId: string | null = null;
+    const content = row.message?.trim() || `(تعليق على المنشور ${row.postId})`;
+
     if (!alreadySeeded) {
-      const content =
-        row.message?.trim() ||
-        `(تعليق على المنشور ${row.postId})`;
-      await this.prisma.message.create({
+      const msg = await this.prisma.message.create({
         data: {
           conversationId: conversation.id,
           role: MessageRole.CUSTOMER,
@@ -178,6 +188,7 @@ export class PageCommentsService {
           },
         },
       });
+      seededMessageId = msg.id;
       await this.prisma.conversation.update({
         where: { id: conversation.id },
         data: { lastMessageAt: new Date() },
@@ -189,16 +200,38 @@ export class PageCommentsService {
       data: { conversationId: conversation.id },
     });
 
-    this.realtime.notifyConversationUpdated(
-      row.businessId,
-      conversation.id,
-    );
+    this.realtime.notifyConversationUpdated(row.businessId, conversation.id);
+
+    // ------------------------------------------------------------------
+    // Trigger AI for the newly-seeded comment conversation so the
+    // merchant gets an AI-generated reply in the inbox exactly like
+    // a normal inbound DM.
+    // ------------------------------------------------------------------
+    if (conversation.mode !== 'HUMAN' && !conversation.needsHuman) {
+      void this.runAiForCommentConversation({
+        businessId: row.businessId,
+        conversationId: conversation.id,
+        customerId: row.customerId,
+        channel: conversation.channel as ChannelType,
+        seededMessageId,
+        customerMessage: content,
+      }).catch((e) =>
+        this.logger.warn(
+          `AI run for comment ${row.commentId} failed: ${e instanceof Error ? e.message : 'unknown'}`,
+        ),
+      );
+    }
+
     return conversation;
   }
 
   /**
-   * Instagram comment webhook: save, open an INSTAGRAM inbox thread,
-   * then send the fixed public reply and a private DM.
+   * Instagram comment webhook: save, open INSTAGRAM inbox thread,
+   * send a configurable PUBLIC acknowledgment (merchant policy),
+   * then run the AI engine for the private DM/inbox conversation.
+   *
+   * The private DM content comes from the AI Service response; we no
+   * longer hardcode a private reply text.
    */
   async handleInstagramComment(input: CreatePageCommentFromWebhookInput) {
     const created = await this.createFromWebhook({
@@ -208,7 +241,9 @@ export class PageCommentsService {
     if (!created) return null;
     if (created.publicRepliedAt && created.privateRepliedAt) return created;
 
-    await this.ensureConversationFromComment(created.commentId);
+    const conversation = await this.ensureConversationFromComment(
+      created.commentId,
+    );
     let row = await this.prisma.pageComment.findUnique({
       where: { id: created.id },
     });
@@ -239,7 +274,13 @@ export class PageCommentsService {
       return row;
     }
 
-    const replyText = this.fixedReply(
+    // ------------------------------------------------------------------
+    // Public reply: merchant/agent-configurable canned ack.
+    // Public threads are visible to all Facebook/Instagram users so the
+    // merchant (not the AI) should own this exact wording via the
+    // `commentFixedReply` agent setting or env override.
+    // ------------------------------------------------------------------
+    const publicReplyText = this.publicCommentAck(
       account.business?.name,
       account.business?.aiAgent?.commentFixedReply,
     );
@@ -248,7 +289,7 @@ export class PageCommentsService {
       const reply = await this.graph.replyToInstagramComment(
         row.commentId,
         token,
-        replyText,
+        publicReplyText,
       );
       if (reply.ok) {
         row = await this.prisma.pageComment.update({
@@ -264,59 +305,57 @@ export class PageCommentsService {
       }
     }
 
-    if (!row.privateRepliedAt) {
-      const pageId = account.parentExternalId || input.pageId;
-      const priv = await this.graph.sendInstagramPrivateReply(
-        pageId,
-        token,
-        row.commentId,
-        replyText,
+    // ------------------------------------------------------------------
+    // Private DM: let the AI engine respond using the already-seeded
+    // conversation. We do NOT duplicate-send if AI already produced a
+    // reply through runAiForCommentConversation.
+    // ------------------------------------------------------------------
+    if (!row.privateRepliedAt && conversation) {
+      // Wait briefly so the concurrent AI run (fired above) can insert
+      // its reply message before we decide whether to send it.
+      const latestAiMsg = await this.waitForLatestAiMessage(
+        conversation.id,
+        4000,
       );
-      const alreadyReplied =
-        !priv.sent &&
-        typeof priv.error === 'string' &&
-        priv.error.includes('already has a reply');
-      if (priv.sent || alreadyReplied) {
-        row = await this.prisma.pageComment.update({
-          where: { id: row.id },
-          data: { privateRepliedAt: new Date() },
-        });
-        this.logger.log(
-          priv.sent
-            ? `IG private reply sent commentId=${row.commentId} messageId=${priv.messageId}`
-            : `IG private reply already sent commentId=${row.commentId}`,
+
+      if (latestAiMsg) {
+        const pageId = account.parentExternalId || input.pageId;
+        const priv = await this.graph.sendInstagramPrivateReply(
+          pageId,
+          token,
+          row.commentId,
+          latestAiMsg.content,
         );
-        if (row.conversationId) {
-          const seeded = await this.prisma.message.findFirst({
-            where: {
-              conversationId: row.conversationId,
-              meta: {
-                path: ['pageCommentId'],
-                equals: row.commentId,
-              },
-            },
+        const alreadyReplied =
+          !priv.sent &&
+          typeof priv.error === 'string' &&
+          priv.error.includes('already has a reply');
+        if (priv.sent || alreadyReplied) {
+          row = await this.prisma.pageComment.update({
+            where: { id: row.id },
+            data: { privateRepliedAt: new Date() },
           });
-          if (!seeded) {
-            await this.prisma.message.create({
+          this.logger.log(
+            priv.sent
+              ? `IG private AI reply sent commentId=${row.commentId} messageId=${priv.messageId}`
+              : `IG private reply already sent commentId=${row.commentId}`,
+          );
+          if (
+            priv.sent &&
+            !(latestAiMsg.meta as Record<string, unknown> | null)?.[
+              'metaMessageId'
+            ]
+          ) {
+            await this.prisma.message.update({
+              where: { id: latestAiMsg.id },
               data: {
-                conversationId: row.conversationId,
-                role: MessageRole.AI,
-                content: replyText,
                 meta: {
-                  source: 'ig_comment_private_reply',
+                  ...(latestAiMsg.meta as Record<string, unknown> | null),
                   pageCommentId: row.commentId,
-                  metaMessageId: priv.sent ? priv.messageId : null,
+                  metaMessageId: priv.messageId,
                 },
               },
             });
-            await this.prisma.conversation.update({
-              where: { id: row.conversationId },
-              data: { lastMessageAt: new Date() },
-            });
-            this.realtime.notifyConversationUpdated(
-              row.businessId,
-              row.conversationId,
-            );
           }
         }
       }
@@ -325,7 +364,15 @@ export class PageCommentsService {
     return row;
   }
 
-  private fixedReply(businessName?: string | null, businessReply?: string | null) {
+  // ------------------------------------------------------------------
+  // Internal helpers
+  // ------------------------------------------------------------------
+
+  /** Acknowledgment shown on a public comment — merchant-owned wording. */
+  private publicCommentAck(
+    businessName?: string | null,
+    businessReply?: string | null,
+  ) {
     const fromBusiness = businessReply?.trim();
     if (fromBusiness) return fromBusiness;
     const fromEnv = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
@@ -343,5 +390,136 @@ export class PageCommentsService {
       select: { id: true },
     });
     return ig ? ConversationChannel.INSTAGRAM : ConversationChannel.FACEBOOK;
+  }
+
+  /**
+   * Generate an AI response for the conversation that was just seeded
+   * from a page comment. Mirrors the logic InboundMessageService uses
+   * so every channel gets the same AI experience.
+   */
+  private async runAiForCommentConversation(input: {
+    businessId: string;
+    conversationId: string;
+    customerId: string;
+    channel: ChannelType;
+    seededMessageId: string | null;
+    customerMessage: string;
+  }) {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: input.conversationId },
+      select: { id: true, mode: true, needsHuman: true, channel: true },
+    });
+    if (
+      !conversation ||
+      conversation.mode === 'HUMAN' ||
+      conversation.needsHuman
+    ) {
+      return;
+    }
+
+    const authorizationToken = await this.tokens.issueForMerchant(
+      input.businessId,
+    );
+    const [historyRows, agentRow, customer] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { conversationId: input.conversationId },
+        orderBy: { createdAt: 'asc' },
+        take: 40,
+        select: { role: true, content: true, createdAt: true },
+      }),
+      this.prisma.aIAgent.findUnique({
+        where: { businessId: input.businessId },
+        select: {
+          primaryGoal: true,
+          secondaryGoals: true,
+          tone: true,
+          instructions: true,
+        },
+      }),
+      this.prisma.customer.findUnique({
+        where: { id: input.customerId },
+        select: { name: true, phone: true, externalId: true },
+      }),
+    ]);
+
+    const payload: AiEngineInboundPayload = {
+      businessId: input.businessId,
+      conversationId: input.conversationId,
+      customerId: input.customerId,
+      channel: input.channel,
+      messageId:
+        (input.seededMessageId ??
+        historyRows[historyRows.length - 1]?.role === 'CUSTOMER')
+          ? ((
+              await this.prisma.message.findFirst({
+                where: {
+                  conversationId: input.conversationId,
+                  role: MessageRole.CUSTOMER,
+                },
+                orderBy: { createdAt: 'desc' },
+                select: { id: true },
+              })
+            )?.id ?? 'comment-seed')
+          : 'comment-seed',
+      text: input.customerMessage,
+      authorizationToken,
+      customer: {
+        name: customer?.name ?? null,
+        phone: customer?.phone ?? null,
+        externalId: customer?.externalId ?? null,
+      },
+      history: historyRows.map((m) => ({
+        role: m.role as 'CUSTOMER' | 'AI' | 'HUMAN' | 'SYSTEM',
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+      })),
+      agent: agentRow
+        ? {
+            primaryGoal: agentRow.primaryGoal,
+            secondaryGoals: agentRow.secondaryGoals,
+            tone: agentRow.tone,
+            instructions: agentRow.instructions,
+          }
+        : undefined,
+    };
+
+    // Adapter persists its own reply message and fires realtime events.
+    await this.aiEngine.handleInbound(payload);
+  }
+
+  /** Poll up to `timeoutMs` for the most recent AI reply in a conversation. */
+  private async waitForLatestAiMessage(
+    conversationId: string,
+    timeoutMs: number,
+  ): Promise<{ id: string; content: string; meta: unknown } | null> {
+    const start = Date.now();
+    const intervalMs = 250;
+    while (Date.now() - start < timeoutMs) {
+      const latest = await this.prisma.message.findFirst({
+        where: {
+          conversationId,
+          role: MessageRole.AI,
+          NOT: {
+            meta: {
+              path: ['source'],
+              equals: 'ig_comment_private_reply',
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, content: true, meta: true, createdAt: true },
+      });
+      if (latest && latest.createdAt.getTime() >= start - 1000) {
+        return latest as { id: string; content: string; meta: unknown };
+      }
+      if (latest)
+        return latest as { id: string; content: string; meta: unknown };
+      await new Promise((r) => setTimeout(r, intervalMs));
+    }
+    return this.prisma.message.findFirst({
+      where: { conversationId, role: MessageRole.AI },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, content: true, meta: true },
+    }) as Promise<{ id: string; content: string; meta: unknown } | null>;
   }
 }

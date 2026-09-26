@@ -46,10 +46,9 @@ export class MetaOutboundService {
 
     const platform =
       account.platform === 'INSTAGRAM' ? 'instagram' : 'messenger';
-    const ownerIds = [
-      account.externalId,
-      account.parentExternalId,
-    ].filter((id): id is string => Boolean(id));
+    const ownerIds = [account.externalId, account.parentExternalId].filter(
+      (id): id is string => Boolean(id),
+    );
 
     for (const ownerId of ownerIds) {
       const name = await this.graph.getSenderNameFromConversations(
