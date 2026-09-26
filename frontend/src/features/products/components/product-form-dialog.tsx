@@ -34,6 +34,8 @@ type ProductFormDialogProps = {
   onNameChange: (value: string) => void;
   priceEgp: string;
   onPriceChange: (value: string) => void;
+  costEgp: string;
+  onCostChange: (value: string) => void;
   description: string;
   onDescriptionChange: (value: string) => void;
   stockQuantity: string;
@@ -63,6 +65,8 @@ export function ProductFormDialog({
   onNameChange,
   priceEgp,
   onPriceChange,
+  costEgp,
+  onCostChange,
   description,
   onDescriptionChange,
   stockQuantity,
@@ -172,6 +176,20 @@ export function ProductFormDialog({
                     </div>
                   ) : null}
                 </div>
+
+                <InputField
+                  id="productCost"
+                  type="number"
+                  min={0}
+                  step="1"
+                  label={t('productCost')}
+                  value={costEgp}
+                  onChange={(e) => onCostChange(e.target.value)}
+                  placeholder="0"
+                />
+                <p className="text-muted text-xs leading-5">
+                  {t('productCostNote')}
+                </p>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="productDescription">

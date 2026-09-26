@@ -40,6 +40,12 @@ export type Business = {
   paymentInfo: string | null;
   faqs: string | null;
   variantDictionary?: VariantDictionaryOption[];
+  shippingZones?: Array<{
+    id: string;
+    name: string;
+    governorates: string[];
+    priceEgp: number;
+  }>;
   onboardingCompletedAt: string | null;
 };
 
@@ -48,6 +54,7 @@ export type Product = {
   name: string;
   description: string | null;
   priceEgp: number;
+  costEgp?: number | null;
   attributes?: Record<string, string | number | boolean | string[]>;
   variants?: {
     axes: Array<{ name: string; values: string[] }>;
@@ -117,6 +124,7 @@ export async function fetchProducts(page = 1, limit = 10) {
 export async function createProduct(input: {
   name: string;
   priceEgp: number;
+  costEgp?: number | null;
   description?: string;
   attributes?: Record<string, string | number | boolean | string[]>;
   variants?: {
@@ -142,6 +150,7 @@ export async function updateProduct(
   input: Partial<{
     name: string;
     priceEgp: number;
+    costEgp: number | null;
     description: string;
     attributes: Record<string, string | number | boolean | string[]>;
     variants: {
@@ -175,6 +184,8 @@ export type OrderRow = {
   orderNumber: number;
   status: string;
   totalEgp: number;
+  governorate?: string | null;
+  shippingEgp?: number | null;
   customerName: string | null;
   customerPhone: string | null;
   createdAt: string;
@@ -186,20 +197,30 @@ export type OrderRow = {
   }>;
 };
 
-export async function fetchOrders(page = 1, limit = 10) {
+export async function fetchOrders(page = 1, limit = 10, campaignId?: string) {
   const { data } = await api.get<{
     orders: OrderRow[];
     page: number;
     limit: number;
     total: number;
     totalPages: number;
-  }>('/orders', { params: { page, limit } });
+  }>('/orders', {
+    params: { page, limit, ...(campaignId ? { campaignId } : {}) },
+  });
   return data;
 }
 
 export async function updateOrderStatus(id: string, status: string) {
   const { data } = await api.patch(`/orders/${id}/status`, { status });
   return data;
+}
+
+export async function updateOrderGovernorate(id: string, governorate: string) {
+  const { data } = await api.patch<{ order: OrderRow }>(
+    `/orders/${id}/governorate`,
+    { governorate },
+  );
+  return data.order;
 }
 
 export async function fetchConversations() {
@@ -279,7 +300,16 @@ export async function simulateMessage(
   return data;
 }
 
-export async function fetchLeads(page = 1, limit = 10) {
+export async function fetchLeads(
+  input: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    intent?: string;
+    q?: string;
+    campaignId?: string;
+  } = {},
+) {
   const { data } = await api.get<
     PageResult<{
       leads: Array<{
@@ -288,9 +318,41 @@ export async function fetchLeads(page = 1, limit = 10) {
         intent: string | null;
         createdAt: string;
         customer: { name: string | null; phone: string | null };
+        campaign: { id: string; name: string } | null;
       }>;
+      counts: {
+        NEW: number;
+        QUALIFIED: number;
+        CONVERTED: number;
+        LOST: number;
+      };
+      intents: string[];
     }>
-  >('/leads', { params: { page, limit } });
+  >('/leads', {
+    params: {
+      page: input.page ?? 1,
+      limit: input.limit ?? 10,
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.intent ? { intent: input.intent } : {}),
+      ...(input.q ? { q: input.q } : {}),
+      ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+    },
+  });
+  return data;
+}
+
+export async function updateLeadsStatus(ids: string[], status: string) {
+  const { data } = await api.patch<{ updated: number }>('/leads/bulk-status', {
+    ids,
+    status,
+  });
+  return data;
+}
+
+export async function deleteLeads(ids: string[]) {
+  const { data } = await api.delete<{ deleted: number }>('/leads', {
+    data: { ids },
+  });
   return data;
 }
 
@@ -329,6 +391,7 @@ export type MeasuredMetric = {
     | 'missing_engagements'
     | 'missing_landing_page_views'
     | 'missing_cost'
+    | 'missing_shipping'
     | 'divide_by_zero'
     | null;
   primary: boolean;
@@ -366,6 +429,7 @@ export async function fetchOverview() {
     };
     unattributed?: CampaignChain & { costOfGoodsEgp: number | null };
     salesByDay: Array<{ day: string; value: number }>;
+    plannedBudgetEgp?: number;
     campaigns?: Array<
       CampaignChain & {
         id: string;
@@ -525,6 +589,11 @@ export type Campaign = {
   leads?: number;
   orders?: number;
   revenueEgp?: number;
+  costOfGoodsEgp?: number | null;
+  shippingEgp?: number | null;
+  returnShippingEgp?: number | null;
+  returnedOrders?: number;
+  returnedRevenueEgp?: number;
   headline?: MetricHeadline;
   metrics?: MeasuredMetric[];
 };
@@ -537,12 +606,24 @@ export async function fetchCampaigns(page = 1, limit = 10) {
   return data;
 }
 
+export async function draftCampaignCopy(input: {
+  name: string;
+  productId: string;
+}) {
+  const { data } = await api.post<{ copy: string }>(
+    '/campaigns/ad-copy',
+    input,
+  );
+  return data.copy;
+}
+
 export async function createCampaign(input: {
   offer: string;
   objective: string;
   audienceDescription: string;
   budget: number;
   valueProposition?: string;
+  adCopy?: string;
   channel?: string;
 }) {
   const { data } = await api.post<{
@@ -552,9 +633,14 @@ export async function createCampaign(input: {
   return data;
 }
 
+export async function fetchCampaign(id: string) {
+  const { data } = await api.get<{ campaign: Campaign }>(`/campaigns/${id}`);
+  return data.campaign;
+}
+
 export async function launchCampaign(
   id: string,
-  status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED',
+  status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED',
 ) {
   const { data } = await api.patch<{
     campaign: Campaign;

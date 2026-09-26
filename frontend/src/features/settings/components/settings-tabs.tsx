@@ -1,4 +1,4 @@
-import { BookOpen, MessagesSquare } from 'lucide-react';
+import { BookOpen, MessagesSquare, Truck } from 'lucide-react';
 import type { MessageKey } from '@/features/i18n/messages';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { SettingsTab } from '@/features/settings/types';
@@ -11,6 +11,7 @@ const TABS: Array<{
 }> = [
   { id: 'social', labelKey: 'socialAccounts', icon: MessagesSquare },
   { id: 'knowledge', labelKey: 'businessKnowledge', icon: BookOpen },
+  { id: 'shipping', labelKey: 'shippingZonesTitle', icon: Truck },
 ];
 
 type SettingsTabsProps = {

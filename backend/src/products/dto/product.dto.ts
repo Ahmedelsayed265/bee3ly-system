@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -10,6 +10,13 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+
+function optionalMoney(value: unknown) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+  return Math.floor(parsed);
+}
 
 export class VariantAxisDto {
   @IsString()
@@ -66,6 +73,12 @@ export class CreateProductDto {
   @Min(0)
   priceEgp!: number;
 
+  @IsOptional()
+  @Transform(({ value }) => optionalMoney(value))
+  @IsInt()
+  @Min(0)
+  costEgp?: number | null;
+
   /** Flexible details: { material: "…", area_m2: 120, … } */
   @IsOptional()
   @IsObject()
@@ -117,6 +130,12 @@ export class UpdateProductDto {
   @IsInt()
   @Min(0)
   priceEgp?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => optionalMoney(value))
+  @IsInt()
+  @Min(0)
+  costEgp?: number | null;
 
   @IsOptional()
   @IsObject()

@@ -4,7 +4,7 @@ import {
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { ConversationChannel, MessageRole } from '@prisma/client';
+import { ConversationChannel, LeadStatus, MessageRole, Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -81,15 +81,30 @@ export class ConversationsService {
     return { success: true };
   }
 
-  async listLeads(userId: string, page = 1, limit = 10) {
+  async listLeads(
+    userId: string,
+    page = 1,
+    limit = 10,
+    filters: {
+      status?: string;
+      intent?: string;
+      q?: string;
+      campaignId?: string;
+    } = {},
+  ) {
     const businessId = await this.access.requireBusinessId(userId);
     const window = pageWindow(page, limit);
-    const where = { businessId };
-    const [leads, total] = await Promise.all([
+    const where = this.leadWhere(businessId, filters);
+    const facetWhere = this.leadWhere(businessId, {
+      intent: filters.intent,
+      q: filters.q,
+      campaignId: filters.campaignId,
+    });
+    const [leads, total, grouped, intentRows] = await Promise.all([
       this.prisma.lead.findMany({
         where,
         include: {
-          customer: true,
+          customer: { select: { name: true, phone: true } },
           campaign: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -97,8 +112,72 @@ export class ConversationsService {
         take: window.limit,
       }),
       this.prisma.lead.count({ where }),
+      this.prisma.lead.groupBy({
+        by: ['status'],
+        where: facetWhere,
+        _count: { _all: true },
+      }),
+      this.prisma.lead.findMany({
+        where: { businessId, intent: { not: null } },
+        distinct: ['intent'],
+        select: { intent: true },
+        orderBy: { intent: 'asc' },
+      }),
     ]);
-    return { leads, ...pageMeta(total, window.page, window.limit) };
+    const counts: Record<LeadStatus, number> = {
+      NEW: 0,
+      QUALIFIED: 0,
+      CONVERTED: 0,
+      LOST: 0,
+    };
+    for (const row of grouped) counts[row.status] = row._count._all;
+    const intents = intentRows
+      .map((row) => row.intent)
+      .filter((intent): intent is string => Boolean(intent));
+    return { leads, counts, intents, ...pageMeta(total, window.page, window.limit) };
+  }
+
+  async updateLeadsStatus(userId: string, ids: string[], status: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const result = await this.prisma.lead.updateMany({
+      where: { businessId, id: { in: ids } },
+      data: { status: status as LeadStatus },
+    });
+    return { updated: result.count };
+  }
+
+  async removeLeads(userId: string, ids: string[]) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const result = await this.prisma.lead.deleteMany({
+      where: { businessId, id: { in: ids } },
+    });
+    return { deleted: result.count };
+  }
+
+  private leadWhere(
+    businessId: string,
+    filters: {
+      status?: string;
+      intent?: string;
+      q?: string;
+      campaignId?: string;
+    },
+  ): Prisma.LeadWhereInput {
+    const q = filters.q?.trim();
+    return {
+      businessId,
+      ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters.status ? { status: filters.status as LeadStatus } : {}),
+      ...(filters.intent ? { intent: filters.intent } : {}),
+      ...(q
+        ? {
+            OR: [
+              { customer: { name: { contains: q, mode: 'insensitive' } } },
+              { customer: { phone: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
   }
 
   async updateLeadStatus(userId: string, leadId: string, status: string) {

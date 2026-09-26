@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Min,
   MinLength,
 } from 'class-validator';
@@ -31,6 +32,19 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   channel?: string;
+
+  @IsOptional()
+  @IsString()
+  adCopy?: string;
+}
+
+export class DraftAdCopyDto {
+  @IsString()
+  @MinLength(2)
+  name!: string;
+
+  @IsUUID()
+  productId!: string;
 }
 
 export class LaunchCampaignDto {

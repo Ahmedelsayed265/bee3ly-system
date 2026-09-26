@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -37,7 +37,9 @@ export class BusinessesService {
 
   async updateMine(userId: string, dto: UpdateBusinessDto) {
     const businessId = await this.access.requireBusinessId(userId);
-    const { completeOnboarding, variantDictionary, ...data } = dto;
+    const { completeOnboarding, variantDictionary, shippingZones, ...data } =
+      dto;
+    if (shippingZones) assertUniqueGovernorates(shippingZones);
 
     const business = await this.prisma.business.update({
       where: { id: businessId },
@@ -49,10 +51,31 @@ export class BusinessesService {
                 variantDictionary as unknown as Prisma.InputJsonValue,
             }
           : {}),
+        ...(shippingZones !== undefined
+          ? {
+              shippingZones: shippingZones as unknown as Prisma.InputJsonValue,
+            }
+          : {}),
         ...(completeOnboarding ? { onboardingCompletedAt: new Date() } : {}),
       },
     });
 
     return { business };
+  }
+}
+
+function assertUniqueGovernorates(
+  zones: Array<{ governorates: string[] }>,
+) {
+  const seen = new Set<string>();
+  for (const zone of zones) {
+    for (const governorate of zone.governorates) {
+      if (seen.has(governorate)) {
+        throw new BadRequestException(
+          'A governorate can belong to only one shipping group',
+        );
+      }
+      seen.add(governorate);
+    }
   }
 }

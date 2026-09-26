@@ -1,25 +1,31 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CampaignObjective, CampaignStatus, NotificationType } from '@prisma/client';
-import { AttributionService } from '../analytics/attribution.service';
+import {
+  AttributionService,
+  type AttributionChain,
+} from '../analytics/attribution.service';
 import {
   computeMetrics,
   EMPTY_DELIVERY,
   type CampaignObjectiveId,
-  type ChainInput,
 } from '../analytics/campaign-metrics';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCampaignDto } from './dto/campaign.dto';
+import { CreateCampaignDto, DraftAdCopyDto } from './dto/campaign.dto';
 
 @Injectable()
 export class CampaignsService {
+  private readonly logger = new Logger(CampaignsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
     private readonly notifications: NotificationsService,
     private readonly attribution: AttributionService,
+    private readonly config: ConfigService,
   ) {}
 
   async list(userId: string, page = 1, limit = 10) {
@@ -74,7 +80,8 @@ export class CampaignsService {
         budget: dto.budget,
         valueProposition:
           dto.valueProposition ?? recommendation.valueProposition,
-        suggestedMessaging: recommendation.suggestedMessaging,
+        suggestedMessaging:
+          dto.adCopy?.trim() || recommendation.suggestedMessaging,
         suggestedCta: recommendation.suggestedCta,
         suggestedCreative: recommendation.suggestedCreative,
         channel: dto.channel ?? 'FACEBOOK_INSTAGRAM',
@@ -117,24 +124,38 @@ export class CampaignsService {
           ? status
           : CampaignStatus.ASSISTED_LAUNCH;
 
+    const launching =
+      safeStatus === CampaignStatus.ASSISTED_LAUNCH ||
+      safeStatus === CampaignStatus.SIMULATED;
     const campaign = await this.prisma.campaign.update({
       where: { id },
       data: {
         status: safeStatus,
-        startDate: new Date(),
+        ...(launching && !existing.startDate ? { startDate: new Date() } : {}),
       },
     });
 
+    const title =
+      safeStatus === CampaignStatus.SIMULATED
+        ? 'حملة تجريبية'
+        : safeStatus === CampaignStatus.PAUSED
+          ? 'الحملة متوقفة'
+          : safeStatus === CampaignStatus.ARCHIVED
+            ? 'الحملة اتقفلت'
+            : 'إطلاق بمساعدة الفريق';
+    const body =
+      safeStatus === CampaignStatus.SIMULATED
+        ? `${campaign.name} — وضع محاكاة (لم تُنشَر إعلانًا حقيقيًا على Meta).`
+        : safeStatus === CampaignStatus.PAUSED
+          ? `${campaign.name} — متوقفة جوه Bee3ly.`
+          : safeStatus === CampaignStatus.ARCHIVED
+            ? `${campaign.name} — اتقفلت. المحادثات والطلبات لسه موجودة.`
+            : `${campaign.name} — جاهزة للإطلاق بمساعدة bee3ly (مش نشر تلقائي على Meta بعد).`;
+
     await this.notifications.create(businessId, {
       type: NotificationType.CAMPAIGN,
-      title:
-        safeStatus === CampaignStatus.SIMULATED
-          ? 'حملة تجريبية'
-          : 'إطلاق بمساعدة الفريق',
-      body:
-        safeStatus === CampaignStatus.SIMULATED
-          ? `${campaign.name} — وضع محاكاة (لم تُنشَر إعلانًا حقيقيًا على Meta).`
-          : `${campaign.name} — جاهزة للإطلاق بمساعدة bee3ly (مش نشر تلقائي على Meta بعد).`,
+      title,
+      body,
       data: { campaignId: campaign.id, status: safeStatus },
     });
 
@@ -151,7 +172,7 @@ export class CampaignsService {
 
   private withMetrics<T extends { id: string; objective: CampaignObjective }>(
     campaign: T,
-    chain: ChainInput,
+    chain: AttributionChain,
   ) {
     const measured = computeMetrics(
       chain,
@@ -164,9 +185,87 @@ export class CampaignsService {
       leads: chain.leads,
       orders: chain.orders,
       revenueEgp: chain.revenueEgp,
+      costOfGoodsEgp: chain.costOfGoodsEgp,
+      shippingEgp: chain.shippingEgp,
+      returnShippingEgp: chain.returnShippingEgp,
+      returnedOrders: chain.returnedOrders,
+      returnedRevenueEgp: chain.returnedRevenueEgp,
       headline: measured.headline,
       metrics: measured.metrics,
     };
+  }
+
+  async draftAdCopy(userId: string, dto: DraftAdCopyDto) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const product = await this.prisma.product.findFirst({
+      where: { id: dto.productId, businessId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    const copy = await this.writeAdCopy(dto.name.trim(), product);
+    return { copy };
+  }
+
+  private async writeAdCopy(
+    campaignName: string,
+    product: { name: string; description: string | null; priceEgp: number },
+  ) {
+    const fallback = this.fallbackAdCopy(campaignName, product);
+    const apiKey = this.config.get<string>('OPENAI_API_KEY')?.trim();
+    if (!apiKey) return fallback;
+
+    const model =
+      this.config.get<string>('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
+    const description = product.description?.trim().slice(0, 400) ?? '';
+    try {
+      const response = await fetch(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            temperature: 0.6,
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'اكتب نص إعلان قصير بالعامية المصرية. من 3 إلى 5 سطور. استخدم اسم الحملة والمنتج والسعر والوصف فقط. متخترعش خصم أو مواصفات مش مكتوبة. من غير هاشتاجات.',
+              },
+              {
+                role: 'user',
+                content: `اسم الحملة: ${campaignName}\nالمنتج: ${product.name}\nالسعر: ${product.priceEgp} جنيه\nالوصف: ${description || 'غير متاح'}`,
+              },
+            ],
+          }),
+        },
+      );
+      if (!response.ok) return fallback;
+      const body = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = body.choices?.[0]?.message?.content?.trim();
+      return text || fallback;
+    } catch (error) {
+      this.logger.warn(`Ad copy generation failed: ${error}`);
+      return fallback;
+    }
+  }
+
+  private fallbackAdCopy(
+    campaignName: string,
+    product: { name: string; description: string | null; priceEgp: number },
+  ) {
+    const lines = [
+      campaignName,
+      '',
+      `${product.name} بـ ${product.priceEgp} جنيه.`,
+    ];
+    if (product.description?.trim()) lines.push(product.description.trim());
+    lines.push('', 'ابعتلنا رسالة واطلبه دلوقتي.');
+    return lines.join('\n');
   }
 
   private buildRecommendation(dto: CreateCampaignDto, businessName: string) {

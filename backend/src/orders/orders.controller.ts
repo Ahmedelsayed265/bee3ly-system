@@ -8,7 +8,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
+import { GOVERNORATE_IDS } from '../businesses/shipping-zones';
 import {
   CurrentUser,
   type AuthUser,
@@ -22,19 +23,44 @@ class UpdateOrderStatusDto {
   status!: OrderStatus;
 }
 
+class UpdateOrderGovernorateDto {
+  @IsIn(GOVERNORATE_IDS)
+  governorate!: string;
+}
+
+class OrderQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsUUID()
+  campaignId?: string;
+}
+
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser, @Query() query: PaginationQueryDto) {
-    return this.orders.list(user.id, query.page ?? 1, query.limit ?? 10);
+  list(@CurrentUser() user: AuthUser, @Query() query: OrderQueryDto) {
+    return this.orders.list(
+      user.id,
+      query.page ?? 1,
+      query.limit ?? 10,
+      query.campaignId,
+    );
   }
 
   @Get(':id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.orders.getOne(user.id, id);
+  }
+
+  @Patch(':id/governorate')
+  setGovernorate(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateOrderGovernorateDto,
+  ) {
+    return this.orders.setGovernorate(user.id, id, dto.governorate);
   }
 
   @Patch(':id/status')

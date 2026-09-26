@@ -43,11 +43,9 @@ export function CampaignGoalStep({
             <span className="text-ink font-semibold">
               {t(`campaignObj_${o}` as MessageKey)}
             </span>
-            {objective === o ? (
-              <span className="text-muted mt-1 block text-xs">
-                {t(`campaignMetrics_${o}` as MessageKey)}
-              </span>
-            ) : null}
+            <span className="text-muted mt-1 block text-xs">
+              {t(`campaignMetrics_${o}` as MessageKey)}
+            </span>
           </button>
         ))}
       </div>

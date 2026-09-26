@@ -120,6 +120,7 @@ export function useProducts() {
   >({});
   const [name, setName] = useState('');
   const [priceEgp, setPriceEgp] = useState('');
+  const [costEgp, setCostEgp] = useState('');
   const [description, setDescription] = useState('');
   const [stockQuantity, setStockQuantity] = useState('10');
   const [listingAvailable, setListingAvailable] = useState(true);
@@ -172,6 +173,7 @@ export function useProducts() {
     setPreservedAttributes({});
     setName('');
     setPriceEgp('');
+    setCostEgp('');
     setDescription('');
     setStockQuantity('10');
     setListingAvailable(true);
@@ -198,6 +200,7 @@ export function useProducts() {
     setPreservedAttributes(attrs);
     setName(product.name);
     setPriceEgp(String(product.priceEgp));
+    setCostEgp(product.costEgp == null ? '' : String(product.costEgp));
     setDescription(product.description ?? '');
     setStockQuantity(String(product.stockQuantity ?? 0));
     setListingAvailable(product.inStock);
@@ -226,6 +229,7 @@ export function useProducts() {
       id: string;
       name: string;
       priceEgp: number;
+      costEgp: number | null;
       description?: string;
       attributes: Record<string, string | number | boolean | string[]>;
       variants: ProductVariants;
@@ -281,6 +285,8 @@ export function useProducts() {
     const payload = {
       name: name.trim(),
       priceEgp: Number(priceEgp),
+      costEgp:
+        costEgp === '' ? null : Math.max(0, Math.floor(Number(costEgp) || 0)),
       description: description.trim() || undefined,
       attributes,
       variants,
@@ -335,6 +341,8 @@ export function useProducts() {
     setName,
     priceEgp,
     setPriceEgp,
+    costEgp,
+    setCostEgp,
     description,
     setDescription,
     stockQuantity,

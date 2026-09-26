@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { BusinessGoal, BusinessType, PlanTier } from '@prisma/client';
+import { GOVERNORATE_IDS } from '../shipping-zones';
 
 export class VariantDictionaryOptionDto {
   @IsString()
@@ -24,6 +26,25 @@ export class VariantDictionaryOptionDto {
   @IsArray()
   @IsString({ each: true })
   values!: string[];
+}
+
+export class ShippingZoneDto {
+  @IsString()
+  @MinLength(1)
+  id!: string;
+
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsArray()
+  @IsIn(GOVERNORATE_IDS, { each: true })
+  governorates!: string[];
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceEgp!: number;
 }
 
 export class UpdateBusinessDto {
@@ -84,6 +105,12 @@ export class UpdateBusinessDto {
   @ValidateNested({ each: true })
   @Type(() => VariantDictionaryOptionDto)
   variantDictionary?: VariantDictionaryOptionDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ShippingZoneDto)
+  shippingZones?: ShippingZoneDto[];
 
   @IsOptional()
   @IsBoolean()

@@ -16,6 +16,10 @@ type CampaignWizardProps = {
   onStepChange: (step: number) => void;
   offer: string;
   onOfferChange: (value: string) => void;
+  productId: string;
+  onProductChange: (value: string) => void;
+  adCopy: string;
+  onAdCopyChange: (value: string) => void;
   objective: CampaignObjective;
   onObjectiveChange: (value: CampaignObjective) => void;
   audience: string;
@@ -38,6 +42,10 @@ export function CampaignWizard({
   onStepChange,
   offer,
   onOfferChange,
+  productId,
+  onProductChange,
+  adCopy,
+  onAdCopyChange,
   objective,
   onObjectiveChange,
   audience,
@@ -82,6 +90,10 @@ export function CampaignWizard({
         <CampaignOfferStep
           offer={offer}
           onOfferChange={onOfferChange}
+          productId={productId}
+          onProductChange={onProductChange}
+          adCopy={adCopy}
+          onAdCopyChange={onAdCopyChange}
           onNext={() => onStepChange(1)}
         />
       ) : null}

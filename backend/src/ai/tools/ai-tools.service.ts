@@ -280,6 +280,7 @@ export class AiToolsService {
               color,
               quantity,
               priceEgp: unitPrice,
+              costEgp: product.costEgp,
             },
           ],
         },

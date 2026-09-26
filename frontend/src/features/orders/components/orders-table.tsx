@@ -3,7 +3,11 @@ import { PaginationBar } from '@/components/ui/pagination-bar';
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
-import { canCancel, canConfirm } from '@/features/orders/hooks/use-orders';
+import {
+  canCancel,
+  canConfirm,
+  canReturn,
+} from '@/features/orders/hooks/use-orders';
 
 type OrdersTableProps = {
   orders: OrderRow[];
@@ -13,7 +17,10 @@ type OrdersTableProps = {
   isStatusPending: boolean;
   money: (value: number) => string;
   onView: (order: OrderRow) => void;
-  onAsk: (order: OrderRow, status: 'CONFIRMED' | 'CANCELLED') => void;
+  onAsk: (
+    order: OrderRow,
+    status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED',
+  ) => void;
   onPage: (page: number) => void;
 };
 
@@ -85,6 +92,15 @@ export function OrdersTable({
                       onClick={() => onView(o)}
                     >
                       {t('viewOrder')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-2.5 text-xs"
+                      disabled={!canReturn(o.status) || isStatusPending}
+                      onClick={() => onAsk(o, 'RETURNED')}
+                    >
+                      {t('returnOrder')}
                     </Button>
                     <Button
                       size="sm"

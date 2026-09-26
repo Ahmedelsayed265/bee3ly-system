@@ -147,6 +147,7 @@ export class ProductsService {
         name: dto.name.trim(),
         description: dto.description?.trim(),
         priceEgp: derived.priceEgp,
+        costEgp: dto.costEgp ?? null,
         attributes: derived.attributes,
         variants: derived.variants as unknown as Prisma.InputJsonValue,
         sizes: derived.legacy.sizes,
@@ -219,6 +220,7 @@ export class ProductsService {
           ? { description: dto.description.trim() }
           : {}),
         priceEgp: derived.priceEgp,
+        ...(dto.costEgp !== undefined ? { costEgp: dto.costEgp } : {}),
         ...(shouldTouchAttributes || dto.variants !== undefined
           ? {
               attributes: derived.attributes,

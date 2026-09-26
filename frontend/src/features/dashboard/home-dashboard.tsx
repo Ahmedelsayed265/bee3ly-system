@@ -401,6 +401,7 @@ function HeroMascot() {
 type MetricCard = {
   label: string;
   value: string;
+  hint?: string;
   delta: string;
   icon: LucideIcon;
   tone: string;
@@ -426,6 +427,16 @@ export function HomeDashboard() {
   const roas = overviewQuery.data?.report?.metrics.find(
     (metric) => metric.id === 'roas',
   );
+  const plannedBudget =
+    overviewQuery.data?.plannedBudgetEgp ??
+    (overviewQuery.data?.campaigns ?? []).reduce(
+      (sum, campaign) => sum + campaign.budget,
+      0,
+    );
+  const roasFromBudget =
+    roas?.value == null && plannedBudget > 0 && (metrics?.salesEgp ?? 0) > 0
+      ? metrics!.salesEgp / plannedBudget
+      : null;
   const cards: MetricCard[] = [
     {
       label: t('metricSales'),
@@ -449,11 +460,20 @@ export function HomeDashboard() {
       tone: 'bg-alert/25 text-brand',
     },
     {
-      label: t('metricRoas'),
+      label:
+        roasFromBudget == null && roas?.value == null
+          ? t('metricConversations')
+          : t('metricRoas'),
       value:
         roas?.value != null
           ? formatMetricValue(roas.value, roas.unit, locale)
-          : '—',
+          : roasFromBudget != null
+            ? formatMetricValue(roasFromBudget, 'multiple', locale)
+            : String(metrics?.conversations ?? 0),
+      hint:
+        roas?.value == null && roasFromBudget != null
+          ? t('metricRoasFromBudget')
+          : undefined,
       delta: '',
       icon: TrendingUp,
       tone: 'bg-ink/10 text-ink',
@@ -539,6 +559,9 @@ export function HomeDashboard() {
                   </span>
                 ) : null}
               </p>
+              {card.hint ? (
+                <p className="text-muted mt-1 text-[11px]">{card.hint}</p>
+              ) : null}
             </div>
           );
         })}
@@ -629,14 +652,14 @@ export function HomeDashboard() {
                     {campaign.orders} {t('metricOrders')}
                   </p>
                 </div>
-                <p className="text-ink text-sm font-bold">
+                <p className="text-ink shrink-0 text-sm font-bold tabular-nums">
                   {campaign.headline
                     ? formatMetricValue(
                         campaign.headline.value,
                         campaign.headline.unit,
                         locale,
                       )
-                    : '—'}
+                    : `${campaign.revenueEgp.toLocaleString()} ${t('egp')}`}
                 </p>
               </div>
             ))}

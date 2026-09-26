@@ -11,6 +11,10 @@ import {
   hasVariantMatrix,
 } from '../../products/product-variants';
 import { presentKnowledge } from '../../businesses/knowledge-text';
+import {
+  formatShippingRates,
+  parseShippingZones,
+} from '../../businesses/shipping-zones';
 import type { BusinessContext } from '../types';
 
 @Injectable()
@@ -68,6 +72,9 @@ export class ContextBuilderService {
         operatingArea: business.operatingArea,
         workingHours: presentKnowledge(business.workingHours),
         deliveryInfo: presentKnowledge(business.deliveryInfo),
+        shippingRates:
+          formatShippingRates(parseShippingZones(business.shippingZones)) ||
+          null,
         paymentInfo: presentKnowledge(business.paymentInfo),
         faqs: presentKnowledge(business.faqs),
         primaryGoal: business.primaryGoal,
@@ -146,6 +153,9 @@ export class ContextBuilderService {
       ctx.business.operatingArea ? `Area: ${ctx.business.operatingArea}` : '',
       ctx.business.workingHours ? `Hours: ${ctx.business.workingHours}` : '',
       ctx.business.deliveryInfo ? `Delivery: ${ctx.business.deliveryInfo}` : '',
+      ctx.business.shippingRates
+        ? `Shipping cost by governorate group:\n${ctx.business.shippingRates}`
+        : '',
       ctx.business.paymentInfo ? `Payment: ${ctx.business.paymentInfo}` : '',
       ctx.business.faqs ? `FAQs:\n${ctx.business.faqs}` : '',
       `Agent goal: ${ctx.agent.primaryGoal}`,

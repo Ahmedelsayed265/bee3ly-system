@@ -74,6 +74,7 @@ export type BusinessContext = {
     operatingArea: string | null;
     workingHours: string | null;
     deliveryInfo: string | null;
+    shippingRates: string | null;
     paymentInfo: string | null;
     faqs: string | null;
     primaryGoal: string | null;

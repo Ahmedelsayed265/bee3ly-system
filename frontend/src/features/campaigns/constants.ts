@@ -10,3 +10,14 @@ export const OBJECTIVES = [
 ] as const;
 
 export type CampaignObjective = (typeof OBJECTIVES)[number];
+
+export const AUDIENCES = [
+  'NEARBY',
+  'INTERESTED',
+  'ENGAGED',
+  'MESSAGED',
+  'CUSTOMERS',
+  'SIMILAR',
+] as const;
+
+export type CampaignAudience = (typeof AUDIENCES)[number];

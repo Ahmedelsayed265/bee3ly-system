@@ -1,4 +1,6 @@
+import { useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { CampaignFilterBanner } from '@/features/campaigns/components/campaign-filter-banner';
 import { useAuth } from '@/features/auth/auth-context';
 import { ConversationList } from '@/features/inbox/components/conversation-list';
 import { ConversationThread } from '@/features/inbox/components/conversation-thread';
@@ -8,6 +10,7 @@ import { useLocale } from '@/features/i18n/locale-context';
 export function InboxPageView() {
   const { t } = useLocale();
   const { business } = useAuth();
+  const [params] = useSearchParams();
   const {
     conversations,
     selectedId,
@@ -31,9 +34,12 @@ export function InboxPageView() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden">
-      <div className="shrink-0">
-        <h1 className="text-ink text-2xl font-bold">{t('navInbox')}</h1>
-        <p className="text-muted mt-1 text-sm">{t('inboxIntro')}</p>
+      <div className="shrink-0 space-y-3">
+        <div>
+          <h1 className="text-ink text-2xl font-bold">{t('navInbox')}</h1>
+          <p className="text-muted mt-1 text-sm">{t('inboxIntro')}</p>
+        </div>
+        <CampaignFilterBanner />
       </div>
 
       <div className="grid min-h-0 flex-1 grid-rows-[minmax(10rem,32%)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-[320px_1fr] lg:grid-rows-none">
@@ -41,6 +47,9 @@ export function InboxPageView() {
           conversations={conversations}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          emptyLabel={
+            params.get('campaignId') ? 'campaignFilteredEmpty' : undefined
+          }
         />
 
         <ConversationThread

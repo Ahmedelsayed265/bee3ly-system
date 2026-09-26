@@ -12,6 +12,8 @@ describe('campaign metrics', () => {
       orders: 30,
       revenueEgp: 20_000,
       costOfGoodsEgp: null,
+      shippingEgp: null,
+      returnShippingEgp: null,
     },
     {
       spendEgp: 5_000,
@@ -59,6 +61,8 @@ describe('campaign metrics', () => {
         orders: 30,
         revenueEgp: 20_000,
         costOfGoodsEgp: 8_000,
+        shippingEgp: 0,
+        returnShippingEgp: 0,
       },
       {
         spendEgp: 5_000,
@@ -73,6 +77,54 @@ describe('campaign metrics', () => {
     expect(value(report.metrics, 'profit')?.value).toBe(7_000);
   });
 
+  it('subtracts product cost, shipping, and shipping lost on returns', () => {
+    const report = computeMetrics(
+      {
+        conversations: 10,
+        leads: 4,
+        orders: 2,
+        revenueEgp: 1_000,
+        costOfGoodsEgp: 400,
+        shippingEgp: 80,
+        returnShippingEgp: 40,
+      },
+      {
+        spendEgp: 200,
+        impressions: null,
+        clicks: null,
+        reach: null,
+        engagements: null,
+        landingPageViews: null,
+      },
+      'MORE_ORDERS',
+    );
+    expect(value(report.metrics, 'profit')?.value).toBe(280);
+  });
+
+  it('does not invent profit without shipping cost', () => {
+    const report = computeMetrics(
+      {
+        conversations: 10,
+        leads: 4,
+        orders: 2,
+        revenueEgp: 1_000,
+        costOfGoodsEgp: 400,
+        shippingEgp: null,
+        returnShippingEgp: 0,
+      },
+      {
+        spendEgp: 200,
+        impressions: null,
+        clicks: null,
+        reach: null,
+        engagements: null,
+        landingPageViews: null,
+      },
+      'MORE_ORDERS',
+    );
+    expect(value(report.metrics, 'profit')?.gap).toBe('missing_shipping');
+  });
+
   it('keeps ad ratios empty when delivery is not connected', () => {
     const report = computeMetrics(
       {
@@ -81,6 +133,8 @@ describe('campaign metrics', () => {
         orders: 1,
         revenueEgp: 300,
         costOfGoodsEgp: null,
+      shippingEgp: null,
+      returnShippingEgp: null,
       },
       {
         spendEgp: null,
@@ -113,6 +167,8 @@ describe('campaign metrics', () => {
         orders: 0,
         revenueEgp: 0,
         costOfGoodsEgp: null,
+      shippingEgp: null,
+      returnShippingEgp: null,
       },
       {
         spendEgp: 5_000,

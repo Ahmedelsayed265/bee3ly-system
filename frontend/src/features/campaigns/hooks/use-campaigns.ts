@@ -11,11 +11,17 @@ import {
   launchCampaign,
   type Campaign,
 } from '@/features/business/api';
-import type { CampaignObjective } from '@/features/campaigns/constants';
+import {
+  AUDIENCES,
+  type CampaignObjective,
+} from '@/features/campaigns/constants';
+import { useLocale } from '@/features/i18n/locale-context';
+import type { MessageKey } from '@/features/i18n/messages';
 
 const PAGE_SIZE = 10;
 
 export function useCampaigns() {
+  const { t } = useLocale();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const listQuery = useQuery({
@@ -28,6 +34,8 @@ export function useCampaigns() {
   const totalPages = listQuery.data?.totalPages ?? 1;
   const [step, setStep] = useState(0);
   const [offer, setOffer] = useState('');
+  const [productId, setProductId] = useState('');
+  const [adCopy, setAdCopy] = useState('');
   const [objective, setObjective] = useState<CampaignObjective>('MORE_ORDERS');
   const [audience, setAudience] = useState('');
   const [budget, setBudget] = useState('500');
@@ -36,7 +44,8 @@ export function useCampaigns() {
   const [notice, setNotice] = useState<string | null>(null);
   const [pendingLaunch, setPendingLaunch] = useState<{
     id: string;
-    status: 'ASSISTED_LAUNCH' | 'SIMULATED';
+    name: string;
+    status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED';
   } | null>(null);
 
   useEffect(() => {
@@ -61,13 +70,15 @@ export function useCampaigns() {
       status,
     }: {
       id: string;
-      status: 'ASSISTED_LAUNCH' | 'SIMULATED';
+      name?: string;
+      status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED';
     }) => launchCampaign(id, status),
     onSuccess: async (data) => {
       setPendingLaunch(null);
       setNotice(data.notice);
       setCreated(data.campaign);
       await qc.invalidateQueries({ queryKey: ['campaigns'] });
+      await qc.invalidateQueries({ queryKey: ['campaign'] });
       await qc.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
@@ -75,6 +86,8 @@ export function useCampaigns() {
   const resetWizard = () => {
     setStep(0);
     setOffer('');
+    setProductId('');
+    setAdCopy('');
     setAudience('');
     setBudget('500');
     setValueProp('');
@@ -86,9 +99,14 @@ export function useCampaigns() {
     createMut.mutate({
       offer: offer.trim(),
       objective,
-      audienceDescription: audience.trim(),
+      audienceDescription: AUDIENCES.includes(
+        audience as (typeof AUDIENCES)[number],
+      )
+        ? t(`campaignAud_${audience}` as MessageKey)
+        : audience.trim(),
       budget: Number(budget),
       valueProposition: valueProp.trim() || undefined,
+      adCopy: adCopy.trim() || undefined,
     });
 
   return {
@@ -97,11 +115,16 @@ export function useCampaigns() {
     campaigns,
     total,
     totalPages,
+    isLoading: listQuery.isLoading,
     isFetching: listQuery.isFetching,
     step,
     setStep,
     offer,
     setOffer,
+    productId,
+    setProductId,
+    adCopy,
+    setAdCopy,
     objective,
     setObjective,
     audience,

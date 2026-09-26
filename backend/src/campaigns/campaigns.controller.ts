@@ -15,7 +15,11 @@ import {
 import { PaginationQueryDto } from '../common/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CampaignsService } from './campaigns.service';
-import { CreateCampaignDto, LaunchCampaignDto } from './dto/campaign.dto';
+import {
+  CreateCampaignDto,
+  DraftAdCopyDto,
+  LaunchCampaignDto,
+} from './dto/campaign.dto';
 
 @Controller('campaigns')
 @UseGuards(JwtAuthGuard)
@@ -30,6 +34,11 @@ export class CampaignsController {
   @Get(':id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.campaigns.getOne(user.id, id);
+  }
+
+  @Post('ad-copy')
+  draftAdCopy(@CurrentUser() user: AuthUser, @Body() dto: DraftAdCopyDto) {
+    return this.campaigns.draftAdCopy(user.id, dto);
   }
 
   @Post()

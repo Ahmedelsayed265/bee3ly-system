@@ -39,7 +39,11 @@ export function SelectField({
   return (
     <div className={cn('space-y-0', className)}>
       {label && id ? <Label htmlFor={id}>{label}</Label> : null}
-      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+      <Select
+        value={value || undefined}
+        onValueChange={onValueChange}
+        disabled={disabled}
+      >
         <SelectTrigger
           id={id}
           aria-invalid={Boolean(error) || undefined}

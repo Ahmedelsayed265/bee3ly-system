@@ -12,10 +12,12 @@ import {
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsIn,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   MinLength,
   ValidateNested,
@@ -28,8 +30,43 @@ import { PaginationQueryDto } from '../common/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConversationsService } from './conversations.service';
 
+const LEAD_STATUSES = ['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'] as const;
+
 class LeadStatusDto {
-  @IsIn(['NEW', 'QUALIFIED', 'CONVERTED', 'LOST'])
+  @IsIn(LEAD_STATUSES)
+  status!: string;
+}
+
+class LeadQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsIn(LEAD_STATUSES)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  intent?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+
+  @IsOptional()
+  @IsUUID()
+  campaignId?: string;
+}
+
+class LeadIdsDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @IsUUID('4', { each: true })
+  ids!: string[];
+}
+
+class BulkLeadStatusDto extends LeadIdsDto {
+  @IsIn(LEAD_STATUSES)
   status!: string;
 }
 
@@ -93,12 +130,28 @@ export class ConversationsController {
   }
 
   @Get('leads')
-  listLeads(@CurrentUser() user: AuthUser, @Query() query: PaginationQueryDto) {
+  listLeads(@CurrentUser() user: AuthUser, @Query() query: LeadQueryDto) {
     return this.conversations.listLeads(
       user.id,
       query.page ?? 1,
       query.limit ?? 10,
+      {
+        status: query.status,
+        intent: query.intent,
+        q: query.q,
+        campaignId: query.campaignId,
+      },
     );
+  }
+
+  @Patch('leads/bulk-status')
+  updateLeads(@CurrentUser() user: AuthUser, @Body() dto: BulkLeadStatusDto) {
+    return this.conversations.updateLeadsStatus(user.id, dto.ids, dto.status);
+  }
+
+  @Delete('leads')
+  removeLeads(@CurrentUser() user: AuthUser, @Body() dto: LeadIdsDto) {
+    return this.conversations.removeLeads(user.id, dto.ids);
   }
 
   @Patch('leads/:id/status')

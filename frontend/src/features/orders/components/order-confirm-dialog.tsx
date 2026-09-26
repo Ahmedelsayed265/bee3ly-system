@@ -4,7 +4,7 @@ import { useLocale } from '@/features/i18n/locale-context';
 
 type PendingAction = {
   order: OrderRow;
-  status: 'CONFIRMED' | 'CANCELLED';
+  status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED';
 } | null;
 
 type OrderConfirmDialogProps = {
@@ -28,14 +28,18 @@ export function OrderConfirmDialog({
       title={
         pendingAction?.status === 'CANCELLED'
           ? t('cancelOrderTitle')
-          : t('confirmOrderTitle')
+          : pendingAction?.status === 'RETURNED'
+            ? t('returnOrderTitle')
+            : t('confirmOrderTitle')
       }
       description={
         pendingAction
           ? t(
               pendingAction.status === 'CANCELLED'
                 ? 'cancelOrderBody'
-                : 'confirmOrderBody',
+                : pendingAction.status === 'RETURNED'
+                  ? 'returnOrderBody'
+                  : 'confirmOrderBody',
               {
                 number: String(pendingAction.order.orderNumber),
                 customer:
@@ -47,7 +51,9 @@ export function OrderConfirmDialog({
       confirmLabel={
         pendingAction?.status === 'CANCELLED'
           ? t('cancelOrder')
-          : t('confirmOrder')
+          : pendingAction?.status === 'RETURNED'
+            ? t('returnOrder')
+            : t('confirmOrder')
       }
       cancelLabel={t('back')}
       pending={isPending}

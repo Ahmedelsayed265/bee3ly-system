@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   deleteConversation,
   fetchConversation,
@@ -10,6 +11,8 @@ import {
 
 export function useInbox() {
   const qc = useQueryClient();
+  const [params] = useSearchParams();
+  const campaignId = params.get('campaignId') ?? '';
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -20,7 +23,13 @@ export function useInbox() {
     queryFn: fetchConversations,
   });
 
-  const activeId = selectedId ?? listQuery.data?.[0]?.id ?? null;
+  const conversations = (listQuery.data ?? []).filter((item) =>
+    campaignId ? item.campaign?.id === campaignId : true,
+  );
+  const activeId =
+    selectedId && conversations.some((item) => item.id === selectedId)
+      ? selectedId
+      : (conversations[0]?.id ?? null);
 
   const detailQuery = useQuery({
     queryKey: ['conversation', activeId],
@@ -90,7 +99,7 @@ export function useInbox() {
   });
 
   return {
-    conversations: listQuery.data ?? [],
+    conversations,
     selectedId: activeId,
     setSelectedId,
     conversation,

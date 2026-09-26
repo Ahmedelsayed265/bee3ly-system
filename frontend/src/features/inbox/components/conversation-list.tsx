@@ -12,12 +12,14 @@ type ConversationSummary = {
   customer: { name: string | null; phone: string | null };
   messages: Array<{ content: string; role: string; intent?: string | null }>;
   leads?: Array<{ status: string; intent: string | null }>;
+  campaign?: { id: string; name: string } | null;
 };
 
 type ConversationListProps = {
   conversations: ConversationSummary[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  emptyLabel?: MessageKey;
 };
 
 function labelOrRaw(
@@ -36,6 +38,7 @@ export function ConversationList({
   conversations,
   selectedId,
   onSelect,
+  emptyLabel,
 }: ConversationListProps) {
   const { t } = useLocale();
 
@@ -80,7 +83,9 @@ export function ConversationList({
           </button>
         ))}
         {conversations.length === 0 ? (
-          <p className="text-muted p-3 text-sm">{t('noConversations')}</p>
+          <p className="text-muted p-3 text-sm">
+            {t(emptyLabel ?? 'noConversations')}
+          </p>
         ) : null}
       </div>
     </div>

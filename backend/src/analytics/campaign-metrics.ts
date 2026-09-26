@@ -54,6 +54,7 @@ export type MetricGap =
   | 'missing_engagements'
   | 'missing_landing_page_views'
   | 'missing_cost'
+  | 'missing_shipping'
   | 'divide_by_zero';
 
 export type ComputedMetric = {
@@ -77,6 +78,10 @@ export type ChainInput = {
   revenueEgp: number;
   /** Null when any sold unit has no recorded cost. Never inferred from price. */
   costOfGoodsEgp: number | null;
+  /** Null when any sold unit has no recorded shipping cost. */
+  shippingEgp: number | null;
+  /** Shipping paid on returned orders. Null when a returned unit has no shipping cost. */
+  returnShippingEgp: number | null;
 };
 
 export type DeliveryInput = {
@@ -305,9 +310,16 @@ function solve(
       if (chain.costOfGoodsEgp == null) {
         return { value: null, gap: 'missing_cost' };
       }
+      if (chain.shippingEgp == null || chain.returnShippingEgp == null) {
+        return { value: null, gap: 'missing_shipping' };
+      }
       return {
         value: roundTo(
-          chain.revenueEgp - delivery.spendEgp - chain.costOfGoodsEgp,
+          chain.revenueEgp -
+            delivery.spendEgp -
+            chain.costOfGoodsEgp -
+            chain.shippingEgp -
+            chain.returnShippingEgp,
           1,
         ),
         gap: null,

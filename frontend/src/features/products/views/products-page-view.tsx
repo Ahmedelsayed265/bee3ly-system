@@ -54,6 +54,8 @@ export function ProductsPageView() {
         onNameChange={products.setName}
         priceEgp={products.priceEgp}
         onPriceChange={products.setPriceEgp}
+        costEgp={products.costEgp}
+        onCostChange={products.setCostEgp}
         description={products.description}
         onDescriptionChange={products.setDescription}
         stockQuantity={products.stockQuantity}

@@ -15,6 +15,7 @@ type ConfirmDialogProps = {
   confirmLabel: string;
   cancelLabel: string;
   pending?: boolean;
+  confirmClassName?: string;
   onConfirm: () => void;
   onOpenChange: (open: boolean) => void;
 };
@@ -26,6 +27,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   pending,
+  confirmClassName,
   onConfirm,
   onOpenChange,
 }: ConfirmDialogProps) {
@@ -51,7 +53,12 @@ export function ConfirmDialog({
           >
             {cancelLabel}
           </Button>
-          <Button type="button" disabled={pending} onClick={onConfirm}>
+          <Button
+            type="button"
+            className={confirmClassName}
+            disabled={pending}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>

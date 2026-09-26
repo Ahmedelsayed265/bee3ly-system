@@ -84,6 +84,11 @@ export function ProductsTable({
                   <span className="text-muted text-xs font-medium">
                     {t('egp')}
                   </span>
+                  <p className="text-muted mt-1 text-[11px] font-medium">
+                    {product.costEgp == null
+                      ? t('productCostMissing')
+                      : `${t('productCost')} ${product.costEgp.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')}`}
+                  </p>
                 </td>
                 <td className="px-4 py-3 text-start align-top">
                   <span

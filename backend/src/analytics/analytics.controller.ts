@@ -40,6 +40,7 @@ export class AnalyticsController {
       humanHandoffs,
       recentOrders,
       campaigns,
+      budget,
     ] = await Promise.all([
       this.prisma.notification.count({
         where: { businessId, readAt: null },
@@ -53,7 +54,7 @@ export class AnalyticsController {
       this.prisma.order.findMany({
         where: {
           businessId,
-          status: { not: 'CANCELLED' },
+          status: { notIn: ['CANCELLED', 'RETURNED'] },
           createdAt: { gte: since },
         },
         orderBy: { createdAt: 'asc' },
@@ -70,6 +71,10 @@ export class AnalyticsController {
           objective: true,
           budget: true,
         },
+      }),
+      this.prisma.campaign.aggregate({
+        where: { businessId },
+        _sum: { budget: true },
       }),
     ]);
 
@@ -98,6 +103,7 @@ export class AnalyticsController {
       report,
       unattributed: chains.unattributed,
       salesByDay,
+      plannedBudgetEgp: budget._sum.budget ?? 0,
       campaigns: campaigns.map((campaign) => {
         const measured = computeMetrics(
           chains.forCampaign(campaign.id),
@@ -111,6 +117,11 @@ export class AnalyticsController {
           leads: chain.leads,
           orders: chain.orders,
           revenueEgp: chain.revenueEgp,
+          costOfGoodsEgp: chain.costOfGoodsEgp,
+          shippingEgp: chain.shippingEgp,
+          returnShippingEgp: chain.returnShippingEgp,
+          returnedOrders: chain.returnedOrders,
+          returnedRevenueEgp: chain.returnedRevenueEgp,
           headline: measured.headline,
           metrics: measured.metrics,
         };
