@@ -285,8 +285,7 @@ export function useProducts() {
     const payload = {
       name: name.trim(),
       priceEgp: Number(priceEgp),
-      costEgp:
-        costEgp === '' ? null : Math.max(0, Math.floor(Number(costEgp) || 0)),
+      costEgp: costEgp === '' ? null : Math.max(0, Math.floor(Number(costEgp) || 0)),
       description: description.trim() || undefined,
       attributes,
       variants,

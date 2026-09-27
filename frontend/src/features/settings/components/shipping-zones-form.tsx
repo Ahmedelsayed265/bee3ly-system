@@ -1,51 +1,32 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useLocale } from '@/features/i18n/locale-context';
 import {
   GOVERNORATES,
   governorateLabel,
-  type GovernorateId,
+  newShippingZone,
   type ShippingZone,
 } from '@/features/settings/governorates';
+import { useLocale } from '@/features/i18n/locale-context';
 
 type ShippingZonesFormProps = {
   zones: ShippingZone[];
-  isSaving: boolean;
   onChange: (zones: ShippingZone[]) => void;
-  onSave: () => void;
 };
 
-export function ShippingZonesForm({
-  zones,
-  isSaving,
-  onChange,
-  onSave,
-}: ShippingZonesFormProps) {
+export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
   const { locale, t } = useLocale();
   const used = new Set(zones.flatMap((zone) => zone.governorates));
 
   const update = (id: string, patch: Partial<ShippingZone>) => {
-    onChange(
-      zones.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)),
-    );
+    onChange(zones.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)));
   };
 
   return (
-    <form
-      className="border-border bg-surface flex flex-col gap-4 rounded-2xl border p-5"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave();
-      }}
-    >
+    <section className="border-border bg-surface space-y-4 rounded-2xl border p-5">
       <div>
-        <h2 className="text-ink text-lg font-bold">
-          {t('shippingZonesTitle')}
-        </h2>
-        <p className="text-muted mt-1 text-sm leading-6">
-          {t('shippingZonesHint')}
-        </p>
+        <h2 className="text-ink text-sm font-semibold">{t('shippingZonesTitle')}</h2>
+        <p className="text-muted mt-1 text-xs leading-5">{t('shippingZonesHint')}</p>
       </div>
 
       {zones.map((zone) => {
@@ -54,51 +35,45 @@ export function ShippingZonesForm({
         );
         return (
           <div key={zone.id} className="bg-page space-y-3 rounded-xl p-4">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
+            <div className="flex flex-wrap items-start gap-2">
               <Input
-                value={zone.name}
+                className="min-w-[140px] flex-1"
                 placeholder={t('shippingZoneName')}
-                onChange={(event) =>
-                  update(zone.id, { name: event.target.value })
-                }
-                required
+                value={zone.name}
+                onChange={(e) => update(zone.id, { name: e.target.value })}
               />
               <Input
                 type="number"
                 min={0}
-                step={1}
-                value={String(zone.priceEgp)}
-                onChange={(event) =>
+                className="w-28"
+                placeholder={t('shippingZonePrice')}
+                value={zone.priceEgp || ''}
+                onChange={(e) =>
                   update(zone.id, {
-                    priceEgp: Math.max(
-                      0,
-                      Math.floor(Number(event.target.value) || 0),
-                    ),
+                    priceEgp: Math.max(0, Math.floor(Number(e.target.value) || 0)),
                   })
                 }
-                required
               />
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() =>
-                  onChange(zones.filter((item) => item.id !== zone.id))
-                }
+                size="sm"
+                className="text-danger shrink-0 px-2"
+                onClick={() => onChange(zones.filter((item) => item.id !== zone.id))}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
+
+            <div className="flex flex-wrap gap-1.5">
               {zone.governorates.map((id) => (
                 <button
                   key={id}
                   type="button"
-                  className="bg-brand/10 text-brand rounded-full px-2.5 py-1 text-xs font-semibold"
+                  className="bg-surface text-ink rounded-full px-2.5 py-1 text-[11px] font-medium"
                   onClick={() =>
                     update(zone.id, {
-                      governorates: zone.governorates.filter(
-                        (item) => item !== id,
-                      ),
+                      governorates: zone.governorates.filter((item) => item !== id),
                     })
                   }
                 >
@@ -106,21 +81,26 @@ export function ShippingZonesForm({
                 </button>
               ))}
             </div>
+
             <select
-              className="border-border bg-surface text-ink h-10 w-full rounded-xl border px-3 text-sm"
+              className="border-border bg-surface text-ink w-full rounded-xl border px-3 py-2 text-sm"
               value=""
-              onChange={(event) => {
-                const id = event.target.value as GovernorateId;
-                if (!id || zone.governorates.includes(id)) return;
-                update(zone.id, { governorates: [...zone.governorates, id] });
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id || zone.governorates.includes(id as typeof zone.governorates[number])) {
+                  return;
+                }
+                update(zone.id, {
+                  governorates: [...zone.governorates, id as typeof zone.governorates[number]],
+                });
               }}
             >
-              <option value="">{t('shippingAddGovernorate')}</option>
+              <option value="">{t('shippingZoneAddGovernorate')}</option>
               {available
                 .filter((item) => !zone.governorates.includes(item.id))
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {locale === 'ar' ? item.ar : item.en}
+                    {governorateLabel(item.id, locale)}
                   </option>
                 ))}
             </select>
@@ -128,29 +108,15 @@ export function ShippingZonesForm({
         );
       })}
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            onChange([
-              ...zones,
-              {
-                id: crypto.randomUUID(),
-                name: '',
-                governorates: [],
-                priceEgp: 0,
-              },
-            ])
-          }
-        >
-          <Plus className="h-4 w-4" />
-          {t('shippingAddZone')}
-        </Button>
-        <Button type="submit" disabled={isSaving}>
-          {t('save')}
-        </Button>
-      </div>
-    </form>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => onChange([...zones, newShippingZone()])}
+      >
+        <Plus className="h-4 w-4" />
+        {t('shippingZoneAdd')}
+      </Button>
+    </section>
   );
 }

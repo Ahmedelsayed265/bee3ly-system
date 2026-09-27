@@ -14,20 +14,6 @@ import {
 import { BusinessGoal, BusinessType, PlanTier } from '@prisma/client';
 import { GOVERNORATE_IDS } from '../shipping-zones';
 
-export class VariantDictionaryOptionDto {
-  @IsString()
-  @MinLength(1)
-  id!: string;
-
-  @IsString()
-  @MinLength(1)
-  name!: string;
-
-  @IsArray()
-  @IsString({ each: true })
-  values!: string[];
-}
-
 export class ShippingZoneDto {
   @IsString()
   @MinLength(1)
@@ -45,6 +31,20 @@ export class ShippingZoneDto {
   @IsInt()
   @Min(0)
   priceEgp!: number;
+}
+
+export class VariantDictionaryOptionDto {
+  @IsString()
+  @MinLength(1)
+  id!: string;
+
+  @IsString()
+  @MinLength(1)
+  name!: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  values!: string[];
 }
 
 export class UpdateBusinessDto {

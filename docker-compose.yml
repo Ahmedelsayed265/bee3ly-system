@@ -6,9 +6,14 @@ services:
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_USER: bee3ly
-      POSTGRES_PASSWORD: bee3ly
-      POSTGRES_DB: bee3ly
+      POSTGRES_USER: bay3ly
+      POSTGRES_PASSWORD: bay3ly
+      POSTGRES_DB: bay3ly
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bay3ly -d bay3ly']
+      interval: 2s
+      timeout: 5s
+      retries: 15
     volumes:
       - bee3ly_pg_data:/var/lib/postgresql/data
 

@@ -254,6 +254,11 @@ export class LlmEngine {
               customerPhone: { type: 'string' },
               size: { type: 'string' },
               quantity: { type: 'number' },
+              governorate: {
+                type: 'string',
+                description:
+                  'Egypt governorate id (cairo, giza, alexandria, …) for shipping',
+              },
             },
             ['customerName', 'customerPhone'],
           ),

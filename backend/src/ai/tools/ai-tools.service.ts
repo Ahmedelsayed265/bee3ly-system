@@ -1,10 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  ActorType,
-  LeadStatus,
-  NotificationType,
-  Prisma,
-} from '@prisma/client';
+import { ActorType, LeadStatus, NotificationType, Prisma } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -22,6 +17,12 @@ import {
   variantsTotalStock,
 } from '../../products/product-variants';
 import { isAvailable } from '../../products/stock-mode';
+import {
+  GOVERNORATE_IDS,
+  formatShippingZonesForKnowledge,
+  parseShippingZones,
+  shippingPriceForGovernorate,
+} from '../../businesses/shipping-zones';
 import type { BusinessContext, ToolName } from '../types';
 
 function asString(value: unknown, fallback = ''): string {
@@ -122,7 +123,9 @@ export class AiToolsService {
       name: product.name,
       description: product.description,
       inStock: available,
-      stockQuantity: matched ? matched.stockQuantity : product.stockQuantity,
+      stockQuantity: matched
+        ? matched.stockQuantity
+        : product.stockQuantity,
       attributes,
       details: formatAttributesLine(attributes),
       sizes: legacy.sizes.length ? legacy.sizes : product.sizes,
@@ -144,6 +147,7 @@ export class AiToolsService {
 
   private getDeliveryInfo(ctx: BusinessContext) {
     const parts = [
+      ctx.business.shippingRates,
       ctx.business.deliveryInfo,
       ctx.business.workingHours
         ? `ساعات العمل: ${ctx.business.workingHours}`
@@ -254,6 +258,28 @@ export class AiToolsService {
     });
     const orderNumber = (last?.orderNumber ?? 1000) + 1;
 
+    const businessRow = await this.prisma.business.findUniqueOrThrow({
+      where: { id: ctx.businessId },
+      select: { shippingZones: true },
+    });
+    const zones = parseShippingZones(businessRow.shippingZones);
+    const governorate = args.governorate
+      ? asString(args.governorate).trim()
+      : null;
+    if (
+      governorate &&
+      !GOVERNORATE_IDS.includes(governorate as (typeof GOVERNORATE_IDS)[number])
+    ) {
+      throw new BadRequestException('Invalid governorate id');
+    }
+    const shippingEgp = shippingPriceForGovernorate(zones, governorate);
+    if (zones.length > 0 && !governorate) {
+      throw new BadRequestException('Governorate required for delivery');
+    }
+    if (zones.length > 0 && governorate && shippingEgp == null) {
+      throw new BadRequestException('Governorate not in any shipping zone');
+    }
+
     // Keep Messenger/profile display name; order stores its own customerName
     await this.prisma.customer.update({
       where: { id: ctx.customerId },
@@ -273,6 +299,8 @@ export class AiToolsService {
         totalEgp: unitPrice * quantity,
         customerName,
         customerPhone,
+        governorate,
+        shippingEgp,
         createdBy: ActorType.AI,
         items: {
           create: [

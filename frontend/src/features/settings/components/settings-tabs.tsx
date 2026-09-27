@@ -10,8 +10,8 @@ const TABS: Array<{
   icon: typeof MessagesSquare;
 }> = [
   { id: 'social', labelKey: 'socialAccounts', icon: MessagesSquare },
+  { id: 'delivery', labelKey: 'navDelivery', icon: Truck },
   { id: 'knowledge', labelKey: 'businessKnowledge', icon: BookOpen },
-  { id: 'shipping', labelKey: 'shippingZonesTitle', icon: Truck },
 ];
 
 type SettingsTabsProps = {

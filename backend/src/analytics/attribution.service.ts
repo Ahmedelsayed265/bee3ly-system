@@ -1,16 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
-import {
-  parseShippingZones,
-  zonePrice,
-  type ShippingZone,
-} from '../businesses/shipping-zones';
 import { PrismaService } from '../prisma/prisma.service';
 import type { ChainInput } from './campaign-metrics';
-
-type MoneyLine = {
-  cost: number | null;
-};
 
 type Bucket = {
   orders: number;
@@ -35,7 +26,7 @@ export class AttributionService {
   constructor(private readonly prisma: PrismaService) {}
 
   async chains(businessId: string) {
-    const [conversations, leads, byConversation, byLead, orders, business] =
+    const [conversations, leads, byConversation, byLead, orders] =
       await Promise.all([
         this.prisma.conversation.count({ where: { businessId } }),
         this.prisma.lead.count({ where: { businessId } }),
@@ -58,7 +49,6 @@ export class AttributionService {
             campaignId: true,
             status: true,
             totalEgp: true,
-            governorate: true,
             shippingEgp: true,
             items: {
               select: {
@@ -69,12 +59,7 @@ export class AttributionService {
             },
           },
         }),
-        this.prisma.business.findUniqueOrThrow({
-          where: { id: businessId },
-          select: { shippingZones: true },
-        }),
       ]);
-    const zones = parseShippingZones(business.shippingZones);
 
     const conversationCounts = new Map(
       byConversation.map((row) => [row.campaignId, row._count._all]),
@@ -92,7 +77,7 @@ export class AttributionService {
     };
 
     for (const order of orders) {
-      addOrder(bucketFor(order.campaignId), order, zones);
+      addOrder(bucketFor(order.campaignId), order);
     }
 
     const businessBucket = emptyBucket();
@@ -115,21 +100,13 @@ export class AttributionService {
   }
 }
 
-function lineMoney(item: {
+function lineCost(item: {
   quantity: number;
   costEgp: number | null;
   product: { costEgp: number | null } | null;
-}): MoneyLine {
+}): number | null {
   const cost = item.costEgp ?? item.product?.costEgp ?? null;
-  return { cost: cost == null ? null : cost * item.quantity };
-}
-
-function orderShipping(
-  order: { governorate: string | null; shippingEgp: number | null },
-  zones: ShippingZone[],
-) {
-  if (order.shippingEgp != null) return order.shippingEgp;
-  return zonePrice(zones, order.governorate);
+  return cost == null ? null : cost * item.quantity;
 }
 
 function addOrder(
@@ -137,7 +114,6 @@ function addOrder(
   order: {
     status: OrderStatus;
     totalEgp: number;
-    governorate: string | null;
     shippingEgp: number | null;
     items: Array<{
       quantity: number;
@@ -145,29 +121,28 @@ function addOrder(
       product: { costEgp: number | null } | null;
     }>;
   },
-  zones: ShippingZone[],
 ) {
-  const shipping = orderShipping(order, zones);
   if (order.status === OrderStatus.RETURNED) {
     bucket.returnedOrders += 1;
     bucket.returnedRevenueEgp += order.totalEgp;
-    if (shipping == null) bucket.returnShippingMissing = true;
-    else bucket.returnShipping += shipping;
+    if (order.shippingEgp == null) bucket.returnShippingMissing = true;
+    else bucket.returnShipping += order.shippingEgp;
     return;
   }
 
   bucket.orders += 1;
   bucket.revenueEgp += order.totalEgp;
-  if (shipping == null) bucket.shippingMissing = true;
-  else bucket.shipping += shipping;
+  if (order.shippingEgp == null) bucket.shippingMissing = true;
+  else bucket.shipping += order.shippingEgp;
+
   if (order.items.length === 0) {
     bucket.cogsMissing = true;
     return;
   }
   for (const item of order.items) {
-    const line = lineMoney(item);
-    if (line.cost == null) bucket.cogsMissing = true;
-    else bucket.cogs += line.cost;
+    const cost = lineCost(item);
+    if (cost == null) bucket.cogsMissing = true;
+    else bucket.cogs += cost;
   }
 }
 
@@ -212,9 +187,7 @@ function toChain(
     revenueEgp: bucket.revenueEgp,
     costOfGoodsEgp: bucket.cogsMissing ? null : bucket.cogs,
     shippingEgp: bucket.shippingMissing ? null : bucket.shipping,
-    returnShippingEgp: bucket.returnShippingMissing
-      ? null
-      : bucket.returnShipping,
+    returnShippingEgp: bucket.returnShippingMissing ? null : bucket.returnShipping,
     returnedOrders: bucket.returnedOrders,
     returnedRevenueEgp: bucket.returnedRevenueEgp,
   };

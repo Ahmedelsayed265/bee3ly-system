@@ -8,8 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
-import { IsEnum, IsIn, IsOptional, IsUUID } from 'class-validator';
-import { GOVERNORATE_IDS } from '../businesses/shipping-zones';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import {
   CurrentUser,
   type AuthUser,
@@ -21,11 +20,6 @@ import { OrdersService } from './orders.service';
 class UpdateOrderStatusDto {
   @IsEnum(OrderStatus)
   status!: OrderStatus;
-}
-
-class UpdateOrderGovernorateDto {
-  @IsIn(GOVERNORATE_IDS)
-  governorate!: string;
 }
 
 class OrderQueryDto extends PaginationQueryDto {
@@ -52,15 +46,6 @@ export class OrdersController {
   @Get(':id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.orders.getOne(user.id, id);
-  }
-
-  @Patch(':id/governorate')
-  setGovernorate(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-    @Body() dto: UpdateOrderGovernorateDto,
-  ) {
-    return this.orders.setGovernorate(user.id, id, dto.governorate);
   }
 
   @Patch(':id/status')

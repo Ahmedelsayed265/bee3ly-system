@@ -208,7 +208,8 @@ export class ProductsService {
           ? dto.stockQuantity
           : existing.stockQuantity
         : existing.stockQuantity,
-      inStock: dto.inStock !== undefined ? dto.inStock : existing.inStock,
+      inStock:
+        dto.inStock !== undefined ? dto.inStock : existing.inStock,
     });
 
     const product = await this.prisma.product.update({

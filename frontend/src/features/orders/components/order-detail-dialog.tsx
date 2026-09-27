@@ -11,41 +11,26 @@ import {
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
-import {
-  canCancel,
-  canConfirm,
-  canReturn,
-} from '@/features/orders/hooks/use-orders';
-import {
-  GOVERNORATES,
-  governorateLabel,
-} from '@/features/settings/governorates';
+import { canCancel, canConfirm, canReturn } from '@/features/orders/hooks/use-orders';
 
 type OrderDetailDialogProps = {
   order: OrderRow | null;
   locale: string;
   isStatusPending: boolean;
-  isPlacing: boolean;
   money: (value: number) => string;
   onOpenChange: (open: boolean) => void;
-  onAsk: (
-    order: OrderRow,
-    status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED',
-  ) => void;
-  onGovernorate: (order: OrderRow, governorate: string) => void;
+  onAsk: (order: OrderRow, status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED') => void;
 };
 
 export function OrderDetailDialog({
   order,
   locale,
   isStatusPending,
-  isPlacing,
   money,
   onOpenChange,
   onAsk,
-  onGovernorate,
 }: OrderDetailDialogProps) {
-  const { locale: uiLocale, t } = useLocale();
+  const { t } = useLocale();
 
   return (
     <Dialog
@@ -114,31 +99,6 @@ export function OrderDetailDialog({
                     </li>
                   ))}
                 </ul>
-              </div>
-
-              <div>
-                <p className="text-muted text-xs">{t('orderGovernorate')}</p>
-                <select
-                  className="border-border bg-surface text-ink mt-1 h-10 w-full rounded-xl border px-3 text-sm"
-                  value={order.governorate ?? ''}
-                  disabled={isPlacing}
-                  onChange={(event) => {
-                    if (!event.target.value) return;
-                    onGovernorate(order, event.target.value);
-                  }}
-                >
-                  <option value="">{t('shippingAddGovernorate')}</option>
-                  {GOVERNORATES.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {governorateLabel(item.id, uiLocale)}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-muted mt-1 text-[11px] leading-5">
-                  {order.shippingEgp == null
-                    ? t('orderShippingMissing')
-                    : `${t('productShipping')} ${money(order.shippingEgp)}`}
-                </p>
               </div>
 
               <div className="bg-page flex items-center justify-between rounded-xl px-3 py-2.5">

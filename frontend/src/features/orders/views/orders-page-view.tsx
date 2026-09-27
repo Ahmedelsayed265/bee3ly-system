@@ -38,13 +38,11 @@ export function OrdersPageView() {
         order={orders.viewing}
         locale={orders.locale}
         isStatusPending={orders.isStatusPending}
-        isPlacing={orders.isPlacing}
         money={orders.money}
         onOpenChange={(open) => {
           if (!open) orders.setViewing(null);
         }}
         onAsk={orders.ask}
-        onGovernorate={orders.setGovernorate}
       />
 
       <OrderConfirmDialog

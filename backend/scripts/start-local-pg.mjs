@@ -22,10 +22,17 @@ function isPortOpen(port, host = '127.0.0.1') {
 }
 
 async function main() {
+  const user = 'bay3ly';
+  const password = 'bay3ly';
+  const database = 'bay3ly';
   const databaseDir = path.join(process.cwd(), '.local-pg');
   const alreadyInitialized = fs.existsSync(path.join(databaseDir, 'PG_VERSION'));
   const pidFile = path.join(databaseDir, 'postmaster.pid');
-  const port = 5432;
+  const preferred = Number(process.env.PGPORT ?? 5432);
+  const portCandidates = [
+    preferred,
+    ...[5432, 5433, 5434].filter((p) => p !== preferred),
+  ];
 
   if (fs.existsSync(pidFile)) {
     const pid = Number(fs.readFileSync(pidFile, 'utf8').split('\n')[0]);
@@ -39,9 +46,14 @@ async function main() {
       }
     }
 
-    const portOpen = await isPortOpen(port);
+    const portOpen = await isPortOpen(preferred);
     if (processAlive && portOpen) {
-      console.log(`Local PostgreSQL already running (pid ${pid}) on localhost:${port}`);
+      console.log(
+        `Local PostgreSQL already running (pid ${pid}) on localhost:${preferred}`,
+      );
+      console.log(
+        `DATABASE_URL="postgresql://${user}:${password}@127.0.0.1:${preferred}/${database}?schema=public"`,
+      );
       console.log('Keep this terminal open while developing.');
       await new Promise(() => {});
       return;
@@ -51,18 +63,25 @@ async function main() {
     console.log('Removed stale postmaster.pid');
   }
 
-  if (await isPortOpen(port)) {
+  let port = null;
+  for (const candidate of portCandidates) {
+    if (!(await isPortOpen(candidate))) {
+      port = candidate;
+      break;
+    }
+  }
+  if (port == null) {
     console.error(
-      `Port ${port} is already in use by another process. Free it or change the Postgres port.`,
+      `Ports ${portCandidates.join(', ')} are in use. Stop the other Postgres or set PGPORT.`,
     );
     process.exit(1);
   }
-
-  // Existing local clusters were initialised as bay3ly; keep that for
-  // persistent data. Fresh installs still get the same credentials.
-  const user = 'bay3ly';
-  const password = 'bay3ly';
-  const database = 'bay3ly';
+  if (port !== preferred && (await isPortOpen(preferred))) {
+    console.warn(
+      `Port ${preferred} is busy; starting embedded Postgres on ${port} instead.`,
+    );
+    console.warn('Update backend/.env DATABASE_URL to match the line below.');
+  }
 
   const pg = new EmbeddedPostgres({
     databaseDir,
@@ -89,6 +108,9 @@ async function main() {
 
   console.log(
     `Local PostgreSQL running on localhost:${port} (user/password/db: ${user})`,
+  );
+  console.log(
+    `DATABASE_URL="postgresql://${user}:${password}@127.0.0.1:${port}/${database}?schema=public"`,
   );
   console.log('Keep this terminal open while developing. Press Ctrl+C to stop.');
 

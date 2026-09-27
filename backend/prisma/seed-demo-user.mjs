@@ -8,6 +8,64 @@ import { PrismaClient } from '@prisma/client'
 const EMAIL = 'ahmedelsayed2102@icloud.com'
 const prisma = new PrismaClient()
 
+const DEFAULT_SHIPPING_ZONES = [
+  {
+    id: 'zone-greater-cairo',
+    name: 'القاهرة الكبرى',
+    governorates: ['cairo', 'giza', 'qalyubia'],
+    priceEgp: 45,
+  },
+  {
+    id: 'zone-alex-delta',
+    name: 'الإسكندرية والدلتا',
+    governorates: [
+      'alexandria',
+      'beheira',
+      'gharbia',
+      'monufia',
+      'dakahlia',
+      'sharqia',
+      'kafr_el_sheikh',
+      'damietta',
+      'port_said',
+      'ismailia',
+    ],
+    priceEgp: 65,
+  },
+  {
+    id: 'zone-upper',
+    name: 'الصعيد والبحر الأحمر',
+    governorates: [
+      'fayoum',
+      'beni_suef',
+      'minya',
+      'asyut',
+      'sohag',
+      'qena',
+      'luxor',
+      'aswan',
+      'red_sea',
+      'new_valley',
+      'matrouh',
+      'north_sinai',
+      'south_sinai',
+      'suez',
+    ],
+    priceEgp: 90,
+  },
+]
+
+function shippingFor(governorate) {
+  const zone = DEFAULT_SHIPPING_ZONES.find((item) =>
+    item.governorates.includes(governorate),
+  )
+  return zone?.priceEgp ?? 65
+}
+
+function defaultCost(priceEgp) {
+  return Math.max(0, Math.round(priceEgp * 0.48))
+}
+
 function daysAgo(n, hour = 12) {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -41,6 +99,7 @@ async function main() {
       paymentInfo: 'كاش عند الاستلام · فودافون كاش · إنستاباي',
       faqs: 'هل المنتج أصلي؟ نعم، استيراد رسمي.\nممكن أرجع؟ خلال 14 يوم بشرط عدم الفتح.',
       onboardingCompletedAt: new Date(),
+      shippingZones: DEFAULT_SHIPPING_ZONES,
     },
   })
 
@@ -98,6 +157,7 @@ async function main() {
         name: 'واي بروتين شوكولاتة 2كجم',
         description: '26g بروتين لكل سكوب',
         priceEgp: 1850,
+        costEgp: 980,
         attributes: { sizes: ['2كجم'], flavors: ['شوكولاتة'], protein_g: 26 },
         sizes: ['2كجم'],
         colors: ['شوكولاتة'],
@@ -108,6 +168,7 @@ async function main() {
         name: 'كرياتين مونوهيدرات 300جم',
         description: '5g يوميًا',
         priceEgp: 450,
+        costEgp: 220,
         attributes: { sizes: ['300جم'], serving: '5g' },
         sizes: ['300جم'],
         colors: [],
@@ -117,6 +178,7 @@ async function main() {
       {
         name: 'BCAA أمينو 60 سيرف',
         priceEgp: 620,
+        costEgp: 310,
         attributes: { sizes: ['60 سيرف'], flavors: ['مانجو', 'توت'] },
         sizes: ['60 سيرف'],
         colors: ['مانجو', 'توت'],
@@ -126,6 +188,7 @@ async function main() {
       {
         name: 'مالتي فيتامين يومي',
         priceEgp: 280,
+        costEgp: 120,
         attributes: { sizes: ['90 قرص'] },
         sizes: ['90 قرص'],
         colors: [],
@@ -135,6 +198,7 @@ async function main() {
       {
         name: 'بري ورك آوت',
         priceEgp: 750,
+        costEgp: 380,
         attributes: { sizes: ['30 سيرف'], flavors: ['تفاح أخضر'] },
         sizes: ['30 سيرف'],
         colors: ['تفاح أخضر'],
@@ -144,6 +208,7 @@ async function main() {
       {
         name: 'أوميغا 3 فيش أويل',
         priceEgp: 390,
+        costEgp: 175,
         attributes: { sizes: ['60 كبسولة'] },
         sizes: ['60 كبسولة'],
         colors: [],
@@ -295,22 +360,26 @@ async function main() {
   }
 
   const orderPlan = [
-    { day: 0, customer: customers[0], product: products[0], status: 'PENDING', size: '2كجم' },
-    { day: 0, customer: customers[5], product: products[1], status: 'CONFIRMED', size: '300جم' },
-    { day: 1, customer: customers[2], product: products[2], status: 'COMPLETED', size: '60 سيرف', color: 'مانجو', qty: 2 },
-    { day: 2, customer: customers[1], product: products[3], status: 'COMPLETED', size: '90 قرص' },
-    { day: 3, customer: customers[6], product: products[5], status: 'CONFIRMED', size: '60 كبسولة' },
-    { day: 4, customer: customers[7], product: products[0], status: 'COMPLETED', size: '2كجم' },
-    { day: 5, customer: customers[3], product: products[2], status: 'CANCELLED', size: '60 سيرف', color: 'توت' },
-    { day: 6, customer: customers[4], product: products[1], status: 'COMPLETED', size: '300جم' },
-    { day: 1, customer: customers[1], product: products[5], status: 'COMPLETED', size: '60 كبسولة' },
-    { day: 2, customer: customers[0], product: products[3], status: 'CONFIRMED', size: '90 قرص', qty: 2 },
+    { day: 0, customer: customers[0], product: products[0], status: 'PENDING', size: '2كجم', governorate: 'cairo' },
+    { day: 0, customer: customers[5], product: products[1], status: 'CONFIRMED', size: '300جم', governorate: 'giza' },
+    { day: 1, customer: customers[2], product: products[2], status: 'COMPLETED', size: '60 سيرف', color: 'مانجو', qty: 2, governorate: 'alexandria' },
+    { day: 2, customer: customers[1], product: products[3], status: 'COMPLETED', size: '90 قرص', governorate: 'sharqia' },
+    { day: 3, customer: customers[6], product: products[5], status: 'CONFIRMED', size: '60 كبسولة', governorate: 'cairo' },
+    { day: 4, customer: customers[7], product: products[0], status: 'COMPLETED', size: '2كجم', governorate: 'qalyubia' },
+    { day: 5, customer: customers[3], product: products[2], status: 'CANCELLED', size: '60 سيرف', color: 'توت', governorate: 'cairo' },
+    { day: 6, customer: customers[4], product: products[1], status: 'COMPLETED', size: '300جم', governorate: 'ismailia' },
+    { day: 1, customer: customers[1], product: products[5], status: 'COMPLETED', size: '60 كبسولة', governorate: 'cairo' },
+    { day: 2, customer: customers[0], product: products[3], status: 'CONFIRMED', size: '90 قرص', qty: 2, governorate: 'giza' },
   ]
 
   let orderNumber = 1040
   for (const o of orderPlan) {
     const qty = o.qty ?? 1
     const total = o.product.priceEgp * qty
+    const governorate = o.governorate ?? 'cairo'
+    const shippingEgp =
+      o.status === 'CANCELLED' ? null : shippingFor(governorate)
+    const costEgp = o.product.costEgp ?? defaultCost(o.product.priceEgp)
     const createdAt = daysAgo(o.day, 10 + (orderNumber % 8))
     const order = await prisma.order.create({
       data: {
@@ -321,6 +390,8 @@ async function main() {
         totalEgp: total,
         customerName: o.customer.name,
         customerPhone: o.customer.phone,
+        governorate: o.status === 'CANCELLED' ? null : governorate,
+        shippingEgp,
         createdAt,
         updatedAt: createdAt,
         items: {
@@ -332,6 +403,7 @@ async function main() {
               color: o.color ?? null,
               quantity: qty,
               priceEgp: o.product.priceEgp,
+              costEgp: o.status === 'CANCELLED' ? null : costEgp,
             },
           ],
         },

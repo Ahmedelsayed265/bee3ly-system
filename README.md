@@ -43,47 +43,38 @@ bee3ly-system/
 
 ## التشغيل المحلي
 
-### 1) قاعدة البيانات
+### أمر واحد (Docker Postgres + Backend + Frontend)
 
-**Docker:**
+من جذر الريبو (يتطلب **Docker Desktop**):
 
 ```bash
-docker compose up -d
+cd backend && cp .env.example .env   # مرة واحدة
+cd backend && npm install
+cd frontend && npm install
+cd .. && npm run dev
 ```
 
-**أو بدون Docker (مدمج):**
+السكربت يوقف أي شيء شغّال على المنافذ **3000 / 5173 / 5432** (سيرفرات dev أو Postgres مدمج)، يشغّل `docker compose up -d`، يطبّق migrations، ثم backend + frontend في نفس التيرمنال.
+
+- API: `http://localhost:3000`
+- UI: `http://localhost:5173`
+- إيقاف الحاوية فقط: `npm run dev:stop` من الجذر
+
+> `DATABASE_URL` في `backend/.env` الافتراضي:  
+> `postgresql://bay3ly:bay3ly@127.0.0.1:5432/bay3ly?schema=public` (يطابق `docker-compose.yml`).
+
+### بدون Docker (Postgres مدمج)
 
 ```bash
 cd backend
 npm run db:local
 ```
 
-سيب التيرمنال مفتوح.
+سيب تيرمنال Postgres مفتوح، ثم في تيرمنالين: `npm run start:dev` و `cd frontend && npm run dev`.
 
-> ملاحظة: `.env.example` بيستخدم `bay3ly` كـ user/db؛ تأكد إن `DATABASE_URL` يطابق طريقة التشغيل عندك.
+### يدوي (بدون `npm run dev` من الجذر)
 
-### 2) Backend
-
-```bash
-cd backend
-cp .env.example .env
-npm install
-npx prisma migrate deploy
-npm run start:dev
-```
-
-API: `http://localhost:3000`
-
-### 3) Frontend
-
-```bash
-cd frontend
-cp .env.example .env
-npm install
-npm run dev
-```
-
-App: `http://localhost:5173`
+Backend: `cd backend && npm run start:dev` — Frontend: `cd frontend && npm run dev`
 
 ---
 

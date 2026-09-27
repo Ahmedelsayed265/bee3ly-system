@@ -39,13 +39,13 @@ export type Business = {
   workingHours: string | null;
   paymentInfo: string | null;
   faqs: string | null;
-  variantDictionary?: VariantDictionaryOption[];
   shippingZones?: Array<{
     id: string;
     name: string;
     governorates: string[];
     priceEgp: number;
   }>;
+  variantDictionary?: VariantDictionaryOption[];
   onboardingCompletedAt: string | null;
 };
 
@@ -184,8 +184,6 @@ export type OrderRow = {
   orderNumber: number;
   status: string;
   totalEgp: number;
-  governorate?: string | null;
-  shippingEgp?: number | null;
   customerName: string | null;
   customerPhone: string | null;
   createdAt: string;
@@ -197,7 +195,11 @@ export type OrderRow = {
   }>;
 };
 
-export async function fetchOrders(page = 1, limit = 10, campaignId?: string) {
+export async function fetchOrders(
+  page = 1,
+  limit = 10,
+  campaignId?: string,
+) {
   const { data } = await api.get<{
     orders: OrderRow[];
     page: number;
@@ -213,14 +215,6 @@ export async function fetchOrders(page = 1, limit = 10, campaignId?: string) {
 export async function updateOrderStatus(id: string, status: string) {
   const { data } = await api.patch(`/orders/${id}/status`, { status });
   return data;
-}
-
-export async function updateOrderGovernorate(id: string, governorate: string) {
-  const { data } = await api.patch<{ order: OrderRow }>(
-    `/orders/${id}/governorate`,
-    { governorate },
-  );
-  return data.order;
 }
 
 export async function fetchConversations() {
@@ -300,16 +294,14 @@ export async function simulateMessage(
   return data;
 }
 
-export async function fetchLeads(
-  input: {
-    page?: number;
-    limit?: number;
-    status?: string;
-    intent?: string;
-    q?: string;
-    campaignId?: string;
-  } = {},
-) {
+export async function fetchLeads(input: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  intent?: string;
+  q?: string;
+  campaignId?: string;
+} = {}) {
   const { data } = await api.get<
     PageResult<{
       leads: Array<{

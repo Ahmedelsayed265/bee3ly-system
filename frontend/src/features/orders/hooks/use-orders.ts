@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   fetchOrders,
-  updateOrderGovernorate,
   updateOrderStatus,
   type OrderRow,
 } from '@/features/business/api';
@@ -73,18 +72,6 @@ export function useOrders() {
     },
   });
 
-  const placeMut = useMutation({
-    mutationFn: ({ id, governorate }: { id: string; governorate: string }) =>
-      updateOrderGovernorate(id, governorate),
-    onSuccess: async (order) => {
-      setViewing(order);
-      await qc.invalidateQueries({ queryKey: ['orders'] });
-      await qc.invalidateQueries({ queryKey: ['overview'] });
-      await qc.invalidateQueries({ queryKey: ['campaigns'] });
-      await qc.invalidateQueries({ queryKey: ['campaign'] });
-    },
-  });
-
   const money = (value: number) =>
     `${value.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-US')} ج.م`;
 
@@ -110,10 +97,7 @@ export function useOrders() {
     pendingAction,
     setPendingAction,
     isStatusPending: statusMut.isPending,
-    isPlacing: placeMut.isPending,
     updateStatus: statusMut.mutate,
-    setGovernorate: (order: OrderRow, governorate: string) =>
-      placeMut.mutate({ id: order.id, governorate }),
     money,
     ask,
   };

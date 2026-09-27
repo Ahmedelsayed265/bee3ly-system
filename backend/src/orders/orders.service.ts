@@ -3,7 +3,6 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
-import { parseShippingZones, zonePrice } from '../businesses/shipping-zones';
 import {
   asVariants,
   findMatchingSku,
@@ -58,16 +57,10 @@ export class OrdersService {
     if (!existing) throw new NotFoundException('Order not found');
 
     const order = await this.prisma.$transaction(async (tx) => {
-      if (
-        existing.status !== OrderStatus.RETURNED &&
-        status === OrderStatus.RETURNED
-      ) {
+      if (existing.status !== OrderStatus.RETURNED && status === OrderStatus.RETURNED) {
         await this.adjustStock(tx, existing.items, 1);
       }
-      if (
-        existing.status === OrderStatus.RETURNED &&
-        status !== OrderStatus.RETURNED
-      ) {
+      if (existing.status === OrderStatus.RETURNED && status !== OrderStatus.RETURNED) {
         await this.adjustStock(tx, existing.items, -1);
       }
       return tx.order.update({
@@ -75,28 +68,6 @@ export class OrdersService {
         data: { status },
         include: { items: true },
       });
-    });
-    return { order };
-  }
-
-  async setGovernorate(userId: string, id: string, governorate: string) {
-    const businessId = await this.access.requireBusinessId(userId);
-    const existing = await this.prisma.order.findFirst({
-      where: { id, businessId },
-    });
-    if (!existing) throw new NotFoundException('Order not found');
-    const business = await this.prisma.business.findUniqueOrThrow({
-      where: { id: businessId },
-      select: { shippingZones: true },
-    });
-    const shippingEgp = zonePrice(
-      parseShippingZones(business.shippingZones),
-      governorate,
-    );
-    const order = await this.prisma.order.update({
-      where: { id },
-      data: { governorate, shippingEgp },
-      include: { items: true },
     });
     return { order };
   }

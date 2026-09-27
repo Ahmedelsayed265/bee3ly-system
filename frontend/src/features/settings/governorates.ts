@@ -3,19 +3,16 @@ export const GOVERNORATES = [
   { id: 'giza', ar: 'الجيزة', en: 'Giza' },
   { id: 'alexandria', ar: 'الإسكندرية', en: 'Alexandria' },
   { id: 'qalyubia', ar: 'القليوبية', en: 'Qalyubia' },
-  { id: 'dakahlia', ar: 'الدقهلية', en: 'Dakahlia' },
   { id: 'sharqia', ar: 'الشرقية', en: 'Sharqia' },
   { id: 'gharbia', ar: 'الغربية', en: 'Gharbia' },
   { id: 'monufia', ar: 'المنوفية', en: 'Monufia' },
+  { id: 'dakahlia', ar: 'الدقهلية', en: 'Dakahlia' },
   { id: 'beheira', ar: 'البحيرة', en: 'Beheira' },
   { id: 'kafr_el_sheikh', ar: 'كفر الشيخ', en: 'Kafr El Sheikh' },
   { id: 'damietta', ar: 'دمياط', en: 'Damietta' },
   { id: 'port_said', ar: 'بورسعيد', en: 'Port Said' },
   { id: 'ismailia', ar: 'الإسماعيلية', en: 'Ismailia' },
   { id: 'suez', ar: 'السويس', en: 'Suez' },
-  { id: 'north_sinai', ar: 'شمال سيناء', en: 'North Sinai' },
-  { id: 'south_sinai', ar: 'جنوب سيناء', en: 'South Sinai' },
-  { id: 'red_sea', ar: 'البحر الأحمر', en: 'Red Sea' },
   { id: 'fayoum', ar: 'الفيوم', en: 'Fayoum' },
   { id: 'beni_suef', ar: 'بني سويف', en: 'Beni Suef' },
   { id: 'minya', ar: 'المنيا', en: 'Minya' },
@@ -24,8 +21,11 @@ export const GOVERNORATES = [
   { id: 'qena', ar: 'قنا', en: 'Qena' },
   { id: 'luxor', ar: 'الأقصر', en: 'Luxor' },
   { id: 'aswan', ar: 'أسوان', en: 'Aswan' },
+  { id: 'red_sea', ar: 'البحر الأحمر', en: 'Red Sea' },
   { id: 'new_valley', ar: 'الوادي الجديد', en: 'New Valley' },
-  { id: 'matrouh', ar: 'مطروح', en: 'Matrouh' },
+  { id: 'matrouh', ar: 'مرسى مطروح', en: 'Matrouh' },
+  { id: 'north_sinai', ar: 'شمال سيناء', en: 'North Sinai' },
+  { id: 'south_sinai', ar: 'جنوب سيناء', en: 'South Sinai' },
 ] as const;
 
 export type GovernorateId = (typeof GOVERNORATES)[number]['id'];
@@ -49,24 +49,28 @@ export function parseShippingZones(raw: unknown): ShippingZone[] {
   if (!Array.isArray(raw)) return [];
   const zones: ShippingZone[] = [];
   for (const row of raw) {
-    if (!row || typeof row !== 'object') continue;
+    if (!row || typeof row !== 'object' || Array.isArray(row)) continue;
     const item = row as Record<string, unknown>;
-    const id = typeof item.id === 'string' ? item.id : '';
-    const name = typeof item.name === 'string' ? item.name : '';
-    const price = Number(item.priceEgp);
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const name = typeof item.name === 'string' ? item.name.trim() : '';
+    const priceEgp = Math.max(0, Math.floor(Number(item.priceEgp ?? 0)));
     const governorates = Array.isArray(item.governorates)
       ? item.governorates.filter(
           (value): value is GovernorateId =>
             typeof value === 'string' && IDS.has(value),
         )
       : [];
-    if (!id) continue;
-    zones.push({
-      id,
-      name,
-      governorates,
-      priceEgp: Number.isFinite(price) ? Math.max(0, Math.floor(price)) : 0,
-    });
+    if (!id || !name || governorates.length === 0) continue;
+    zones.push({ id, name, governorates, priceEgp });
   }
   return zones;
+}
+
+export function newShippingZone(): ShippingZone {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    governorates: [],
+    priceEgp: 0,
+  };
 }

@@ -13,6 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "db:local": "node scripts/start-local-pg.mjs",
+    "db:local:stop": "node scripts/stop-local-pg.mjs",
     "db:seed:demo": "node prisma/seed-demo-user.mjs",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

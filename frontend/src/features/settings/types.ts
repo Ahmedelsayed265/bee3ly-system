@@ -1,4 +1,4 @@
-export type SettingsTab = 'social' | 'knowledge' | 'shipping';
+export type SettingsTab = 'social' | 'delivery' | 'knowledge';
 export type ChannelId = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP';
 
 export type SocialAccount = {

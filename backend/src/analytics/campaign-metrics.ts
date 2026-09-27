@@ -185,7 +185,9 @@ export function computeMetrics(
   delivery: DeliveryInput,
   objective: CampaignObjectiveId | null,
 ): MetricsReport {
-  const primary = new Set(objective ? PRIMARY[objective] : BUSINESS_PRIMARY);
+  const primary = new Set(
+    objective ? PRIMARY[objective] : BUSINESS_PRIMARY,
+  );
   const headlineOrder = objective ? PRIMARY[objective] : BUSINESS_PRIMARY;
   const metrics = CATALOG.map((id) =>
     metric(id, chain, delivery, primary.has(id)),
@@ -384,10 +386,7 @@ function divide(
   numerator: number | null,
   denominator: number | null,
   digits: number,
-  missing: {
-    missingNumerator: MetricGap | null;
-    missingDenominator: MetricGap | null;
-  },
+  missing: { missingNumerator: MetricGap | null; missingDenominator: MetricGap | null },
 ): { value: number | null; gap: MetricGap | null } {
   if (numerator == null && missing.missingNumerator) {
     return { value: null, gap: missing.missingNumerator };

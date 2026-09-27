@@ -18,18 +18,13 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
   const FlowIcon = dir === 'rtl' ? ChevronLeft : ChevronRight;
   const count = (value: number) => formatMetricValue(value, 'count', locale);
   const money = (value: number) => formatMetricValue(value, 'egp', locale);
-  const percent = (value: number) =>
-    formatMetricValue(value, 'percent', locale);
+  const percent = (value: number) => formatMetricValue(value, 'percent', locale);
 
   const stages: Array<
     | { kind: 'stage'; value: string; label: string }
     | { kind: 'rate'; value: string; label: string }
   > = [
-    {
-      kind: 'stage',
-      value: count(ledger.impressions),
-      label: t('metric_impressions'),
-    },
+    { kind: 'stage', value: count(ledger.impressions), label: t('metric_impressions') },
     { kind: 'rate', value: percent(ledger.ctr), label: t('metricFormula_ctr') },
     { kind: 'stage', value: count(ledger.clicks), label: t('metric_clicks') },
     {
@@ -37,11 +32,7 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
       value: percent(ledger.clickToConversation),
       label: t('metricFormula_clickToConversation'),
     },
-    {
-      kind: 'stage',
-      value: count(ledger.conversations),
-      label: t('metricConversations'),
-    },
+    { kind: 'stage', value: count(ledger.conversations), label: t('metricConversations') },
     {
       kind: 'rate',
       value: percent(ledger.conversationToLead),
@@ -115,13 +106,8 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
         <div className="mt-3 grid grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
           {stages.map((stage) =>
             stage.kind === 'stage' ? (
-              <div
-                key={stage.label}
-                className="bg-page min-w-0 rounded-xl px-3 py-3"
-              >
-                <p className="text-ink text-xl font-bold tabular-nums">
-                  {stage.value}
-                </p>
+              <div key={stage.label} className="bg-page min-w-0 rounded-xl px-3 py-3">
+                <p className="text-ink text-xl font-bold tabular-nums">{stage.value}</p>
                 <p className="text-muted mt-1 text-[11px]">{stage.label}</p>
               </div>
             ) : (
@@ -131,12 +117,8 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
               >
                 <FlowIcon className="text-muted/50 h-4 w-4 shrink-0 lg:hidden" />
                 <div>
-                  <p className="text-brand text-sm font-bold tabular-nums">
-                    {stage.value}
-                  </p>
-                  <p className="text-muted mt-0.5 text-[11px] leading-snug">
-                    {stage.label}
-                  </p>
+                  <p className="text-brand text-sm font-bold tabular-nums">{stage.value}</p>
+                  <p className="text-muted mt-0.5 text-[11px] leading-snug">{stage.label}</p>
                 </div>
               </div>
             ),
@@ -145,9 +127,7 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
       </div>
 
       <div>
-        <h3 className="text-ink text-sm font-semibold">
-          {t('analyticsMoney')}
-        </h3>
+        <h3 className="text-ink text-sm font-semibold">{t('analyticsMoney')}</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {moneyCells.map((cell) => (
             <MoneyTile
@@ -163,7 +143,7 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
         <p className="text-muted mt-2 text-[11px] leading-5">
           {ledger.costOfGoods == null || ledger.shipping == null
             ? t('netProfitNeedsCost')
-            : `${t('metric_cost')} ${money(ledger.costOfGoods)} ${t('egp')} · ${t('productShipping')} ${money(ledger.shipping)} ${t('egp')}`}
+            : `${t('metric_cost')} ${money(ledger.costOfGoods)} ${t('egp')} · ${t('businessShippingCost')} ${money(ledger.shipping)} ${t('egp')}`}
         </p>
         <p className="text-muted mt-1 text-[11px] leading-5">
           {ledger.returnedOrders === 0
@@ -180,9 +160,7 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
       </div>
 
       <div>
-        <h3 className="text-ink text-sm font-semibold">
-          {t('analyticsUnitCost')}
-        </h3>
+        <h3 className="text-ink text-sm font-semibold">{t('analyticsUnitCost')}</h3>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           {costs.map((cell) => (
             <MoneyTile
@@ -190,9 +168,7 @@ export function BuyerBoard({ ledger }: { ledger: BuyerLedger }) {
               label={t(cell.label)}
               value={money(cell.value)}
               unit={t('egp')}
-              caption={t(
-                `metricFormula_${cell.label.slice('metric_'.length)}` as MessageKey,
-              )}
+              caption={t(`metricFormula_${cell.label.slice('metric_'.length)}` as MessageKey)}
             />
           ))}
         </div>
@@ -222,29 +198,16 @@ function MoneyTile({
   tone?: 'brand' | 'danger';
 }) {
   return (
-    <div
-      className={cn(
-        'min-w-0 rounded-xl px-4 py-3',
-        tone === 'brand' ? 'bg-brand/8' : 'bg-page',
-      )}
-    >
+    <div className={cn('min-w-0 rounded-xl px-4 py-3', tone === 'brand' ? 'bg-brand/8' : 'bg-page')}>
       <p className="text-muted text-[11px]">{label}</p>
       <p
         className={cn(
           'mt-1 text-xl font-bold tracking-tight tabular-nums',
-          tone === 'brand'
-            ? 'text-brand'
-            : tone === 'danger'
-              ? 'text-danger'
-              : 'text-ink',
+          tone === 'brand' ? 'text-brand' : tone === 'danger' ? 'text-danger' : 'text-ink',
         )}
       >
         {value}
-        {unit ? (
-          <span className="text-muted ms-1 text-[11px] font-normal">
-            {unit}
-          </span>
-        ) : null}
+        {unit ? <span className="text-muted ms-1 text-[11px] font-normal">{unit}</span> : null}
       </p>
       <p className="text-muted mt-1 text-[11px] leading-4">{caption}</p>
     </div>

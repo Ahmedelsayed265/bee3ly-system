@@ -180,10 +180,10 @@ model Business {
   workingHours          String?
   paymentInfo           String?
   faqs                  String?
+  /// Delivery zones: [{ id, name, governorates[], priceEgp }]
+  shippingZones         Json           @default("[]")
   /// Shared option catalogs for product variants: [{ id, name, values }]
   variantDictionary     Json           @default("[]")
-  /// Shipping cost groups: [{ id, name, governorates, priceEgp }]
-  shippingZones         Json           @default("[]")
   onboardingCompletedAt DateTime?
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
@@ -343,12 +343,12 @@ model Order {
   orderNumber    Int
   status         OrderStatus @default(PENDING)
   totalEgp       Int
-  /// Governorate id from the business shipping zones. Null until chosen.
-  governorate    String?
-  /// Shipping cost snapshotted from the matching zone. Null until a zone matches.
-  shippingEgp    Int?
   customerName   String?
   customerPhone  String?
+  /// Egyptian governorate id (see shipping zones).
+  governorate    String?
+  /// Snapshotted shipping cost from business zones when the order was created.
+  shippingEgp    Int?
   notes          String?
   createdBy      ActorType   @default(AI)
   createdAt      DateTime    @default(now())
