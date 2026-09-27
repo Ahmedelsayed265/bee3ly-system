@@ -700,7 +700,6 @@
   "metricOrders": "Orders",
   "metricLeads": "Potential customers",
   "metricRoas": "ROAS",
-  "metricRoasFromBudget": "From planned budget",
   "salesChartTitle": "Sales over the last 7 days",
   "salesChartSubtitle": "Daily sales performance",
   "salesWeekTotal": "Week total",

@@ -471,10 +471,7 @@ export function HomeDashboard() {
           : roasFromBudget != null
             ? formatMetricValue(roasFromBudget, 'multiple', locale)
             : String(metrics?.conversations ?? 0),
-      hint:
-        roas?.value == null && roasFromBudget != null
-          ? t('metricRoasFromBudget')
-          : undefined,
+      hint: undefined,
       delta: '',
       icon: TrendingUp,
       tone: 'bg-ink/10 text-ink',
