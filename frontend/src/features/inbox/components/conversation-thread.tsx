@@ -5,6 +5,7 @@ import { MessageBubble } from '@/features/inbox/components/message-bubble';
 import { MessageComposer } from '@/features/inbox/components/message-composer';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import { InboxThreadSkeleton } from '@/components/ui/skeleton-blocks';
 import type { QuickReply, ReplyContext } from '@/features/inbox/reply-kit';
 
 type Message = {
@@ -24,6 +25,7 @@ type Conversation = {
 type ConversationThreadProps = {
   conversation: Conversation | undefined;
   messages: Message[];
+  isLoading?: boolean;
   selectedId: string | null;
   isHumanMode: boolean;
   isModePending: boolean;
@@ -46,6 +48,7 @@ function channelLabel(t: (key: MessageKey) => string, channel: string) {
 export function ConversationThread({
   conversation,
   messages,
+  isLoading = false,
   selectedId,
   isHumanMode,
   isModePending,
@@ -59,6 +62,10 @@ export function ConversationThread({
   onDeleteRequest,
 }: ConversationThreadProps) {
   const { t } = useLocale();
+
+  if (isLoading) {
+    return <InboxThreadSkeleton />;
+  }
 
   return (
     <div className="border-border bg-surface flex min-h-0 flex-col overflow-hidden rounded-2xl border">

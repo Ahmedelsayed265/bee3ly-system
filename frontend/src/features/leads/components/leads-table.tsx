@@ -19,6 +19,7 @@ import {
   type LeadCounts,
   type LeadStatus,
 } from '@/features/leads/constants';
+import { TableRowsSkeleton } from '@/components/ui/skeleton-blocks';
 import { cn } from '@/lib/utils';
 
 type LeadsTableProps = {
@@ -27,6 +28,7 @@ type LeadsTableProps = {
   intents: string[];
   page: number;
   totalPages: number;
+  isLoading: boolean;
   isFetching: boolean;
   isBusy: boolean;
   empty: boolean;
@@ -53,6 +55,7 @@ export function LeadsTable({
   intents,
   page,
   totalPages,
+  isLoading,
   isFetching,
   isBusy,
   empty,
@@ -220,82 +223,86 @@ export function LeadsTable({
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead) => {
-                  const name = lead.customer.name ?? t('unknownCustomer');
-                  const meta = [
-                    formatLeadDate(lead.createdAt, locale),
-                    lead.campaign?.name,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ');
-                  const picked = selectedIds.includes(lead.id);
-                  return (
-                    <tr
-                      key={lead.id}
-                      className={cn(
-                        'border-border border-t',
-                        picked ? 'bg-brand/5' : 'hover:bg-page',
-                      )}
-                    >
-                      <td className="px-4 py-3 text-start">
-                        <Checkbox
-                          className="shadow-none"
-                          aria-label={t('leadSelectOne', { name })}
-                          checked={picked}
-                          disabled={isBusy}
-                          onCheckedChange={(checked) =>
-                            onToggle(lead.id, checked === true)
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <p className="text-ink font-semibold">{name}</p>
-                        {meta ? (
-                          <p className="text-muted mt-0.5 text-xs">{meta}</p>
-                        ) : null}
-                      </td>
-                      <td className="text-muted px-4 py-3 text-start tabular-nums">
-                        {lead.customer.phone ? (
-                          <span className="inline-block" dir="ltr">
-                            {lead.customer.phone}
-                          </span>
-                        ) : (
-                          '—'
+                {isLoading ? (
+                  <TableRowsSkeleton rows={8} cols={5} />
+                ) : (
+                  leads.map((lead) => {
+                    const name = lead.customer.name ?? t('unknownCustomer');
+                    const meta = [
+                      formatLeadDate(lead.createdAt, locale),
+                      lead.campaign?.name,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ');
+                    const picked = selectedIds.includes(lead.id);
+                    return (
+                      <tr
+                        key={lead.id}
+                        className={cn(
+                          'border-border border-t',
+                          picked ? 'bg-brand/5' : 'hover:bg-page',
                         )}
-                      </td>
-                      <td className="text-ink px-4 py-3 text-start">
-                        {intentText(t, lead.intent)}
-                      </td>
-                      <td className="px-4 py-3 text-start">
-                        <Select
-                          value={lead.status}
-                          disabled={isBusy}
-                          onValueChange={(value) => {
-                            if (value !== lead.status) {
-                              onStatusClick(lead, value as LeadStatus);
+                      >
+                        <td className="px-4 py-3 text-start">
+                          <Checkbox
+                            className="shadow-none"
+                            aria-label={t('leadSelectOne', { name })}
+                            checked={picked}
+                            disabled={isBusy}
+                            onCheckedChange={(checked) =>
+                              onToggle(lead.id, checked === true)
                             }
-                          }}
-                        >
-                          <SelectTrigger
-                            className={cn(
-                              'h-9 w-40 px-3 text-xs font-semibold',
-                              statusTone(lead.status),
-                            )}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-start">
+                          <p className="text-ink font-semibold">{name}</p>
+                          {meta ? (
+                            <p className="text-muted mt-0.5 text-xs">{meta}</p>
+                          ) : null}
+                        </td>
+                        <td className="text-muted px-4 py-3 text-start tabular-nums">
+                          {lead.customer.phone ? (
+                            <span className="inline-block" dir="ltr">
+                              {lead.customer.phone}
+                            </span>
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                        <td className="text-ink px-4 py-3 text-start">
+                          {intentText(t, lead.intent)}
+                        </td>
+                        <td className="px-4 py-3 text-start">
+                          <Select
+                            value={lead.status}
+                            disabled={isBusy}
+                            onValueChange={(value) => {
+                              if (value !== lead.status) {
+                                onStatusClick(lead, value as LeadStatus);
+                              }
+                            }}
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LEAD_STATUSES.map((item) => (
-                              <SelectItem key={item} value={item}>
-                                {t(`leadStatus_${item}` as MessageKey)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            <SelectTrigger
+                              className={cn(
+                                'h-9 w-40 px-3 text-xs font-semibold',
+                                statusTone(lead.status),
+                              )}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LEAD_STATUSES.map((item) => (
+                                <SelectItem key={item} value={item}>
+                                  {t(`leadStatus_${item}` as MessageKey)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

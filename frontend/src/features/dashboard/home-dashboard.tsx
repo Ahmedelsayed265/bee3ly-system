@@ -13,6 +13,7 @@ import { formatMetricValue } from '@/features/analytics/format-metric';
 import { recentChats } from '@/features/dashboard/mock-data';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import { ListRowsSkeleton } from '@/components/ui/skeleton-blocks';
 import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 import {
@@ -491,6 +492,10 @@ export function HomeDashboard() {
     { to: paths.orders, label: t('actionViewOrders'), icon: ShoppingBag },
   ];
 
+  const overviewLoading = overviewQuery.isLoading && !overviewQuery.data;
+  const ordersLoading = ordersQuery.isLoading && !ordersQuery.data;
+  const chatsLoading = convQuery.isLoading && !convQuery.data;
+
   return (
     <div className="home-dashboard w-full space-y-6">
       {/* Hero */}
@@ -522,7 +527,7 @@ export function HomeDashboard() {
         </div>
       </section>
 
-      {/* KPIs */}
+      {/* KPIs — keep real cards; values show — while overview loads (like orders table chrome) */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card, i) => {
           const Icon = card.icon;
@@ -551,15 +556,26 @@ export function HomeDashboard() {
               <p className="text-muted mt-4 text-xs font-medium">
                 {card.label}
               </p>
-              <p className="text-ink mt-1 text-2xl font-bold tracking-tight">
-                {card.value}
-                {card.label === t('metricSales') ? (
-                  <span className="text-muted ms-1 text-sm font-semibold">
-                    ج.م
-                  </span>
-                ) : null}
+              <p
+                className={cn(
+                  'mt-1 text-2xl font-bold tracking-tight tabular-nums',
+                  overviewLoading ? 'text-muted' : 'text-ink',
+                )}
+              >
+                {overviewLoading ? (
+                  '—'
+                ) : (
+                  <>
+                    {card.value}
+                    {card.label === t('metricSales') ? (
+                      <span className="text-muted ms-1 text-sm font-semibold">
+                        ج.م
+                      </span>
+                    ) : null}
+                  </>
+                )}
               </p>
-              {card.hint ? (
+              {!overviewLoading && card.hint ? (
                 <p className="text-muted mt-1 text-[11px]">{card.hint}</p>
               ) : null}
             </div>
@@ -634,36 +650,38 @@ export function HomeDashboard() {
             </span>
           </div>
           <div className="space-y-3">
-            {liveCampaigns.map((campaign) => (
-              <div
-                key={campaign.id}
-                className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-ink truncate text-sm font-semibold">
-                    {campaign.name}
-                  </p>
-                  <p className="text-muted text-[11px]">
-                    {t('plannedBudget')} {campaign.budget.toLocaleString()}{' '}
-                    {t('egp')}
-                  </p>
-                  <p className="text-muted text-[11px]">
-                    {campaign.conversations} {t('metricConversations')} ·{' '}
-                    {campaign.orders} {t('metricOrders')}
+            {overviewLoading ? <ListRowsSkeleton rows={3} /> : null}
+            {!overviewLoading &&
+              liveCampaigns.map((campaign) => (
+                <div
+                  key={campaign.id}
+                  className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-ink truncate text-sm font-semibold">
+                      {campaign.name}
+                    </p>
+                    <p className="text-muted text-[11px]">
+                      {t('plannedBudget')} {campaign.budget.toLocaleString()}{' '}
+                      {t('egp')}
+                    </p>
+                    <p className="text-muted text-[11px]">
+                      {campaign.conversations} {t('metricConversations')} ·{' '}
+                      {campaign.orders} {t('metricOrders')}
+                    </p>
+                  </div>
+                  <p className="text-ink shrink-0 text-sm font-bold tabular-nums">
+                    {campaign.headline
+                      ? formatMetricValue(
+                          campaign.headline.value,
+                          campaign.headline.unit,
+                          locale,
+                        )
+                      : `${campaign.revenueEgp.toLocaleString()} ${t('egp')}`}
                   </p>
                 </div>
-                <p className="text-ink shrink-0 text-sm font-bold tabular-nums">
-                  {campaign.headline
-                    ? formatMetricValue(
-                        campaign.headline.value,
-                        campaign.headline.unit,
-                        locale,
-                      )
-                    : `${campaign.revenueEgp.toLocaleString()} ${t('egp')}`}
-                </p>
-              </div>
-            ))}
-            {liveCampaigns.length === 0 ? (
+              ))}
+            {!overviewLoading && liveCampaigns.length === 0 ? (
               <p className="text-muted text-sm">{t('campaignEmpty')}</p>
             ) : null}
           </div>
@@ -682,34 +700,37 @@ export function HomeDashboard() {
             </Link>
           </div>
           <div className="space-y-2.5">
-            {latestOrders.map((o) => (
-              <div
-                key={o.id}
-                className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
-              >
-                <span className="bg-lavender text-brand inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
-                  <ShoppingBag className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-ink truncate text-sm font-semibold">
-                    #{o.orderNumber} · {o.customerName ?? t('unknownCustomer')}
-                  </p>
-                  <p className="text-muted truncate text-[11px]">
-                    {o.items[0]?.name ?? '—'} · {o.totalEgp.toLocaleString()}{' '}
-                    ج.م
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                    orderStatusTone(o.status),
-                  )}
+            {ordersLoading ? <ListRowsSkeleton rows={4} /> : null}
+            {!ordersLoading &&
+              latestOrders.map((o) => (
+                <div
+                  key={o.id}
+                  className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
                 >
-                  {t(`orderStatus_${o.status}` as MessageKey)}
-                </span>
-              </div>
-            ))}
-            {latestOrders.length === 0 ? (
+                  <span className="bg-lavender text-brand inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl">
+                    <ShoppingBag className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-ink truncate text-sm font-semibold">
+                      #{o.orderNumber} ·{' '}
+                      {o.customerName ?? t('unknownCustomer')}
+                    </p>
+                    <p className="text-muted truncate text-[11px]">
+                      {o.items[0]?.name ?? '—'} · {o.totalEgp.toLocaleString()}{' '}
+                      ج.م
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                      orderStatusTone(o.status),
+                    )}
+                  >
+                    {t(`orderStatus_${o.status}` as MessageKey)}
+                  </span>
+                </div>
+              ))}
+            {!ordersLoading && latestOrders.length === 0 ? (
               <p className="text-muted text-sm">{t('noOrders')}</p>
             ) : null}
           </div>
@@ -725,49 +746,53 @@ export function HomeDashboard() {
             </Link>
           </div>
           <div className="space-y-2.5">
-            {latestChats.length > 0
-              ? latestChats.map((c) => (
-                  <Link
-                    key={c.id}
-                    to={paths.inbox}
-                    className="bg-page/80 hover:bg-lavender/80 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors"
-                  >
-                    <span className="from-brand to-alert inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white">
-                      {(c.customer.name ?? '?').slice(0, 2)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="text-ink flex items-center gap-1.5 truncate text-sm font-semibold">
-                        <ChannelMark channel={c.channel} className="shrink-0" />
-                        <span className="truncate">
-                          {c.customer.name ?? t('unknownCustomer')}
-                        </span>
-                      </span>
-                      <span className="text-muted block truncate text-[11px]">
-                        {c.messages?.[0]?.content ?? '—'}
+            {chatsLoading ? (
+              <ListRowsSkeleton rows={4} />
+            ) : latestChats.length > 0 ? (
+              latestChats.map((c) => (
+                <Link
+                  key={c.id}
+                  to={paths.inbox}
+                  className="bg-page/80 hover:bg-lavender/80 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors"
+                >
+                  <span className="from-brand to-alert inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white">
+                    {(c.customer.name ?? '?').slice(0, 2)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="text-ink flex items-center gap-1.5 truncate text-sm font-semibold">
+                      <ChannelMark channel={c.channel} className="shrink-0" />
+                      <span className="truncate">
+                        {c.customer.name ?? t('unknownCustomer')}
                       </span>
                     </span>
-                    <MessageCircle className="text-muted h-4 w-4 shrink-0" />
-                  </Link>
-                ))
-              : recentChats.map((c) => (
-                  <div
-                    key={c.id}
-                    className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
-                  >
-                    <span className="from-brand to-alert inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white">
-                      {c.initials}
+                    <span className="text-muted block truncate text-[11px]">
+                      {c.messages?.[0]?.content ?? '—'}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="text-ink block truncate text-sm font-semibold">
-                        {c.name}
-                      </span>
-                      <span className="text-muted block truncate text-[11px]">
-                        {c.preview}
-                      </span>
+                  </span>
+                  <MessageCircle className="text-muted h-4 w-4 shrink-0" />
+                </Link>
+              ))
+            ) : (
+              recentChats.map((c) => (
+                <div
+                  key={c.id}
+                  className="bg-page/80 flex items-center gap-3 rounded-2xl px-3 py-2.5"
+                >
+                  <span className="from-brand to-alert inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white">
+                    {c.initials}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="text-ink block truncate text-sm font-semibold">
+                      {c.name}
                     </span>
-                    <span className="text-muted text-[10px]">{c.time}</span>
-                  </div>
-                ))}
+                    <span className="text-muted block truncate text-[11px]">
+                      {c.preview}
+                    </span>
+                  </span>
+                  <span className="text-muted text-[10px]">{c.time}</span>
+                </div>
+              ))
+            )}
           </div>
         </section>
       </div>

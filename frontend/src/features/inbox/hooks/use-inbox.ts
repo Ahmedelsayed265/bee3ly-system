@@ -109,6 +109,11 @@ export function useInbox() {
     draft,
     setDraft,
     messagesEndRef,
+    isListLoading: listQuery.isLoading && listQuery.data === undefined,
+    isDetailLoading:
+      Boolean(activeId) &&
+      detailQuery.isLoading &&
+      detailQuery.data === undefined,
     isSending: sendMut.isPending,
     isModePending: modeMut.isPending,
     sendMessage: (

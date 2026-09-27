@@ -2,6 +2,13 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   GOVERNORATES,
   governorateLabel,
   newShippingZone,
@@ -95,13 +102,10 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
               ))}
             </div>
 
-            <select
-              className="border-border bg-surface text-ink w-full rounded-xl border px-3 py-2 text-sm"
-              value=""
-              onChange={(e) => {
-                const id = e.target.value;
+            <Select
+              key={`${zone.id}-${zone.governorates.join('-')}`}
+              onValueChange={(id) => {
                 if (
-                  !id ||
                   zone.governorates.includes(
                     id as (typeof zone.governorates)[number],
                   )
@@ -116,15 +120,19 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
                 });
               }}
             >
-              <option value="">{t('shippingZoneAddGovernorate')}</option>
-              {available
-                .filter((item) => !zone.governorates.includes(item.id))
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {governorateLabel(item.id, locale)}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger className="bg-surface w-full">
+                <SelectValue placeholder={t('shippingZoneAddGovernorate')} />
+              </SelectTrigger>
+              <SelectContent>
+                {available
+                  .filter((item) => !zone.governorates.includes(item.id))
+                  .map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {governorateLabel(item.id, locale)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         );
       })}

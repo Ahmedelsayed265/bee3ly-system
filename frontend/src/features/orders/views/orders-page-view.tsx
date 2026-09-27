@@ -25,6 +25,7 @@ export function OrdersPageView() {
           orders={orders.orders}
           page={orders.page}
           totalPages={orders.totalPages}
+          isLoading={orders.isLoading}
           isFetching={orders.isFetching}
           isStatusPending={orders.isStatusPending}
           money={orders.money}

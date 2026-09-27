@@ -76,6 +76,7 @@ export function ProductsPageView() {
       ) : (
         <ProductsTable
           products={products.products}
+          isLoading={products.isLoading && products.products.length === 0}
           businessType={products.businessType}
           quantityMode={products.quantityMode}
           onEdit={products.openEdit}

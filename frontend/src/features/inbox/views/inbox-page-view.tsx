@@ -22,6 +22,8 @@ export function InboxPageView() {
     draft,
     setDraft,
     messagesEndRef,
+    isListLoading,
+    isDetailLoading,
     isSending,
     isModePending,
     sendMessage,
@@ -47,6 +49,7 @@ export function InboxPageView() {
           conversations={conversations}
           selectedId={selectedId}
           onSelect={setSelectedId}
+          isLoading={isListLoading}
           emptyLabel={
             params.get('campaignId') ? 'campaignFilteredEmpty' : undefined
           }
@@ -54,6 +57,7 @@ export function InboxPageView() {
 
         <ConversationThread
           conversation={conversation}
+          isLoading={isDetailLoading}
           messages={messages}
           selectedId={selectedId}
           isHumanMode={Boolean(isHumanMode)}

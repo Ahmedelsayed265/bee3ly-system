@@ -1,5 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import {
+  CampaignDetailSkeleton,
+  CampaignListSkeleton,
+} from '@/components/ui/skeleton-blocks';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { fetchCampaign } from '@/features/business/api';
@@ -130,10 +134,14 @@ export function CampaignsPageView() {
               })
             }
           />
+        ) : detailQuery.isLoading ? (
+          <CampaignDetailSkeleton />
         ) : (
           <p className="text-muted text-sm">{t('campaignsIntro')}</p>
         )
-      ) : campaigns.isLoading ? null : campaigns.total === 0 ? (
+      ) : campaigns.isLoading ? (
+        <CampaignListSkeleton />
+      ) : campaigns.total === 0 ? (
         <p className="text-muted text-sm">{t('campaignEmpty')}</p>
       ) : (
         <CampaignList

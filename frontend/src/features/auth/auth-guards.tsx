@@ -1,23 +1,14 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { AuthLoadingSkeleton } from '@/components/ui/skeleton-blocks';
 import { useAuth } from '@/features/auth/auth-context';
-import { useLocale } from '@/features/i18n/locale-context';
 import { paths } from '@/routes/paths';
-
-function AuthLoading() {
-  const { t } = useLocale();
-  return (
-    <div className="bg-page text-muted flex min-h-screen items-center justify-center">
-      {t('loading')}
-    </div>
-  );
-}
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
-    return <AuthLoading />;
+    return <AuthLoadingSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -37,7 +28,7 @@ export function GuestRoute() {
   const location = useLocation();
 
   if (isLoading) {
-    return <AuthLoading />;
+    return <AuthLoadingSkeleton />;
   }
 
   if (isAuthenticated) {

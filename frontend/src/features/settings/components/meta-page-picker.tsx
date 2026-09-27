@@ -1,3 +1,4 @@
+import { MetaPagesSkeleton } from '@/components/ui/skeleton-blocks';
 import { useLocale } from '@/features/i18n/locale-context';
 
 type MetaPage = {
@@ -39,9 +40,7 @@ export function MetaPagePicker({
           </span>
         </button>
       ))}
-      {isLoading ? (
-        <p className="text-muted text-xs">{t('connectionConnecting')}…</p>
-      ) : null}
+      {isLoading ? <MetaPagesSkeleton /> : null}
       {isError ? (
         <p className="text-danger text-sm">{t('metaPendingExpired')}</p>
       ) : null}

@@ -1,6 +1,7 @@
 import { ChannelMark } from '@/components/brand/channel-icons';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import { InboxListSkeleton } from '@/components/ui/skeleton-blocks';
 import { cn } from '@/lib/utils';
 
 type ConversationSummary = {
@@ -19,6 +20,7 @@ type ConversationListProps = {
   conversations: ConversationSummary[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  isLoading?: boolean;
   emptyLabel?: MessageKey;
 };
 
@@ -38,9 +40,14 @@ export function ConversationList({
   conversations,
   selectedId,
   onSelect,
+  isLoading = false,
   emptyLabel,
 }: ConversationListProps) {
   const { t } = useLocale();
+
+  if (isLoading) {
+    return <InboxListSkeleton />;
+  }
 
   return (
     <div className="border-border bg-surface flex min-h-0 flex-col overflow-hidden rounded-2xl border">

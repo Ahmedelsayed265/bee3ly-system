@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { PaginationBar } from '@/components/ui/pagination-bar';
+import { TableRowsSkeleton } from '@/components/ui/skeleton-blocks';
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
@@ -13,6 +14,7 @@ type OrdersTableProps = {
   orders: OrderRow[];
   page: number;
   totalPages: number;
+  isLoading: boolean;
   isFetching: boolean;
   isStatusPending: boolean;
   money: (value: number) => string;
@@ -28,6 +30,7 @@ export function OrdersTable({
   orders,
   page,
   totalPages,
+  isLoading,
   isFetching,
   isStatusPending,
   money,
@@ -53,76 +56,80 @@ export function OrdersTable({
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr
-                key={o.id}
-                className="border-border hover:bg-canvas/40 border-b last:border-b-0"
-              >
-                <td className="text-ink px-4 py-3 text-start font-semibold">
-                  #{o.orderNumber}
-                </td>
-                <td className="text-ink px-4 py-3 text-start">
-                  {o.customerName ?? t('unknownCustomer')}
-                </td>
-                <td className="text-muted px-4 py-3 text-start tabular-nums">
-                  {o.customerPhone ?? '—'}
-                </td>
-                <td className="text-ink max-w-70 px-4 py-3 text-start">
-                  {o.items
-                    .map(
-                      (item) =>
-                        `${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity}`,
-                    )
-                    .join(' · ')}
-                </td>
-                <td className="text-ink px-4 py-3 text-start font-medium tabular-nums">
-                  {money(o.totalEgp)}
-                </td>
-                <td className="px-4 py-3 text-start">
-                  <span className="bg-lavender text-ink inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
-                    {t(`orderStatus_${o.status}` as MessageKey)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-start">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2.5 text-xs"
-                      onClick={() => onView(o)}
-                    >
-                      {t('viewOrder')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2.5 text-xs"
-                      disabled={!canReturn(o.status) || isStatusPending}
-                      onClick={() => onAsk(o, 'RETURNED')}
-                    >
-                      {t('returnOrder')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2.5 text-xs"
-                      disabled={!canCancel(o.status) || isStatusPending}
-                      onClick={() => onAsk(o, 'CANCELLED')}
-                    >
-                      {t('cancelOrder')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="h-8 px-2.5 text-xs"
-                      disabled={!canConfirm(o.status) || isStatusPending}
-                      onClick={() => onAsk(o, 'CONFIRMED')}
-                    >
-                      {t('confirmOrderShort')}
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {isLoading ? (
+              <TableRowsSkeleton rows={8} cols={7} />
+            ) : (
+              orders.map((o) => (
+                <tr
+                  key={o.id}
+                  className="border-border hover:bg-canvas/40 border-b last:border-b-0"
+                >
+                  <td className="text-ink px-4 py-3 text-start font-semibold">
+                    #{o.orderNumber}
+                  </td>
+                  <td className="text-ink px-4 py-3 text-start">
+                    {o.customerName ?? t('unknownCustomer')}
+                  </td>
+                  <td className="text-muted px-4 py-3 text-start tabular-nums">
+                    {o.customerPhone ?? '—'}
+                  </td>
+                  <td className="text-ink max-w-70 px-4 py-3 text-start">
+                    {o.items
+                      .map(
+                        (item) =>
+                          `${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity}`,
+                      )
+                      .join(' · ')}
+                  </td>
+                  <td className="text-ink px-4 py-3 text-start font-medium tabular-nums">
+                    {money(o.totalEgp)}
+                  </td>
+                  <td className="px-4 py-3 text-start">
+                    <span className="bg-lavender text-ink inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
+                      {t(`orderStatus_${o.status}` as MessageKey)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-start">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2.5 text-xs"
+                        onClick={() => onView(o)}
+                      >
+                        {t('viewOrder')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2.5 text-xs"
+                        disabled={!canReturn(o.status) || isStatusPending}
+                        onClick={() => onAsk(o, 'RETURNED')}
+                      >
+                        {t('returnOrder')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2.5 text-xs"
+                        disabled={!canCancel(o.status) || isStatusPending}
+                        onClick={() => onAsk(o, 'CANCELLED')}
+                      >
+                        {t('cancelOrder')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 px-2.5 text-xs"
+                        disabled={!canConfirm(o.status) || isStatusPending}
+                        onClick={() => onAsk(o, 'CONFIRMED')}
+                      >
+                        {t('confirmOrderShort')}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

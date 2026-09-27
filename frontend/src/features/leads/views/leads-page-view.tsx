@@ -28,6 +28,7 @@ export function LeadsPageView() {
           intents={leads.intents}
           page={leads.page}
           totalPages={leads.totalPages}
+          isLoading={leads.isLoading}
           isFetching={leads.isFetching}
           isBusy={leads.isBusy}
           empty={!leads.isLoading && leads.total === 0}
