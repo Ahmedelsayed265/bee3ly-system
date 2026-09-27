@@ -218,13 +218,18 @@ function CampaignCard({
               )}
             </p>
             <p className="text-muted text-[11px] tabular-nums">
-              {formatMetricValue(ledger.roas, 'multiple', locale)} {t('metric_roas')}
+              {formatMetricValue(ledger.roas, 'multiple', locale)}{' '}
+              {t('metric_roas')}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          <MiniMoney label={t('metric_spend')} value={money(ledger.adCost)} unit={t('egp')} />
+          <MiniMoney
+            label={t('metric_spend')}
+            value={money(ledger.adCost)}
+            unit={t('egp')}
+          />
           <MiniMoney
             label={t('metric_impressions')}
             value={count(ledger.impressions)}
@@ -259,8 +264,16 @@ function CampaignCard({
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <MiniMoney label={t('metric_revenue')} value={money(ledger.revenue)} unit={t('egp')} />
-          <MiniMoney label={t('campaignAdBudget')} value={money(ledger.adCost)} unit={t('egp')} />
+          <MiniMoney
+            label={t('metric_revenue')}
+            value={money(ledger.revenue)}
+            unit={t('egp')}
+          />
+          <MiniMoney
+            label={t('campaignAdBudget')}
+            value={money(ledger.adCost)}
+            unit={t('egp')}
+          />
           <MiniMoney
             label={t('campaignResult')}
             value={
@@ -302,12 +315,21 @@ function BookCell({
   tone?: 'brand' | 'danger';
 }) {
   return (
-    <div className={cn('min-w-0 rounded-xl px-4 py-3', tone === 'brand' ? 'bg-brand/8' : 'bg-page')}>
+    <div
+      className={cn(
+        'min-w-0 rounded-xl px-4 py-3',
+        tone === 'brand' ? 'bg-brand/8' : 'bg-page',
+      )}
+    >
       <p className="text-muted text-[11px]">{label}</p>
       <p
         className={cn(
           'mt-1 text-lg font-bold tabular-nums',
-          tone === 'brand' ? 'text-brand' : tone === 'danger' ? 'text-danger' : 'text-ink',
+          tone === 'brand'
+            ? 'text-brand'
+            : tone === 'danger'
+              ? 'text-danger'
+              : 'text-ink',
         )}
       >
         {value}
@@ -333,12 +355,18 @@ function MiniMoney({
       <p
         className={cn(
           'mt-1 text-sm font-semibold tabular-nums',
-          tone === 'brand' ? 'text-brand' : tone === 'danger' ? 'text-danger' : 'text-ink',
+          tone === 'brand'
+            ? 'text-brand'
+            : tone === 'danger'
+              ? 'text-danger'
+              : 'text-ink',
         )}
       >
         {value}
         {unit ? (
-          <span className="text-muted ms-1 text-[11px] font-normal">{unit}</span>
+          <span className="text-muted ms-1 text-[11px] font-normal">
+            {unit}
+          </span>
         ) : null}
       </p>
     </div>
@@ -347,8 +375,10 @@ function MiniMoney({
 
 function focusMetric(objective: string) {
   if (objective === 'MORE_MESSAGES') return 'conversations';
-  if (objective === 'MORE_LEADS' || objective === 'MORE_BOOKINGS') return 'leads';
-  if (objective === 'MORE_ORDERS' || objective === 'RETARGETING') return 'orders';
+  if (objective === 'MORE_LEADS' || objective === 'MORE_BOOKINGS')
+    return 'leads';
+  if (objective === 'MORE_ORDERS' || objective === 'RETARGETING')
+    return 'orders';
   return '';
 }
 

@@ -94,7 +94,8 @@ export function AnalyticsPageView() {
           : formatMetricValue(rates.roas, 'multiple', locale),
       label: 'metric_roas',
       formula: 'metricFormula_roas',
-      tone: rates.roas == null ? undefined : rates.roas >= 1 ? 'brand' : 'danger',
+      tone:
+        rates.roas == null ? undefined : rates.roas >= 1 ? 'brand' : 'danger',
     },
     {
       ...money(profit),
@@ -155,7 +156,10 @@ export function AnalyticsPageView() {
         <div className="relative mt-5 grid grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
           {stages.map((item) =>
             item.kind === 'stage' ? (
-              <div key={item.label} className="bg-page min-w-0 rounded-xl px-4 py-4">
+              <div
+                key={item.label}
+                className="bg-page min-w-0 rounded-xl px-4 py-4"
+              >
                 <p className="text-ink text-2xl font-bold tracking-tight tabular-nums">
                   {item.value}
                 </p>
@@ -257,7 +261,9 @@ function MetricTile({
       >
         {value}
         {unit ? (
-          <span className="text-muted ms-1 text-[11px] font-normal">{unit}</span>
+          <span className="text-muted ms-1 text-[11px] font-normal">
+            {unit}
+          </span>
         ) : null}
       </p>
       <p className="text-muted mt-2 text-[11px] leading-4">{caption}</p>

@@ -60,7 +60,15 @@ export function useLeads() {
   }, [search]);
 
   const leadsQuery = useQuery({
-    queryKey: ['leads', page, LEADS_PAGE_SIZE, status, intent, search, campaignId],
+    queryKey: [
+      'leads',
+      page,
+      LEADS_PAGE_SIZE,
+      status,
+      intent,
+      search,
+      campaignId,
+    ],
     queryFn: () =>
       fetchLeads({
         page,
@@ -142,7 +150,9 @@ export function useLeads() {
       setIntentState(next);
       resetPage();
     },
-    hasFilters: Boolean(status || intent || query.trim() || search || campaignId),
+    hasFilters: Boolean(
+      status || intent || query.trim() || search || campaignId,
+    ),
     query,
     setQuery,
     clearFilters: () => {

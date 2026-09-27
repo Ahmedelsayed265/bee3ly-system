@@ -62,9 +62,15 @@ export function SettingsPageView() {
         />
       ) : tab === 'delivery' ? (
         <div className="space-y-4">
-          <ShippingZonesForm zones={delivery.zones} onChange={delivery.setZones} />
+          <ShippingZonesForm
+            zones={delivery.zones}
+            onChange={delivery.setZones}
+          />
           <div className="flex justify-end">
-            <Button disabled={delivery.isSaving} onClick={() => delivery.save()}>
+            <Button
+              disabled={delivery.isSaving}
+              onClick={() => delivery.save()}
+            >
               {t('save')}
             </Button>
           </div>

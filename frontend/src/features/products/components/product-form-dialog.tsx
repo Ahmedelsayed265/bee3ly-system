@@ -187,7 +187,9 @@ export function ProductFormDialog({
                   onChange={(e) => onCostChange(e.target.value)}
                   placeholder="0"
                 />
-                <p className="text-muted text-xs leading-5">{t('productCostNote')}</p>
+                <p className="text-muted text-xs leading-5">
+                  {t('productCostNote')}
+                </p>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="productDescription">

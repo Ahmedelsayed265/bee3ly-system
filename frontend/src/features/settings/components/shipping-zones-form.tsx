@@ -19,14 +19,20 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
   const used = new Set(zones.flatMap((zone) => zone.governorates));
 
   const update = (id: string, patch: Partial<ShippingZone>) => {
-    onChange(zones.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)));
+    onChange(
+      zones.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)),
+    );
   };
 
   return (
     <section className="border-border bg-surface space-y-4 rounded-2xl border p-5">
       <div>
-        <h2 className="text-ink text-sm font-semibold">{t('shippingZonesTitle')}</h2>
-        <p className="text-muted mt-1 text-xs leading-5">{t('shippingZonesHint')}</p>
+        <h2 className="text-ink text-sm font-semibold">
+          {t('shippingZonesTitle')}
+        </h2>
+        <p className="text-muted mt-1 text-xs leading-5">
+          {t('shippingZonesHint')}
+        </p>
       </div>
 
       {zones.map((zone) => {
@@ -50,7 +56,10 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
                 value={zone.priceEgp || ''}
                 onChange={(e) =>
                   update(zone.id, {
-                    priceEgp: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+                    priceEgp: Math.max(
+                      0,
+                      Math.floor(Number(e.target.value) || 0),
+                    ),
                   })
                 }
               />
@@ -59,7 +68,9 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
                 variant="ghost"
                 size="sm"
                 className="text-danger shrink-0 px-2"
-                onClick={() => onChange(zones.filter((item) => item.id !== zone.id))}
+                onClick={() =>
+                  onChange(zones.filter((item) => item.id !== zone.id))
+                }
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -73,7 +84,9 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
                   className="bg-surface text-ink rounded-full px-2.5 py-1 text-[11px] font-medium"
                   onClick={() =>
                     update(zone.id, {
-                      governorates: zone.governorates.filter((item) => item !== id),
+                      governorates: zone.governorates.filter(
+                        (item) => item !== id,
+                      ),
                     })
                   }
                 >
@@ -87,11 +100,19 @@ export function ShippingZonesForm({ zones, onChange }: ShippingZonesFormProps) {
               value=""
               onChange={(e) => {
                 const id = e.target.value;
-                if (!id || zone.governorates.includes(id as typeof zone.governorates[number])) {
+                if (
+                  !id ||
+                  zone.governorates.includes(
+                    id as (typeof zone.governorates)[number],
+                  )
+                ) {
                   return;
                 }
                 update(zone.id, {
-                  governorates: [...zone.governorates, id as typeof zone.governorates[number]],
+                  governorates: [
+                    ...zone.governorates,
+                    id as (typeof zone.governorates)[number],
+                  ],
                 });
               }}
             >

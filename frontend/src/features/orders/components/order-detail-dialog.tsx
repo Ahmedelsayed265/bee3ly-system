@@ -11,7 +11,11 @@ import {
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
-import { canCancel, canConfirm, canReturn } from '@/features/orders/hooks/use-orders';
+import {
+  canCancel,
+  canConfirm,
+  canReturn,
+} from '@/features/orders/hooks/use-orders';
 
 type OrderDetailDialogProps = {
   order: OrderRow | null;
@@ -19,7 +23,10 @@ type OrderDetailDialogProps = {
   isStatusPending: boolean;
   money: (value: number) => string;
   onOpenChange: (open: boolean) => void;
-  onAsk: (order: OrderRow, status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED') => void;
+  onAsk: (
+    order: OrderRow,
+    status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED',
+  ) => void;
 };
 
 export function OrderDetailDialog({

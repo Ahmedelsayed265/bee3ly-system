@@ -7,10 +7,7 @@ import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
 
 type CampaignStatusAction =
-  | 'ASSISTED_LAUNCH'
-  | 'SIMULATED'
-  | 'PAUSED'
-  | 'ARCHIVED';
+  'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED';
 
 type CampaignDetailProps = {
   campaign: Campaign;
@@ -28,8 +25,7 @@ export function CampaignDetail({
     campaign.status === 'ASSISTED_LAUNCH' ||
     campaign.status === 'SIMULATED' ||
     campaign.status === 'ACTIVE';
-  const canLaunch =
-    campaign.status === 'READY' || campaign.status === 'DRAFT';
+  const canLaunch = campaign.status === 'READY' || campaign.status === 'DRAFT';
   const query = `campaignId=${campaign.id}&campaign=${encodeURIComponent(campaign.name)}`;
 
   const facts = [
@@ -66,7 +62,9 @@ export function CampaignDetail({
 
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm" className="h-9">
-            <Link to={`${paths.inbox}?${query}`}>{t('metricConversations')}</Link>
+            <Link to={`${paths.inbox}?${query}`}>
+              {t('metricConversations')}
+            </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="h-9">
             <Link to={`${paths.leads}?${query}`}>{t('metricLeads')}</Link>
@@ -80,7 +78,9 @@ export function CampaignDetail({
           {facts.map((item) => (
             <div key={item.label}>
               <dt className="text-muted text-xs">{item.label}</dt>
-              <dd className="text-ink mt-1 whitespace-pre-wrap">{item.value}</dd>
+              <dd className="text-ink mt-1 whitespace-pre-wrap">
+                {item.value}
+              </dd>
             </div>
           ))}
           <p className="text-muted text-xs">{t('campaignPublishNotice')}</p>

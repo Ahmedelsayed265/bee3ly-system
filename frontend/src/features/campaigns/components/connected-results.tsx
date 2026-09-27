@@ -36,9 +36,7 @@ export function ConnectedResults({ campaigns }: ConnectedResultsProps) {
           title={campaign.name}
           status={campaign.status}
           statusLabel={t(`campaignStatus_${campaign.status}` as MessageKey)}
-          objectiveLabel={t(
-            `campaignObj_${campaign.objective}` as MessageKey,
-          )}
+          objectiveLabel={t(`campaignObj_${campaign.objective}` as MessageKey)}
           row={{
             spendEgp: campaign.spendEgp,
             impressions: campaign.impressions,
@@ -50,7 +48,12 @@ export function ConnectedResults({ campaigns }: ConnectedResultsProps) {
           }}
         />
       ))}
-      <ResultCard locale={locale} title={t('analyticsTotal')} row={totals} summary />
+      <ResultCard
+        locale={locale}
+        title={t('analyticsTotal')}
+        row={totals}
+        summary
+      />
     </div>
   );
 }
@@ -149,9 +152,7 @@ function ResultCard({
     <article
       className={cn(
         'relative overflow-hidden rounded-[1.75rem] border p-5',
-        summary
-          ? 'border-border bg-page'
-          : 'border-border/70 bg-surface',
+        summary ? 'border-border bg-page' : 'border-border/70 bg-surface',
       )}
     >
       {tone?.live ? (

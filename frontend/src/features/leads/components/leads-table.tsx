@@ -166,7 +166,7 @@ export function LeadsTable({
                 type="button"
                 size="sm"
                 variant="outline"
-                className="text-danger hover:bg-danger/10 hover:text-danger h-8 border-danger/30 px-2.5 text-xs"
+                className="text-danger hover:bg-danger/10 hover:text-danger border-danger/30 h-8 px-2.5 text-xs"
                 disabled={isBusy}
                 onClick={onDeleteSelected}
               >
@@ -213,9 +213,7 @@ export function LeadsTable({
                     {t('leadColCustomer')}
                   </th>
                   <th className="px-4 py-3 text-start">{t('leadColPhone')}</th>
-                  <th className="px-4 py-3 text-start">
-                    {t('leadColIntent')}
-                  </th>
+                  <th className="px-4 py-3 text-start">{t('leadColIntent')}</th>
                   <th className="px-4 py-3 text-start">
                     {t('leadColActions')}
                   </th>
@@ -352,7 +350,8 @@ function FilterChip({
 
 function statusTone(status: string) {
   if (status === 'NEW') return 'border-brand/30 bg-brand/10 text-brand';
-  if (status === 'QUALIFIED') return 'border-transparent bg-lavender text-trust';
+  if (status === 'QUALIFIED')
+    return 'border-transparent bg-lavender text-trust';
   if (status === 'CONVERTED') return 'border-trust/20 bg-trust/10 text-trust';
   return 'border-border bg-page text-muted';
 }

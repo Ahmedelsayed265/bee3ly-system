@@ -195,11 +195,7 @@ export type OrderRow = {
   }>;
 };
 
-export async function fetchOrders(
-  page = 1,
-  limit = 10,
-  campaignId?: string,
-) {
+export async function fetchOrders(page = 1, limit = 10, campaignId?: string) {
   const { data } = await api.get<{
     orders: OrderRow[];
     page: number;
@@ -294,14 +290,16 @@ export async function simulateMessage(
   return data;
 }
 
-export async function fetchLeads(input: {
-  page?: number;
-  limit?: number;
-  status?: string;
-  intent?: string;
-  q?: string;
-  campaignId?: string;
-} = {}) {
+export async function fetchLeads(
+  input: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    intent?: string;
+    q?: string;
+    campaignId?: string;
+  } = {},
+) {
   const { data } = await api.get<
     PageResult<{
       leads: Array<{

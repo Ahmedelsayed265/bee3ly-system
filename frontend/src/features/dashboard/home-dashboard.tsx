@@ -434,9 +434,7 @@ export function HomeDashboard() {
       0,
     );
   const roasFromBudget =
-    roas?.value == null &&
-    plannedBudget > 0 &&
-    (metrics?.salesEgp ?? 0) > 0
+    roas?.value == null && plannedBudget > 0 && (metrics?.salesEgp ?? 0) > 0
       ? metrics!.salesEgp / plannedBudget
       : null;
   const cards: MetricCard[] = [
@@ -462,9 +460,10 @@ export function HomeDashboard() {
       tone: 'bg-alert/25 text-brand',
     },
     {
-      label: roasFromBudget == null && roas?.value == null
-        ? t('metricConversations')
-        : t('metricRoas'),
+      label:
+        roasFromBudget == null && roas?.value == null
+          ? t('metricConversations')
+          : t('metricRoas'),
       value:
         roas?.value != null
           ? formatMetricValue(roas.value, roas.unit, locale)
