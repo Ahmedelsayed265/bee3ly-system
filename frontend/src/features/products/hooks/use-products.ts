@@ -81,16 +81,8 @@ function axesFromProduct(
     });
   };
 
-  const sizes = product.sizes?.length
-    ? product.sizes
-    : Array.isArray(attrs.sizes)
-      ? attrs.sizes.map(String)
-      : [];
-  const colors = product.colors?.length
-    ? product.colors
-    : Array.isArray(attrs.colors)
-      ? attrs.colors.map(String)
-      : [];
+  const sizes = Array.isArray(attrs.sizes) ? attrs.sizes.map(String) : [];
+  const colors = Array.isArray(attrs.colors) ? attrs.colors.map(String) : [];
   const flavors = Array.isArray(attrs.flavors) ? attrs.flavors.map(String) : [];
 
   pushIf(['مقاس', 'Size', 'sizes'], sizes);

@@ -75,16 +75,8 @@ export function dictionaryDraftsFromProducts(
       }
     }
 
-    collectList(
-      bag,
-      ar ? 'مقاس' : 'Size',
-      product.sizes?.length ? product.sizes : listFromAttr(attrs, 'sizes'),
-    );
-    collectList(
-      bag,
-      ar ? 'لون' : 'Color',
-      product.colors?.length ? product.colors : listFromAttr(attrs, 'colors'),
-    );
+    collectList(bag, ar ? 'مقاس' : 'Size', listFromAttr(attrs, 'sizes'));
+    collectList(bag, ar ? 'لون' : 'Color', listFromAttr(attrs, 'colors'));
     collectList(bag, ar ? 'نكهة' : 'Flavor', listFromAttr(attrs, 'flavors'));
     collectList(bag, ar ? 'درجة' : 'Shade', listFromAttr(attrs, 'shade'));
     collectList(bag, ar ? 'خيار' : 'Option', listFromAttr(attrs, 'options'));

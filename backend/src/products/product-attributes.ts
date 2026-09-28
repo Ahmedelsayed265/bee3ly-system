@@ -1,3 +1,5 @@
+import { asVariants, axisValuesByKind } from './product-variants';
+
 export type ProductAttributeValue = string | number | boolean | string[];
 export type ProductAttributes = Record<string, ProductAttributeValue>;
 
@@ -47,6 +49,19 @@ export function syncLegacyArrays(attrs: ProductAttributes): {
   return {
     sizes: listAttributeOptions(attrs, 'sizes'),
     colors: listAttributeOptions(attrs, 'colors'),
+  };
+}
+
+/** Sizes/colors from attributes + variant axes (single source — no DB columns). */
+export function productSizeColorLists(input: {
+  attributes: unknown;
+  variants: unknown;
+}): { sizes: string[]; colors: string[] } {
+  const legacy = syncLegacyArrays(asAttributes(input.attributes));
+  const fromAxes = axisValuesByKind(asVariants(input.variants));
+  return {
+    sizes: legacy.sizes.length ? legacy.sizes : fromAxes.sizes,
+    colors: legacy.colors.length ? legacy.colors : fromAxes.colors,
   };
 }
 

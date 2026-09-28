@@ -231,9 +231,6 @@ model Product {
   attributes  Json     @default("{}")
   /// Variant axes + SKU matrix: { axes: [{name, values}], skus: [{key, options, priceEgp, stockQuantity}] }
   variants    Json     @default("{\"axes\":[],\"skus\":[]}")
-  /// Legacy convenience mirrors of attributes.sizes / attributes.colors / variant axes
-  sizes       String[] @default([])
-  colors      String[] @default([])
   /// Unit count for inventory items (sum of variant stocks when matrix exists). Null for availability-only.
   stockQuantity Int?
   inStock     Boolean  @default(true)

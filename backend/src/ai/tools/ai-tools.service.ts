@@ -6,7 +6,7 @@ import {
   asAttributes,
   formatAttributesLine,
   listAttributeOptions,
-  syncLegacyArrays,
+  productSizeColorLists,
 } from '../../products/product-attributes';
 import {
   asVariants,
@@ -103,7 +103,6 @@ export class AiToolsService {
     const product = await this.getProduct(ctx, args);
     if (!product) return null;
     const attributes = asAttributes(product.attributes);
-    const legacy = syncLegacyArrays(attributes);
     const variants = asVariants(product.variants);
     const chosen = {
       size: args.size ? asString(args.size) : null,
@@ -128,8 +127,8 @@ export class AiToolsService {
         : product.stockQuantity,
       attributes,
       details: formatAttributesLine(attributes),
-      sizes: legacy.sizes.length ? legacy.sizes : product.sizes,
-      colors: legacy.colors.length ? legacy.colors : product.colors,
+      sizes: productSizeColorLists(product).sizes,
+      colors: productSizeColorLists(product).colors,
       priceEgp: matched?.priceEgp ?? product.priceEgp,
       variants: hasVariantMatrix(variants)
         ? formatVariantsSummary(variants)
@@ -147,8 +146,7 @@ export class AiToolsService {
 
   private getDeliveryInfo(ctx: BusinessContext) {
     const parts = [
-      ctx.business.shippingRates,
-      ctx.business.deliveryInfo,
+      ctx.business.shippingRates ?? ctx.business.deliveryInfo,
       ctx.business.workingHours
         ? `ساعات العمل: ${ctx.business.workingHours}`
         : null,
@@ -164,7 +162,7 @@ export class AiToolsService {
       description: ctx.business.description,
       area: ctx.business.operatingArea,
       hours: ctx.business.workingHours,
-      delivery: ctx.business.deliveryInfo,
+      delivery: ctx.business.shippingRates ?? ctx.business.deliveryInfo,
       payment: ctx.business.paymentInfo,
     };
   }
@@ -182,9 +180,8 @@ export class AiToolsService {
     }
 
     const attributes = asAttributes(product.attributes);
-    const legacy = syncLegacyArrays(attributes);
     const variants = asVariants(product.variants);
-    const availableSizes = legacy.sizes.length ? legacy.sizes : product.sizes;
+    const availableSizes = productSizeColorLists(product).sizes;
 
     const customerName = asString(
       args.customerName ?? ctx.customer.name,

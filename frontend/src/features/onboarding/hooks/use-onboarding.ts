@@ -26,9 +26,6 @@ export function useOnboarding() {
   const [primaryGoal, setPrimaryGoal] = useState<BusinessGoal>(
     business?.primaryGoal ?? 'MORE_ORDERS',
   );
-  const [deliveryInfo, setDeliveryInfo] = useState(
-    business?.deliveryInfo ?? '50 ج.م داخل القاهرة',
-  );
   const [workingHours, setWorkingHours] = useState(
     business?.workingHours ?? '10 ص – 11 م',
   );
@@ -42,7 +39,6 @@ export function useOnboarding() {
         averagePriceEgp: averagePriceEgp ? Number(averagePriceEgp) : undefined,
         operatingArea: operatingArea.trim() || undefined,
         primaryGoal,
-        deliveryInfo: deliveryInfo.trim() || undefined,
         workingHours: workingHours.trim() || undefined,
         contactChannels: ['FACEBOOK', 'INSTAGRAM'],
         completeOnboarding: true,
@@ -65,8 +61,6 @@ export function useOnboarding() {
     setOperatingArea,
     primaryGoal,
     setPrimaryGoal,
-    deliveryInfo,
-    setDeliveryInfo,
     workingHours,
     setWorkingHours,
     saving,

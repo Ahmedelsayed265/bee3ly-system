@@ -7,15 +7,12 @@ import type { MessageKey } from '@/features/i18n/messages';
 import {
   PAYMENT_METHODS,
   WEEK_DAYS,
-  parseDelivery,
   parseFaqs,
   parseHours,
   parsePayment,
-  serializeDelivery,
   serializeFaqs,
   serializeHours,
   serializePayment,
-  type DeliveryDraft,
   type FaqDraft,
   type HoursDraft,
   type PaymentMethod,
@@ -43,12 +40,10 @@ const PAYMENT_LABEL: Record<PaymentMethod, MessageKey> = {
 
 type KnowledgeFormProps = {
   faqs: string;
-  deliveryInfo: string;
   workingHours: string;
   paymentInfo: string;
   isSaving: boolean;
   onFaqsChange: (value: string) => void;
-  onDeliveryInfoChange: (value: string) => void;
   onWorkingHoursChange: (value: string) => void;
   onPaymentInfoChange: (value: string) => void;
   onSave: () => void;
@@ -93,12 +88,10 @@ function MiniLabel({
 
 export function KnowledgeForm({
   faqs,
-  deliveryInfo,
   workingHours,
   paymentInfo,
   isSaving,
   onFaqsChange,
-  onDeliveryInfoChange,
   onWorkingHoursChange,
   onPaymentInfoChange,
   onSave,
@@ -106,9 +99,6 @@ export function KnowledgeForm({
   const { t } = useLocale();
   const [hours, setHours] = useState<HoursDraft>(() =>
     parseHours(workingHours),
-  );
-  const [delivery, setDelivery] = useState<DeliveryDraft>(() =>
-    parseDelivery(deliveryInfo),
   );
   const [methods, setMethods] = useState<PaymentMethod[]>(() =>
     parsePayment(paymentInfo),
@@ -118,11 +108,6 @@ export function KnowledgeForm({
   const updateHours = (next: HoursDraft) => {
     setHours(next);
     onWorkingHoursChange(serializeHours(next));
-  };
-
-  const updateDelivery = (next: DeliveryDraft) => {
-    setDelivery(next);
-    onDeliveryInfoChange(serializeDelivery(next));
   };
 
   const toggleDay = (day: WeekDay) => {
@@ -152,133 +137,53 @@ export function KnowledgeForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Section title={t('workingHours')} hint={t('workingHoursHint')}>
-          <div className="flex flex-wrap gap-2">
-            {WEEK_DAYS.map((day) => {
-              const selected = hours.days.includes(day);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleDay(day)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-xs font-semibold transition',
-                    selected
-                      ? 'border-brand bg-brand text-white'
-                      : 'border-border text-muted hover:text-ink',
-                  )}
-                >
-                  {t(DAY_LABEL[day])}
-                </button>
-              );
-            })}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <MiniLabel htmlFor="hours-open">{t('hoursFrom')}</MiniLabel>
-              <Input
-                id="hours-open"
-                type="time"
-                value={hours.open}
-                onChange={(e) =>
-                  updateHours({ ...hours, open: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <MiniLabel htmlFor="hours-close">{t('hoursTo')}</MiniLabel>
-              <Input
-                id="hours-close"
-                type="time"
-                value={hours.close}
-                onChange={(e) =>
-                  updateHours({ ...hours, close: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        </Section>
-
-        <Section title={t('deliveryInfo')} hint={t('deliveryInfoHint')}>
+      <Section title={t('workingHours')} hint={t('workingHoursHint')}>
+        <div className="flex flex-wrap gap-2">
+          {WEEK_DAYS.map((day) => {
+            const selected = hours.days.includes(day);
+            return (
+              <button
+                key={day}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => toggleDay(day)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                  selected
+                    ? 'border-brand bg-brand text-white'
+                    : 'border-border text-muted hover:text-ink',
+                )}
+              >
+                {t(DAY_LABEL[day])}
+              </button>
+            );
+          })}
+        </div>
+        <div className="grid max-w-md grid-cols-2 gap-3">
           <div>
-            <MiniLabel htmlFor="delivery-area">{t('deliveryArea')}</MiniLabel>
+            <MiniLabel htmlFor="hours-open">{t('hoursFrom')}</MiniLabel>
             <Input
-              id="delivery-area"
-              value={delivery.area}
-              placeholder={t('deliveryAreaPlaceholder')}
+              id="hours-open"
+              type="time"
+              value={hours.open}
               onChange={(e) =>
-                updateDelivery({ ...delivery, area: e.target.value })
+                updateHours({ ...hours, open: e.target.value })
               }
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <MiniLabel htmlFor="delivery-from">{t('deliveryFrom')}</MiniLabel>
-              <Input
-                id="delivery-from"
-                inputMode="numeric"
-                value={delivery.fromHours}
-                placeholder="24"
-                onChange={(e) =>
-                  updateDelivery({
-                    ...delivery,
-                    fromHours: e.target.value.replace(/[^\d]/g, ''),
-                  })
-                }
-              />
-            </div>
-            <div>
-              <MiniLabel htmlFor="delivery-to">{t('deliveryTo')}</MiniLabel>
-              <Input
-                id="delivery-to"
-                inputMode="numeric"
-                value={delivery.toHours}
-                placeholder="48"
-                onChange={(e) =>
-                  updateDelivery({
-                    ...delivery,
-                    toHours: e.target.value.replace(/[^\d]/g, ''),
-                  })
-                }
-              />
-            </div>
-            <div>
-              <MiniLabel htmlFor="delivery-fee">{t('deliveryFee')}</MiniLabel>
-              <Input
-                id="delivery-fee"
-                inputMode="numeric"
-                value={delivery.fee}
-                placeholder="50"
-                onChange={(e) =>
-                  updateDelivery({
-                    ...delivery,
-                    fee: e.target.value.replace(/[^\d]/g, ''),
-                  })
-                }
-              />
-            </div>
-            <div>
-              <MiniLabel htmlFor="delivery-free">
-                {t('deliveryFreeAbove')}
-              </MiniLabel>
-              <Input
-                id="delivery-free"
-                inputMode="numeric"
-                value={delivery.freeAbove}
-                placeholder="1500"
-                onChange={(e) =>
-                  updateDelivery({
-                    ...delivery,
-                    freeAbove: e.target.value.replace(/[^\d]/g, ''),
-                  })
-                }
-              />
-            </div>
+          <div>
+            <MiniLabel htmlFor="hours-close">{t('hoursTo')}</MiniLabel>
+            <Input
+              id="hours-close"
+              type="time"
+              value={hours.close}
+              onChange={(e) =>
+                updateHours({ ...hours, close: e.target.value })
+              }
+            />
           </div>
-        </Section>
-      </div>
+        </div>
+      </Section>
 
       <Section title={t('paymentInfo')} hint={t('paymentInfoHint')}>
         <div className="flex flex-wrap gap-2">
@@ -379,6 +284,8 @@ export function KnowledgeForm({
           </Button>
         </div>
       </Section>
+
+      <p className="text-muted text-xs leading-5">{t('knowledgeShippingNote')}</p>
     </div>
   );
 }

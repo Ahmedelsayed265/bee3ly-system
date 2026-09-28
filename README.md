@@ -34,7 +34,9 @@ bee3ly-system/
 ├── backend/          # NestJS API + Prisma
 ├── frontend/         # Vite React SPA
 ├── docs/
-│   └── beta-first-business.md   # بلاي بوك أول بيزنس بيتا
+│   ├── beta-first-business.md   # بلاي بوك أول بيزنس بيتا
+│   ├── tiktok-integration.md    # خطة ربط TikTok
+│   └── architecture-modules.md  # ترابط الموديولات ومصادر الحقيقة
 ├── docker-compose.yml
 └── README.md         # هذا الملف
 ```
@@ -54,9 +56,9 @@ cd frontend && npm install
 cd .. && npm run dev
 ```
 
-السكربت يوقف أي شيء شغّال على المنافذ **3000 / 5173 / 5432** (سيرفرات dev أو Postgres مدمج)، يشغّل `docker compose up -d`، يطبّق migrations، ثم backend + frontend في نفس التيرمنال.
+السكربت يوقف أي شيء شغّال على المنافذ **5000 / 5173 / 5432** (سيرفرات dev أو Postgres مدمج)، يشغّل `docker compose up -d`، يطبّق migrations، ثم backend + frontend في نفس التيرمنال.
 
-- API: `http://localhost:3000`
+- API: `http://localhost:5000`
 - UI: `http://localhost:5173`
 - إيقاف الحاوية فقط: `npm run dev:stop` من الجذر
 
@@ -161,6 +163,7 @@ Backend: `cd backend && npm run start:dev` — Frontend: `cd frontend && npm run
 ### Docs
 
 - `docs/beta-first-business.md` — بلاي بوك قياس أول بيزنس بيتا
+- `docs/tiktok-integration.md` — خطوات التكامل الكامل لـ TikTok (parity مع Meta)
 
 ---
 
@@ -203,7 +206,7 @@ Then restart or redeploy the API.
 
 **Frontend** (`frontend/.env.example`):
 
-`VITE_API_URL=http://localhost:3000`
+`VITE_API_URL=http://localhost:5000`
 
 On **Vercel**, set `VITE_API_URL` to the public HTTPS backend URL (not localhost), then redeploy so the build picks it up.
 

@@ -65,8 +65,6 @@ export type Product = {
       stockQuantity: number;
     }>;
   };
-  sizes: string[];
-  colors: string[];
   stockQuantity?: number | null;
   inStock: boolean;
 };
@@ -147,8 +145,6 @@ export async function createProduct(input: {
       stockQuantity: number;
     }>;
   };
-  sizes?: string[];
-  colors?: string[];
   stockQuantity?: number;
   inStock?: boolean;
 }) {
@@ -173,8 +169,6 @@ export async function updateProduct(
         stockQuantity: number;
       }>;
     };
-    sizes: string[];
-    colors: string[];
     stockQuantity: number;
     inStock: boolean;
   }>,

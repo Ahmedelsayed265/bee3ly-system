@@ -74,7 +74,7 @@ async function bootstrap() {
     }),
   );
 
-  const port = Number(config.get('PORT') ?? 3000);
+  const port = Number(config.get('PORT') ?? 5000);
   await app.listen(port);
 }
 

@@ -78,12 +78,10 @@ export function SettingsPageView() {
       ) : (
         <KnowledgeForm
           faqs={knowledge.faqs}
-          deliveryInfo={knowledge.deliveryInfo}
           workingHours={knowledge.workingHours}
           paymentInfo={knowledge.paymentInfo}
           isSaving={knowledge.isSaving}
           onFaqsChange={knowledge.setFaqs}
-          onDeliveryInfoChange={knowledge.setDeliveryInfo}
           onWorkingHoursChange={knowledge.setWorkingHours}
           onPaymentInfoChange={knowledge.setPaymentInfo}
           onSave={knowledge.save}

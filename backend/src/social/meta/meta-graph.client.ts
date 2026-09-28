@@ -36,7 +36,7 @@ export class MetaGraphClient {
     const appSecret = this.config.get<string>('META_APP_SECRET');
     const redirect = this.config.get<string>(
       'META_REDIRECT_URI',
-      'http://localhost:3000/social/meta/callback',
+      'http://localhost:5000/social/meta/callback',
     );
     if (!appId || !appSecret) {
       throw new Error('META_APP_ID / META_APP_SECRET not configured');

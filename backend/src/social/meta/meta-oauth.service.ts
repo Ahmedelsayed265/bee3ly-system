@@ -31,7 +31,7 @@ export class MetaOauthService {
     const appId = this.config.get<string>('META_APP_ID');
     const redirect = this.config.get<string>(
       'META_REDIRECT_URI',
-      'http://localhost:3000/social/meta/callback',
+      'http://localhost:5000/social/meta/callback',
     );
     if (!appId) return null;
     const state = Buffer.from(JSON.stringify({ businessId, userId })).toString(

@@ -9,7 +9,8 @@ const rootDir = path.join(__dirname, '..');
 const backendDir = path.join(rootDir, 'backend');
 const frontendDir = path.join(rootDir, 'frontend');
 
-const DEV_PORTS = [3000, 5173];
+const BACKEND_PORT = 5000;
+const DEV_PORTS = [BACKEND_PORT, 5173];
 const PG_PORT = 5432;
 
 function run(command, args, options = {}) {
@@ -205,7 +206,7 @@ async function main() {
   const useDocker = hasDockerCli();
   let embeddedPg = null;
 
-  console.log('Stopping previous dev servers (ports 3000, 5173)...');
+  console.log(`Stopping previous dev servers (ports ${BACKEND_PORT}, 5173)...`);
   for (const port of DEV_PORTS) killPort(port);
 
   if (useDocker) {
@@ -240,7 +241,7 @@ async function main() {
   console.log('Applying migrations...');
   run('npx', ['prisma', 'migrate', 'deploy'], { cwd: backendDir });
 
-  console.log('Starting backend (3000) and frontend (5173)...');
+  console.log(`Starting backend (${BACKEND_PORT}) and frontend (5173)...`);
   console.log(
     useDocker
       ? 'Press Ctrl+C to stop API and UI (Postgres container keeps running).\n'

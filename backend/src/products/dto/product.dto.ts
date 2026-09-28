@@ -90,18 +90,6 @@ export class CreateProductDto {
   @Type(() => ProductVariantsDto)
   variants?: ProductVariantsDto;
 
-  /** @deprecated Prefer attributes.sizes / variants — kept for compatibility */
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  sizes?: string[];
-
-  /** @deprecated Prefer attributes.colors / variants — kept for compatibility */
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  colors?: string[];
-
   /** Inventory count when no variant matrix. Ignored/overwritten when variants.skus exist. */
   @IsOptional()
   @Type(() => Number)
@@ -145,16 +133,6 @@ export class UpdateProductDto {
   @ValidateNested()
   @Type(() => ProductVariantsDto)
   variants?: ProductVariantsDto;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  sizes?: string[];
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  colors?: string[];
 
   @IsOptional()
   @Type(() => Number)

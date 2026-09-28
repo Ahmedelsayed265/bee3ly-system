@@ -10,9 +10,6 @@ export function useKnowledgeSettings() {
   const { business, refreshMe } = useAuth();
 
   const [faqs, setFaqs] = useState(business?.faqs ?? '');
-  const [deliveryInfo, setDeliveryInfo] = useState(
-    business?.deliveryInfo ?? '',
-  );
   const [workingHours, setWorkingHours] = useState(
     business?.workingHours ?? '',
   );
@@ -22,7 +19,6 @@ export function useKnowledgeSettings() {
     mutationFn: () =>
       updateBusiness({
         faqs,
-        deliveryInfo,
         workingHours,
         paymentInfo,
       }),
@@ -38,8 +34,6 @@ export function useKnowledgeSettings() {
   return {
     faqs,
     setFaqs,
-    deliveryInfo,
-    setDeliveryInfo,
     workingHours,
     setWorkingHours,
     paymentInfo,

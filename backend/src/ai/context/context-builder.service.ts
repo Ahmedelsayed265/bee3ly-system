@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   asAttributes,
   formatAttributesLine,
-  syncLegacyArrays,
+  productSizeColorLists,
 } from '../../products/product-attributes';
 import {
   asVariants,
@@ -89,16 +89,16 @@ export class ContextBuilderService {
       },
       products: products.map((p) => {
         const attributes = asAttributes(p.attributes);
-        const legacy = syncLegacyArrays(attributes);
         const variants = asVariants(p.variants);
+        const lists = productSizeColorLists(p);
         return {
           id: p.id,
           name: p.name,
           description: p.description,
           priceEgp: p.priceEgp,
           attributes,
-          sizes: legacy.sizes.length ? legacy.sizes : p.sizes,
-          colors: legacy.colors.length ? legacy.colors : p.colors,
+          sizes: lists.sizes,
+          colors: lists.colors,
           stockQuantity: p.stockQuantity,
           inStock: p.inStock,
           variantsSummary: hasVariantMatrix(variants)
@@ -153,7 +153,11 @@ export class ContextBuilderService {
       ctx.business.description ? `About: ${ctx.business.description}` : '',
       ctx.business.operatingArea ? `Area: ${ctx.business.operatingArea}` : '',
       ctx.business.workingHours ? `Hours: ${ctx.business.workingHours}` : '',
-      ctx.business.deliveryInfo ? `Delivery: ${ctx.business.deliveryInfo}` : '',
+      ctx.business.shippingRates
+        ? `Shipping: ${ctx.business.shippingRates}`
+        : ctx.business.deliveryInfo
+          ? `Delivery: ${ctx.business.deliveryInfo}`
+          : '',
       ctx.business.paymentInfo ? `Payment: ${ctx.business.paymentInfo}` : '',
       ctx.business.faqs ? `FAQs:\n${ctx.business.faqs}` : '',
       `Agent goal: ${ctx.agent.primaryGoal}`,

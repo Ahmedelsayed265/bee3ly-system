@@ -18,8 +18,6 @@ export function OnboardingPageView() {
     setOperatingArea,
     primaryGoal,
     setPrimaryGoal,
-    deliveryInfo,
-    setDeliveryInfo,
     workingHours,
     setWorkingHours,
     saving,
@@ -58,9 +56,7 @@ export function OnboardingPageView() {
         {step === 2 ? (
           <OnboardingDetailsStep
             workingHours={workingHours}
-            deliveryInfo={deliveryInfo}
             onWorkingHoursChange={setWorkingHours}
-            onDeliveryInfoChange={setDeliveryInfo}
           />
         ) : null}
 

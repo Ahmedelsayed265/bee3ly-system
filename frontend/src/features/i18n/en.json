@@ -159,6 +159,7 @@
   "knowledgeOpsTitle": "How you operate",
   "knowledgeOpsHint": "The AI uses this when customers ask about hours, delivery, or payment.",
   "workingHoursHint": "Pick the open days and the opening and closing times.",
+  "knowledgeShippingNote": "Delivery fees and governorates are under Settings → Delivery (shipping zones).",
   "workingHoursPlaceholder": "Sat–Thu, 10 AM – 11 PM",
   "deliveryInfoHint": "Area, delivery window in hours, and the fee.",
   "deliveryInfoPlaceholder": "Inside Cairo in 24–48 hours, 50 EGP",

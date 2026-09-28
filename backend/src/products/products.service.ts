@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import {
   asAttributes,
-  mergeLegacyIntoAttributes,
   syncLegacyArrays,
 } from './product-attributes';
 import {
@@ -162,11 +161,7 @@ export class ProductsService {
   async create(userId: string, dto: CreateProductDto) {
     const businessId = await this.access.requireBusinessId(userId);
     const type = await this.businessType(businessId);
-    const attributes = mergeLegacyIntoAttributes(
-      asAttributes(dto.attributes),
-      dto.sizes,
-      dto.colors,
-    );
+    const attributes = asAttributes(dto.attributes);
     const variants = this.normalizeVariants(
       dto.variants,
       dto.priceEgp,
@@ -190,8 +185,6 @@ export class ProductsService {
         costEgp: dto.costEgp ?? null,
         attributes: derived.attributes,
         variants: derived.variants as unknown as Prisma.InputJsonValue,
-        sizes: derived.legacy.sizes,
-        colors: derived.legacy.colors,
         stockQuantity: derived.stockQuantity,
         inStock: derived.inStock,
       },
@@ -207,20 +200,11 @@ export class ProductsService {
     });
     if (!existing) throw new NotFoundException('Product not found');
 
-    const shouldTouchAttributes =
-      dto.attributes !== undefined ||
-      dto.sizes !== undefined ||
-      dto.colors !== undefined;
+    const shouldTouchAttributes = dto.attributes !== undefined;
 
     let attributes = asAttributes(existing.attributes);
     if (shouldTouchAttributes) {
-      attributes = mergeLegacyIntoAttributes(
-        dto.attributes !== undefined
-          ? asAttributes(dto.attributes)
-          : attributes,
-        dto.sizes,
-        dto.colors,
-      );
+      attributes = asAttributes(dto.attributes);
     }
 
     const existingVariants = asVariants(existing.variants);
@@ -262,11 +246,7 @@ export class ProductsService {
         priceEgp: derived.priceEgp,
         ...(dto.costEgp !== undefined ? { costEgp: dto.costEgp } : {}),
         ...(shouldTouchAttributes || dto.variants !== undefined
-          ? {
-              attributes: derived.attributes,
-              sizes: derived.legacy.sizes,
-              colors: derived.legacy.colors,
-            }
+          ? { attributes: derived.attributes }
           : {}),
         ...(dto.variants !== undefined
           ? {
