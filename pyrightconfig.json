@@ -1,0 +1,13 @@
+{
+  "venvPath": "ai-services",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "include": ["ai-services/app"],
+  "executionEnvironments": [
+    {
+      "root": "ai-services",
+      "extraPaths": ["ai-services"]
+    }
+  ],
+  "typeCheckingMode": "basic"
+}

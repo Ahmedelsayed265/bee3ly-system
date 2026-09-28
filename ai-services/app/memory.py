@@ -1,15 +1,22 @@
 import json
+from typing import Dict
+
 import redis
+
 from app.config import settings
 
-# Initialize Redis client using Upstash Cloud URL
+# Fast fail when Redis is not running locally (avoids multi-second hangs on Windows).
 redis_client = redis.Redis.from_url(
     settings.REDIS_URL,
-    decode_responses=True
+    decode_responses=True,
+    socket_connect_timeout=1,
+    socket_timeout=1,
 )
 
+_memory_fallback: Dict[str, str] = {}
+
+
 def get_session_history(conversation_id: str, customer_id: str) -> list:
-    """Retrieve full conversation history for a given session without truncation."""
     key = f"chat_history:{conversation_id}:{customer_id}"
     try:
         history_json = redis_client.get(key)
@@ -17,22 +24,29 @@ def get_session_history(conversation_id: str, customer_id: str) -> list:
             return json.loads(history_json)
     except Exception as e:
         print(f"[Redis Error] Failed to get session history: {e}")
+    raw = _memory_fallback.get(key)
+    if raw:
+        try:
+            return json.loads(raw)
+        except Exception:
+            return []
     return []
 
+
 def save_session_history(conversation_id: str, customer_id: str, history: list):
-    """
-    Save the updated conversation history permanently.
-    No TTL applied so history remains permanently on Upstash.
-    """
     key = f"chat_history:{conversation_id}:{customer_id}"
+    payload = json.dumps(history)
     try:
-        redis_client.set(name=key, value=json.dumps(history))
+        redis_client.set(name=key, value=payload)
+        return
     except Exception as e:
         print(f"[Redis Error] Failed to save session history: {e}")
+    _memory_fallback[key] = payload
+
 
 def clear_session_history(conversation_id: str, customer_id: str):
-    """Delete conversation history if a reset is requested."""
     key = f"chat_history:{conversation_id}:{customer_id}"
+    _memory_fallback.pop(key, None)
     try:
         redis_client.delete(key)
     except Exception as e:

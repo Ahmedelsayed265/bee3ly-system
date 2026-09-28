@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -43,6 +44,7 @@ export class AiController {
 
   /** Session catalog + shipping/payment block for external AI service. */
   @Post('session-context')
+  @HttpCode(200)
   sessionContext(
     @CurrentUser() user: AuthUser,
     @Body() dto: AiSessionContextDto,
@@ -52,6 +54,7 @@ export class AiController {
 
   /** Execute a validated sales tool (order, lead, stock, shipping quote). */
   @Post('run-tool')
+  @HttpCode(200)
   runTool(@CurrentUser() user: AuthUser, @Body() dto: RunAiToolDto) {
     return this.ai.runTool(user.id, dto);
   }

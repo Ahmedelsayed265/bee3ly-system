@@ -1,5 +1,10 @@
 import os
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+_ENV_DIR = Path(__file__).resolve().parent.parent
+
 
 class Settings(BaseSettings):
     GEMINI_API_KEY: str
@@ -10,8 +15,12 @@ class Settings(BaseSettings):
     BEE3LY_API_URL: str = "http://127.0.0.1:5000"
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_DIR / ".env")
         extra = "allow"
 
+
 settings = Settings()
-os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
+_key = settings.GEMINI_API_KEY.strip()
+if not _key:
+    raise ValueError("GEMINI_API_KEY is empty — set it in ai-services/.env")
+settings.GEMINI_API_KEY = _key

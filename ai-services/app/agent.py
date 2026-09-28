@@ -9,6 +9,10 @@ from app.memory import get_session_history, save_session_history
 MAX_TOOL_ROUNDS = 4
 
 
+def _gemini_client() -> genai.Client:
+    return genai.Client(api_key=settings.GEMINI_API_KEY)
+
+
 def execute_customer_chat(
     *,
     conversation_id: str,
@@ -55,7 +59,7 @@ def execute_customer_chat(
         types.Content(role="user", parts=[types.Part.from_text(text=message)])
     )
 
-    client = genai.Client()
+    client = _gemini_client()
     tools_used: list[str] = []
     order = None
     lead = None

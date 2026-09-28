@@ -32,7 +32,7 @@ def fetch_session_context(
         },
         timeout=20,
     )
-    if res.status_code != 200:
+    if res.status_code >= 400:
         print(f"[bee3ly] session-context {res.status_code}: {res.text[:300]}")
         return {"contextBlock": "", "governorateIds": []}
     return res.json()
