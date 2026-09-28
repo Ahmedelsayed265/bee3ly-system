@@ -1,15 +1,15 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CampaignObjective, CampaignStatus, NotificationType } from '@prisma/client';
+import {
+  CampaignObjective,
+  CampaignStatus,
+  NotificationType,
+} from '@prisma/client';
 import {
   AttributionService,
   type AttributionChain,
 } from '../analytics/attribution.service';
-import {
-  computeMetrics,
-  EMPTY_DELIVERY,
-  type CampaignObjectiveId,
-} from '../analytics/campaign-metrics';
+import { computeMetrics, EMPTY_DELIVERY } from '../analytics/campaign-metrics';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -174,11 +174,7 @@ export class CampaignsService {
     campaign: T,
     chain: AttributionChain,
   ) {
-    const measured = computeMetrics(
-      chain,
-      EMPTY_DELIVERY,
-      campaign.objective as CampaignObjectiveId,
-    );
+    const measured = computeMetrics(chain, EMPTY_DELIVERY, campaign.objective);
     return {
       ...campaign,
       conversations: chain.conversations,

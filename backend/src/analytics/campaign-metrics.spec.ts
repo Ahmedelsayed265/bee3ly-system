@@ -133,8 +133,8 @@ describe('campaign metrics', () => {
         orders: 1,
         revenueEgp: 300,
         costOfGoodsEgp: null,
-      shippingEgp: null,
-      returnShippingEgp: null,
+        shippingEgp: null,
+        returnShippingEgp: null,
       },
       {
         spendEgp: null,
@@ -167,8 +167,8 @@ describe('campaign metrics', () => {
         orders: 0,
         revenueEgp: 0,
         costOfGoodsEgp: null,
-      shippingEgp: null,
-      returnShippingEgp: null,
+        shippingEgp: null,
+        returnShippingEgp: null,
       },
       {
         spendEgp: 5_000,

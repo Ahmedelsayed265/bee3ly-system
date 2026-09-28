@@ -18,6 +18,14 @@ export type ProductVariants = {
 
 export const EMPTY_VARIANTS: ProductVariants = { axes: [], skus: [] };
 
+function asTrimmedString(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value).trim();
+  }
+  return '';
+}
+
 const SIZE_AXIS_NAMES = new Set([
   'size',
   'sizes',
@@ -81,9 +89,13 @@ export function asVariants(raw: unknown): ProductVariants {
     .map((item) => {
       if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
       const row = item as Record<string, unknown>;
-      const name = String(row.name ?? '').trim();
+      const name = asTrimmedString(row.name);
       const values = Array.isArray(row.values)
-        ? [...new Set(row.values.map((v) => String(v).trim()).filter(Boolean))]
+        ? [
+            ...new Set(
+              row.values.map((v) => asTrimmedString(v)).filter(Boolean),
+            ),
+          ]
         : [];
       if (!name || !values.length) return null;
       return { name, values };
@@ -103,7 +115,7 @@ export function asVariants(raw: unknown): ProductVariants {
       const options: Record<string, string> = {};
       for (const [k, v] of Object.entries(optionsRaw)) {
         const key = k.trim();
-        const value = String(v ?? '').trim();
+        const value = asTrimmedString(v);
         if (key && value) options[key] = value;
       }
       if (!Object.keys(options).length) return null;
@@ -113,7 +125,7 @@ export function asVariants(raw: unknown): ProductVariants {
         Math.floor(Number(row.stockQuantity ?? 0)),
       );
       return {
-        key: String(row.key ?? '').trim() || variantSkuKey(options),
+        key: asTrimmedString(row.key) || variantSkuKey(options),
         options,
         priceEgp,
         stockQuantity,
@@ -180,7 +192,7 @@ export function variantsTotalStock(variants: ProductVariants): number {
 /** Display / base price: first SKU when matrix exists. */
 export function variantsFirstPrice(variants: ProductVariants): number | null {
   if (!variants.skus.length) return null;
-  return variants.skus[0]!.priceEgp;
+  return variants.skus[0].priceEgp;
 }
 
 export function hasVariantMatrix(variants: ProductVariants): boolean {

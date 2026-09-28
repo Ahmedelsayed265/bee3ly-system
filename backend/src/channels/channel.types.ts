@@ -68,6 +68,5 @@ export type AiEngineInboundResponse = {
     | 'SERVICE_UNAVAILABLE'
     | 'TIMEOUT'
     | 'PRODUCTS_UNAVAILABLE'
-    | 'INVALID_RESPONSE'
-    | string;
+    | 'INVALID_RESPONSE';
 };

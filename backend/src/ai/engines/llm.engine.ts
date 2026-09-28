@@ -286,7 +286,8 @@ export class LlmEngine {
               },
               paymentMethod: {
                 type: 'string',
-                description: 'How customer will pay (from business payment options)',
+                description:
+                  'How customer will pay (from business payment options)',
               },
             },
             ['customerName', 'customerPhone'],

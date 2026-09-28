@@ -71,7 +71,9 @@ export class OrdersService {
     },
   ): Prisma.OrderWhereInput {
     const q = filters.q?.trim();
-    const orderNumber = q ? Number.parseInt(q.replace(/^#/, ''), 10) : Number.NaN;
+    const orderNumber = q
+      ? Number.parseInt(q.replace(/^#/, ''), 10)
+      : Number.NaN;
     return {
       businessId,
       ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
@@ -84,10 +86,10 @@ export class OrdersService {
             OR: [
               { customerName: { contains: q, mode: 'insensitive' } },
               { customerPhone: { contains: q, mode: 'insensitive' } },
-              { items: { some: { name: { contains: q, mode: 'insensitive' } } } },
-              ...(Number.isFinite(orderNumber)
-                ? [{ orderNumber }]
-                : []),
+              {
+                items: { some: { name: { contains: q, mode: 'insensitive' } } },
+              },
+              ...(Number.isFinite(orderNumber) ? [{ orderNumber }] : []),
             ],
           }
         : {}),
@@ -115,10 +117,16 @@ export class OrdersService {
     if (!existing) throw new NotFoundException('Order not found');
 
     const order = await this.prisma.$transaction(async (tx) => {
-      if (existing.status !== OrderStatus.RETURNED && status === OrderStatus.RETURNED) {
+      if (
+        existing.status !== OrderStatus.RETURNED &&
+        status === OrderStatus.RETURNED
+      ) {
         await this.adjustStock(tx, existing.items, 1);
       }
-      if (existing.status === OrderStatus.RETURNED && status !== OrderStatus.RETURNED) {
+      if (
+        existing.status === OrderStatus.RETURNED &&
+        status !== OrderStatus.RETURNED
+      ) {
         await this.adjustStock(tx, existing.items, -1);
       }
       return tx.order.update({
@@ -175,7 +183,7 @@ export class OrdersService {
         await tx.product.update({
           where: { id: product.id },
           data: {
-            variants: nextVariants as unknown as Prisma.InputJsonValue,
+            variants: nextVariants,
             stockQuantity: nextTotal,
             inStock: nextTotal > 0,
           },

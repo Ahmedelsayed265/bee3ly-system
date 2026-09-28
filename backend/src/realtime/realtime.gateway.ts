@@ -12,6 +12,10 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { BusinessAccessService } from '../common/business-access.service';
 import { RealtimeService } from './realtime.service';
 
+type RealtimeSocket = Socket & {
+  data: { userId?: string; businessId?: string };
+};
+
 function parseFrontendOrigins(raw: string | undefined): string[] | boolean {
   const origins = (raw ?? 'http://localhost:5173')
     .split(',')
@@ -46,6 +50,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   async handleConnection(client: Socket) {
+    const socket = client as RealtimeSocket;
     try {
       const token = this.extractToken(client);
       if (!token) {
@@ -60,8 +65,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       const businessId = await this.access.requireBusinessId(payload.sub);
       const room = `business:${businessId}`;
       await client.join(room);
-      client.data.userId = payload.sub;
-      client.data.businessId = businessId;
+      const data = socket.data as { userId: string; businessId: string };
+      data.userId = payload.sub;
+      data.businessId = businessId;
       this.logger.debug(`Socket ${client.id} joined ${room}`);
     } catch (err) {
       this.logger.debug(
@@ -72,7 +78,8 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   }
 
   private extractToken(client: Socket): string | null {
-    const authToken = client.handshake.auth?.token;
+    const authToken = (client.handshake.auth as { token?: unknown } | undefined)
+      ?.token;
     if (typeof authToken === 'string' && authToken.trim()) {
       return authToken.trim();
     }

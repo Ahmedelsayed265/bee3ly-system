@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { ActorType, LeadStatus, NotificationType, Prisma } from '@prisma/client';
+import { ActorType, LeadStatus, NotificationType } from '@prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -21,7 +21,6 @@ import { isAvailable } from '../../products/stock-mode';
 import { presentKnowledge } from '../../businesses/knowledge-text';
 import {
   GOVERNORATE_IDS,
-  formatShippingZonesForKnowledge,
   parseShippingZones,
   shippingPriceForGovernorate,
 } from '../../businesses/shipping-zones';
@@ -146,9 +145,7 @@ export class AiToolsService {
       name: product.name,
       description: product.description,
       inStock: available,
-      stockQuantity: matched
-        ? matched.stockQuantity
-        : product.stockQuantity,
+      stockQuantity: matched ? matched.stockQuantity : product.stockQuantity,
       attributes,
       details: formatAttributesLine(attributes),
       sizes: productSizeColorLists(product).sizes,
@@ -269,7 +266,9 @@ export class AiToolsService {
     const unitPriceEgp = unitPrice;
     const zone = zones.find((z) =>
       governorate
-        ? z.governorates.includes(governorate as (typeof GOVERNORATE_IDS)[number])
+        ? z.governorates.includes(
+            governorate as (typeof GOVERNORATE_IDS)[number],
+          )
         : false,
     );
 
@@ -458,7 +457,7 @@ export class AiToolsService {
       await this.prisma.product.update({
         where: { id: product.id },
         data: {
-          variants: nextVariants as unknown as Prisma.InputJsonValue,
+          variants: nextVariants,
           stockQuantity: nextTotal,
           inStock: nextTotal > 0,
           priceEgp: product.priceEgp,

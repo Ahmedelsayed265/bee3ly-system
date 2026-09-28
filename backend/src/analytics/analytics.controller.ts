@@ -7,11 +7,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttributionService } from './attribution.service';
-import {
-  computeMetrics,
-  EMPTY_DELIVERY,
-  type CampaignObjectiveId,
-} from './campaign-metrics';
+import { computeMetrics, EMPTY_DELIVERY } from './campaign-metrics';
 
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
@@ -108,7 +104,7 @@ export class AnalyticsController {
         const measured = computeMetrics(
           chains.forCampaign(campaign.id),
           EMPTY_DELIVERY,
-          campaign.objective as CampaignObjectiveId,
+          campaign.objective,
         );
         const chain = chains.forCampaign(campaign.id);
         return {

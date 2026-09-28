@@ -48,9 +48,9 @@ function formatDays(days: string[]) {
   if (!indexes.length) return '';
   if (indexes.length === WEEK_DAYS.length) return 'كل أيام الأسبوع';
   const contiguous = indexes.every(
-    (index, position) => position === 0 || index === indexes[position - 1]! + 1,
+    (index, position) => position === 0 || index === indexes[position - 1] + 1,
   );
-  const labels = indexes.map((index) => DAY_LABEL[WEEK_DAYS[index]!]);
+  const labels = indexes.map((index) => DAY_LABEL[WEEK_DAYS[index]]);
   if (contiguous && labels.length > 1) {
     return `${labels[0]}–${labels[labels.length - 1]}`;
   }

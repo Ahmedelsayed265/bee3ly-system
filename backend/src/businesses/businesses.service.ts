@@ -64,9 +64,7 @@ export class BusinessesService {
           : {}),
         ...(shippingZones !== undefined
           ? {
-              shippingZones: parseShippingZones(
-                shippingZones,
-              ) as unknown as Prisma.InputJsonValue,
+              shippingZones: parseShippingZones(shippingZones),
             }
           : {}),
         ...(completeOnboarding ? { onboardingCompletedAt: new Date() } : {}),

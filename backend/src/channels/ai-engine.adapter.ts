@@ -45,9 +45,10 @@ export class AiEngineAdapter {
   async handleInbound(
     payload: AiEngineInboundPayload,
   ): Promise<AiEngineInboundResponse> {
-    const engineUrl =
+    const engineUrl = this.normalizeEngineUrl(
       this.config.get<string>('AI_SERVICE_URL')?.trim() ||
-      this.config.get<string>('AI_ENGINE_URL')?.trim();
+        this.config.get<string>('AI_ENGINE_URL')?.trim(),
+    );
 
     if (engineUrl) {
       return this.callExternalEngine(engineUrl, payload);
@@ -488,10 +489,10 @@ export class AiEngineAdapter {
         content,
         meta: {
           source,
-          ...(extra?.toolsUsed?.length
-            ? { toolsUsed: extra.toolsUsed }
+          ...(extra?.toolsUsed?.length ? { toolsUsed: extra.toolsUsed } : {}),
+          ...(extra?.order
+            ? { orderId: (extra.order as { id?: string }).id }
             : {}),
-          ...(extra?.order ? { orderId: (extra.order as { id?: string }).id } : {}),
           ...(extra?.needsHuman ? { needsHuman: true } : {}),
         },
       },
@@ -507,6 +508,14 @@ export class AiEngineAdapter {
     const n = Number(raw);
     if (!Number.isFinite(n) || n <= 0) return 15_000;
     return n;
+  }
+
+  /** Accept `localhost:8000` and normalize to `http://127.0.0.1:8000`. */
+  private normalizeEngineUrl(raw: string | undefined): string | undefined {
+    const trimmed = raw?.trim();
+    if (!trimmed) return undefined;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\/$/, '');
+    return `http://${trimmed.replace(/\/$/, '')}`;
   }
 
   private async safeReadText(res: Response): Promise<string> {

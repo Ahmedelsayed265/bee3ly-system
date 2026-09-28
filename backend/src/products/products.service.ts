@@ -5,10 +5,7 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
-import {
-  asAttributes,
-  syncLegacyArrays,
-} from './product-attributes';
+import { asAttributes, syncLegacyArrays } from './product-attributes';
 import {
   asVariants,
   axisValuesByKind,
@@ -61,7 +58,7 @@ export class ProductsService {
     inStock?: boolean;
   }) {
     const fromAxes = axisValuesByKind(input.variants);
-    let attributes = { ...input.attributes };
+    const attributes = { ...input.attributes };
     if (fromAxes.sizes.length) attributes.sizes = fromAxes.sizes;
     if (fromAxes.colors.length) attributes.colors = fromAxes.colors;
     const legacy = syncLegacyArrays(attributes);
@@ -186,7 +183,7 @@ export class ProductsService {
         priceEgp: derived.priceEgp,
         costEgp: dto.costEgp ?? null,
         attributes: derived.attributes,
-        variants: derived.variants as unknown as Prisma.InputJsonValue,
+        variants: derived.variants,
         stockQuantity: derived.stockQuantity,
         inStock: derived.inStock,
       },
@@ -235,8 +232,7 @@ export class ProductsService {
           ? dto.stockQuantity
           : existing.stockQuantity
         : existing.stockQuantity,
-      inStock:
-        dto.inStock !== undefined ? dto.inStock : existing.inStock,
+      inStock: dto.inStock !== undefined ? dto.inStock : existing.inStock,
     });
 
     const product = await this.prisma.product.update({
@@ -253,7 +249,7 @@ export class ProductsService {
           : {}),
         ...(dto.variants !== undefined
           ? {
-              variants: derived.variants as unknown as Prisma.InputJsonValue,
+              variants: derived.variants,
             }
           : {}),
         ...(shouldTouchStock || dto.variants !== undefined

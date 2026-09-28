@@ -167,9 +167,7 @@ export class ContextBuilderService {
     };
   }
 
-  private renderCatalogBlock(
-    products: BusinessContext['products'],
-  ): string {
+  private renderCatalogBlock(products: BusinessContext['products']): string {
     return products
       .map((p) => {
         const details =

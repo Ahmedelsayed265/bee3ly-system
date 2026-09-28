@@ -218,7 +218,7 @@ export class InboundMessageService {
           externalId: customer.externalId,
         },
         history: historyRows.map((m) => ({
-          role: m.role as 'CUSTOMER' | 'AI' | 'HUMAN' | 'SYSTEM',
+          role: m.role,
           content: m.content,
           createdAt: m.createdAt.toISOString(),
         })),
