@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 node_modules/
 dist/
 .env
@@ -12,3 +13,25 @@ backend/.local-pg/
 .cursor/
 docs/
 .env*
+=======
+# Python / Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+
+# Environment variables & sensitive keys
+.env
+.env.local
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+>>>>>>> cd286e7 (Initial commit: Add AI Sales & Merchant Consultant Agent)
