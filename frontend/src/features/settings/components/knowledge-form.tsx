@@ -1,4 +1,4 @@
-import { MessageSquareText, Plus, Trash2, Truck } from 'lucide-react';
+import { Clock, MessageSquareText, Plus, Trash2, Truck } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -164,147 +164,161 @@ export function KnowledgeForm({
   const paymentPreview = describePayment(methods, locale);
   const crossMidnight = hoursCrossesMidnight(hours);
 
-  return (
-    <div className="space-y-4 pb-20">
-      <div className="border-border bg-surface rounded-2xl border p-5">
-        <h2 className="text-ink text-sm font-semibold">
-          {t('knowledgeOpsTitle')}
-        </h2>
-        <p className="text-muted mt-1 text-xs leading-5">
-          {t(
-            showWorkingHours
-              ? 'knowledgeOpsHintPhysical'
-              : 'knowledgeOpsHintOnline',
-          )}
+  const paymentSection = (
+    <Section title={t('paymentInfo')} hint={t('paymentInfoHint')}>
+      <div className="flex flex-wrap gap-2">
+        {PAYMENT_METHODS.map((method) => {
+          const selected = methods.includes(method);
+          return (
+            <button
+              key={method}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => toggleMethod(method)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
+                selected
+                  ? 'border-brand bg-brand/10 text-brand'
+                  : 'border-border text-muted hover:text-ink',
+              )}
+            >
+              {t(PAYMENT_LABEL[method])}
+            </button>
+          );
+        })}
+      </div>
+      {!methods.length ? (
+        <p className="text-danger text-xs leading-5">
+          {t('paymentNoneWarning')}
         </p>
+      ) : null}
+      <div>
+        <p className="text-muted mb-1.5 text-xs font-semibold">
+          {t('knowledgePreviewTitle')}
+        </p>
+        <PreviewLine text={paymentPreview} />
+      </div>
+    </Section>
+  );
+
+  const hoursSection = (
+    <Section title={t('workingHours')} hint={t('workingHoursHint')}>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-full text-xs"
+          onClick={() => applyDayPreset(HOURS_PRESET_WEEKDAYS)}
+        >
+          {t('hoursPresetWeekdays')}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-full text-xs"
+          onClick={() => applyDayPreset([...WEEK_DAYS])}
+        >
+          {t('hoursPresetAllDays')}
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {WEEK_DAYS.map((day) => {
+          const selected = hours.days.includes(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => toggleDay(day)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                selected
+                  ? 'border-brand bg-brand text-white'
+                  : 'border-border text-muted hover:text-ink',
+              )}
+            >
+              {t(DAY_LABEL[day])}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid max-w-md grid-cols-2 gap-3">
+        <div>
+          <MiniLabel htmlFor="hours-open">{t('hoursFrom')}</MiniLabel>
+          <Input
+            id="hours-open"
+            type="time"
+            value={hours.open}
+            onChange={(e) => updateHours({ ...hours, open: e.target.value })}
+          />
+        </div>
+        <div>
+          <MiniLabel htmlFor="hours-close">{t('hoursTo')}</MiniLabel>
+          <Input
+            id="hours-close"
+            type="time"
+            value={hours.close}
+            onChange={(e) => updateHours({ ...hours, close: e.target.value })}
+          />
+        </div>
+      </div>
+      {crossMidnight ? (
+        <p className="text-muted text-xs leading-5">
+          {t('hoursCrossMidnightHint')}
+        </p>
+      ) : null}
+      <div>
+        <p className="text-muted mb-1.5 text-xs font-semibold">
+          {t('knowledgePreviewTitle')}
+        </p>
+        <PreviewLine text={hoursPreview} />
+      </div>
+    </Section>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="border-border bg-surface flex flex-col gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-ink text-sm font-semibold">
+            {t('knowledgeOpsTitle')}
+          </h2>
+          <p className="text-muted mt-1 text-xs leading-5">
+            {t(
+              showWorkingHours
+                ? 'knowledgeOpsHintPhysical'
+                : 'knowledgeOpsHintOnline',
+            )}
+          </p>
+        </div>
+        <Button
+          onClick={onSave}
+          disabled={isSaving}
+          className="w-full shrink-0 sm:w-auto sm:min-w-28"
+        >
+          {isSaving ? t('saving') : t('save')}
+        </Button>
       </div>
 
-      <div
-        className={cn(
-          'grid gap-4',
-          showWorkingHours ? 'xl:grid-cols-2' : 'max-w-xl',
-        )}
-      >
-        {showWorkingHours ? (
-          <Section title={t('workingHours')} hint={t('workingHoursHint')}>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full text-xs"
-                onClick={() => applyDayPreset(HOURS_PRESET_WEEKDAYS)}
-              >
-                {t('hoursPresetWeekdays')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full text-xs"
-                onClick={() => applyDayPreset([...WEEK_DAYS])}
-              >
-                {t('hoursPresetAllDays')}
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {WEEK_DAYS.map((day) => {
-                const selected = hours.days.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => toggleDay(day)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition',
-                      selected
-                        ? 'border-brand bg-brand text-white'
-                        : 'border-border text-muted hover:text-ink',
-                    )}
-                  >
-                    {t(DAY_LABEL[day])}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="grid max-w-md grid-cols-2 gap-3">
-              <div>
-                <MiniLabel htmlFor="hours-open">{t('hoursFrom')}</MiniLabel>
-                <Input
-                  id="hours-open"
-                  type="time"
-                  value={hours.open}
-                  onChange={(e) =>
-                    updateHours({ ...hours, open: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <MiniLabel htmlFor="hours-close">{t('hoursTo')}</MiniLabel>
-                <Input
-                  id="hours-close"
-                  type="time"
-                  value={hours.close}
-                  onChange={(e) =>
-                    updateHours({ ...hours, close: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            {crossMidnight ? (
-              <p className="text-muted text-xs leading-5">
-                {t('hoursCrossMidnightHint')}
-              </p>
-            ) : null}
-            <div>
-              <p className="text-muted mb-1.5 text-xs font-semibold">
-                {t('knowledgePreviewTitle')}
-              </p>
-              <PreviewLine text={hoursPreview} />
-            </div>
-          </Section>
-        ) : (
-          <p className="text-muted text-xs leading-5 xl:col-span-2">
+      {!showWorkingHours ? (
+        <div className="border-border bg-lavender/25 flex gap-3 rounded-2xl border p-4">
+          <Clock className="text-muted mt-0.5 h-5 w-5 shrink-0" />
+          <p className="text-muted text-xs leading-5">
             {t('workingHoursUnavailable')}
           </p>
-        )}
+        </div>
+      ) : null}
 
-        <Section title={t('paymentInfo')} hint={t('paymentInfoHint')}>
-          <div className="flex flex-wrap gap-2">
-            {PAYMENT_METHODS.map((method) => {
-              const selected = methods.includes(method);
-              return (
-                <button
-                  key={method}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => toggleMethod(method)}
-                  className={cn(
-                    'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
-                    selected
-                      ? 'border-brand bg-brand/10 text-brand'
-                      : 'border-border text-muted hover:text-ink',
-                  )}
-                >
-                  {t(PAYMENT_LABEL[method])}
-                </button>
-              );
-            })}
-          </div>
-          {!methods.length ? (
-            <p className="text-danger text-xs leading-5">
-              {t('paymentNoneWarning')}
-            </p>
-          ) : null}
-          <div>
-            <p className="text-muted mb-1.5 text-xs font-semibold">
-              {t('knowledgePreviewTitle')}
-            </p>
-            <PreviewLine text={paymentPreview} />
-          </div>
-        </Section>
-      </div>
+      {showWorkingHours ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {hoursSection}
+          {paymentSection}
+        </div>
+      ) : (
+        paymentSection
+      )}
 
       <div className="border-border bg-surface flex flex-col gap-3 rounded-2xl border p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
@@ -403,12 +417,6 @@ export function KnowledgeForm({
           {t('faqAdd')}
         </Button>
       </Section>
-
-      <div className="border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/80 sticky bottom-0 z-10 -mx-1 flex items-center justify-end gap-3 rounded-xl border px-4 py-3 shadow-sm backdrop-blur">
-        <Button onClick={onSave} disabled={isSaving} className="min-w-28">
-          {isSaving ? t('saving') : t('save')}
-        </Button>
-      </div>
     </div>
   );
 }

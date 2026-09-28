@@ -40,8 +40,7 @@ export function useOnboarding() {
         averagePriceEgp: averagePriceEgp ? Number(averagePriceEgp) : undefined,
         operatingArea: operatingArea.trim() || undefined,
         primaryGoal,
-        ...(businessUsesPhysicalHours(business?.type) &&
-        workingHours.trim()
+        ...(businessUsesPhysicalHours(business?.type) && workingHours.trim()
           ? { workingHours: workingHours.trim() }
           : {}),
         contactChannels: ['FACEBOOK', 'INSTAGRAM'],
