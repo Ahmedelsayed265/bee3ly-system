@@ -4,6 +4,7 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { parseShippingZones } from './shipping-zones';
+import { businessUsesPhysicalHours } from './uses-physical-hours';
 
 @Injectable()
 export class BusinessesService {
@@ -41,10 +42,18 @@ export class BusinessesService {
     const { completeOnboarding, variantDictionary, shippingZones, ...data } =
       dto;
 
+    const current = await this.prisma.business.findUniqueOrThrow({
+      where: { id: businessId },
+      select: { type: true },
+    });
+    const effectiveType = data.type ?? current.type;
+    const stripWorkingHours = !businessUsesPhysicalHours(effectiveType);
+
     const business = await this.prisma.business.update({
       where: { id: businessId },
       data: {
         ...data,
+        ...(stripWorkingHours ? { workingHours: null } : {}),
         ...(variantDictionary !== undefined
           ? {
               variantDictionary:

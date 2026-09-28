@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/auth-context';
 import { updateBusiness, type BusinessGoal } from '@/features/business/api';
+import { businessUsesPhysicalHours } from '@/features/business/uses-physical-hours';
 import { paths } from '@/routes/paths';
 
 export const ONBOARDING_GOALS: BusinessGoal[] = [
@@ -39,7 +40,10 @@ export function useOnboarding() {
         averagePriceEgp: averagePriceEgp ? Number(averagePriceEgp) : undefined,
         operatingArea: operatingArea.trim() || undefined,
         primaryGoal,
-        workingHours: workingHours.trim() || undefined,
+        ...(businessUsesPhysicalHours(business?.type) &&
+        workingHours.trim()
+          ? { workingHours: workingHours.trim() }
+          : {}),
         contactChannels: ['FACEBOOK', 'INSTAGRAM'],
         completeOnboarding: true,
       });
@@ -50,9 +54,12 @@ export function useOnboarding() {
     }
   };
 
+  const showWorkingHours = businessUsesPhysicalHours(business?.type);
+
   return {
     step,
     setStep,
+    showWorkingHours,
     description,
     setDescription,
     averagePriceEgp,

@@ -20,6 +20,7 @@ export function OnboardingPageView() {
     setPrimaryGoal,
     workingHours,
     setWorkingHours,
+    showWorkingHours,
     saving,
     finish,
   } = useOnboarding();
@@ -55,6 +56,7 @@ export function OnboardingPageView() {
 
         {step === 2 ? (
           <OnboardingDetailsStep
+            showWorkingHours={showWorkingHours}
             workingHours={workingHours}
             onWorkingHoursChange={setWorkingHours}
           />

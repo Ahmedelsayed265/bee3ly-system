@@ -11,6 +11,7 @@ import {
   hasVariantMatrix,
 } from '../../products/product-variants';
 import { presentKnowledge } from '../../businesses/knowledge-text';
+import { businessUsesPhysicalHours } from '../../businesses/uses-physical-hours';
 import {
   formatShippingZonesForKnowledge,
   parseShippingZones,
@@ -70,7 +71,9 @@ export class ContextBuilderService {
         type: business.type,
         description: business.description,
         operatingArea: business.operatingArea,
-        workingHours: presentKnowledge(business.workingHours),
+        workingHours: businessUsesPhysicalHours(business.type)
+          ? presentKnowledge(business.workingHours)
+          : null,
         deliveryInfo: presentKnowledge(business.deliveryInfo),
         shippingRates:
           formatShippingZonesForKnowledge(

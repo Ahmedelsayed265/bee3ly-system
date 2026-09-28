@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/page-layout';
+import { useAuth } from '@/features/auth/auth-context';
 import { useLocale } from '@/features/i18n/locale-context';
 import { KnowledgeForm } from '@/features/settings/components/knowledge-form';
 import { ShippingZonesForm } from '@/features/settings/components/shipping-zones-form';
@@ -11,15 +12,42 @@ import { useKnowledgeSettings } from '@/features/settings/hooks/use-knowledge-se
 import { Button } from '@/components/ui/button';
 import { useSocialSettings } from '@/features/settings/hooks/use-social-settings';
 import type { SettingsTab } from '@/features/settings/types';
+import { businessUsesPhysicalHours } from '@/features/business/uses-physical-hours';
 import { paths } from '@/routes/paths';
+
+function BusinessKnowledgeTab({
+  onOpenDelivery,
+}: {
+  onOpenDelivery: () => void;
+}) {
+  const { business } = useAuth();
+  const knowledge = useKnowledgeSettings();
+  const showWorkingHours = businessUsesPhysicalHours(business?.type);
+  return (
+    <KnowledgeForm
+      faqs={knowledge.faqs}
+      workingHours={knowledge.workingHours}
+      paymentInfo={knowledge.paymentInfo}
+      showWorkingHours={showWorkingHours}
+      isSaving={knowledge.isSaving}
+      onFaqsChange={knowledge.setFaqs}
+      onWorkingHoursChange={knowledge.setWorkingHours}
+      onPaymentInfoChange={knowledge.setPaymentInfo}
+      onSave={knowledge.save}
+      onOpenDelivery={onOpenDelivery}
+    />
+  );
+}
 
 export function SettingsPageView() {
   const { t } = useLocale();
+  const { business } = useAuth();
   const [tab, setTab] = useState<SettingsTab>('social');
+  const knowledgeFormKey = business
+    ? `${business.id}|${business.faqs ?? ''}|${business.workingHours ?? ''}|${business.paymentInfo ?? ''}`
+    : 'loading';
   const social = useSocialSettings();
   const delivery = useDeliverySettings();
-  const knowledge = useKnowledgeSettings();
-
   return (
     <PageLayout
       title={t('navSettings')}
@@ -75,18 +103,12 @@ export function SettingsPageView() {
             </Button>
           </div>
         </div>
-      ) : (
-        <KnowledgeForm
-          faqs={knowledge.faqs}
-          workingHours={knowledge.workingHours}
-          paymentInfo={knowledge.paymentInfo}
-          isSaving={knowledge.isSaving}
-          onFaqsChange={knowledge.setFaqs}
-          onWorkingHoursChange={knowledge.setWorkingHours}
-          onPaymentInfoChange={knowledge.setPaymentInfo}
-          onSave={knowledge.save}
+      ) : business ? (
+        <BusinessKnowledgeTab
+          key={knowledgeFormKey}
+          onOpenDelivery={() => setTab('delivery')}
         />
-      )}
+      ) : null}
     </PageLayout>
   );
 }

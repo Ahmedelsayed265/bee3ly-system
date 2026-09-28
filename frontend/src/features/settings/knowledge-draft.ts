@@ -1,3 +1,5 @@
+import type { Locale } from '@/features/i18n/messages';
+
 export const WEEK_DAYS = [
   'sat',
   'sun',
@@ -271,4 +273,110 @@ export function serializeFaqs(items: FaqDraft[]) {
     .filter((item) => item.q || item.a);
   if (!filled.length) return '';
   return JSON.stringify({ v: 1, kind: 'faqs', items: filled });
+}
+
+const DAY_LABEL_AR: Record<WeekDay, string> = {
+  sat: 'السبت',
+  sun: 'الأحد',
+  mon: 'الإثنين',
+  tue: 'الثلاثاء',
+  wed: 'الأربعاء',
+  thu: 'الخميس',
+  fri: 'الجمعة',
+};
+
+const DAY_LABEL_EN: Record<WeekDay, string> = {
+  sat: 'Sat',
+  sun: 'Sun',
+  mon: 'Mon',
+  tue: 'Tue',
+  wed: 'Wed',
+  thu: 'Thu',
+  fri: 'Fri',
+};
+
+const PAYMENT_LABEL_AR: Record<PaymentMethod, string> = {
+  cod: 'كاش عند الاستلام',
+  vodafone: 'فودافون كاش',
+  instapay: 'إنستاباي',
+  card: 'بطاقة',
+  bank: 'تحويل بنكي',
+};
+
+const PAYMENT_LABEL_EN: Record<PaymentMethod, string> = {
+  cod: 'Cash on delivery',
+  vodafone: 'Vodafone Cash',
+  instapay: 'InstaPay',
+  card: 'Card',
+  bank: 'Bank transfer',
+};
+
+export const HOURS_PRESET_WEEKDAYS: WeekDay[] = [
+  'sat',
+  'sun',
+  'mon',
+  'tue',
+  'wed',
+  'thu',
+];
+
+function formatClock(value: string, locale: Locale) {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minutes = match[2];
+  if (locale === 'en') {
+    const suffix = hour < 12 ? 'AM' : 'PM';
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return minutes === '00'
+      ? `${hour12} ${suffix}`
+      : `${hour12}:${minutes} ${suffix}`;
+  }
+  const suffix = hour < 12 ? 'ص' : 'م';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return minutes === '00'
+    ? `${hour12} ${suffix}`
+    : `${hour12}:${minutes} ${suffix}`;
+}
+
+function formatDayRange(days: WeekDay[], locale: Locale) {
+  const indexes = days
+    .map((day) => WEEK_DAYS.indexOf(day))
+    .filter((index) => index >= 0)
+    .sort((a, b) => a - b);
+  if (!indexes.length) return '';
+  const labels = locale === 'ar' ? DAY_LABEL_AR : DAY_LABEL_EN;
+  if (indexes.length === WEEK_DAYS.length) {
+    return locale === 'ar' ? 'كل أيام الأسبوع' : 'Every day';
+  }
+  const contiguous = indexes.every(
+    (index, position) => position === 0 || index === indexes[position - 1]! + 1,
+  );
+  const dayLabels = indexes.map((index) => labels[WEEK_DAYS[index]!]);
+  if (contiguous && dayLabels.length > 1) {
+    return `${dayLabels[0]}–${dayLabels[dayLabels.length - 1]}`;
+  }
+  const sep = locale === 'ar' ? '، ' : ', ';
+  return dayLabels.join(sep);
+}
+
+/** Human-readable hours line (matches backend `presentKnowledge` for hours). */
+export function describeHours(draft: HoursDraft, locale: Locale) {
+  const days = formatDayRange(draft.days, locale);
+  const open = formatClock(draft.open, locale);
+  const close = formatClock(draft.close, locale);
+  const clock = open && close ? `${open} – ${close}` : open || close;
+  const sep = locale === 'ar' ? '، ' : ', ';
+  return [days, clock].filter(Boolean).join(sep);
+}
+
+export function describePayment(methods: PaymentMethod[], locale: Locale) {
+  const labels = locale === 'ar' ? PAYMENT_LABEL_AR : PAYMENT_LABEL_EN;
+  const sep = locale === 'ar' ? '، ' : ', ';
+  return methods.map((method) => labels[method]).join(sep);
+}
+
+export function hoursCrossesMidnight(draft: HoursDraft) {
+  if (!draft.open || !draft.close) return false;
+  return draft.close <= draft.open;
 }
