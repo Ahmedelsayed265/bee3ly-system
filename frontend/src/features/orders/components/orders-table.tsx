@@ -116,7 +116,12 @@ export function OrdersTable({
               />
             </div>
             {hasFilters ? (
-              <Button type="button" variant="ghost" size="sm" onClick={onClearFilters}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onClearFilters}
+              >
                 {t('leadClearFilters')}
               </Button>
             ) : null}
@@ -128,7 +133,9 @@ export function OrdersTable({
             <thead>
               <tr className="border-border bg-canvas/60 text-muted border-b text-xs font-semibold tracking-wide uppercase">
                 <th className="px-4 py-3 text-start">{t('orderColNumber')}</th>
-                <th className="px-4 py-3 text-start">{t('orderColCustomer')}</th>
+                <th className="px-4 py-3 text-start">
+                  {t('orderColCustomer')}
+                </th>
                 <th className="px-4 py-3 text-start">{t('orderColPhone')}</th>
                 <th className="px-4 py-3 text-start">{t('orderColItems')}</th>
                 <th className="px-4 py-3 text-start">{t('orderColTotal')}</th>

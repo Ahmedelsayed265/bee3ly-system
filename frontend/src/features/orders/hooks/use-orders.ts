@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   fetchOrders,
@@ -18,6 +18,7 @@ import {
   type OrderStatusAction,
   type OrderStatusFilter,
 } from '@/features/orders/constants';
+import { adjustPageToTotal, useScopedListPage } from '@/lib/list-pagination';
 
 const PAGE_SIZE = 10;
 
@@ -42,7 +43,6 @@ export function useOrders() {
   const qc = useQueryClient();
   const [params] = useSearchParams();
   const campaignId = params.get('campaignId') ?? '';
-  const [page, setPage] = useState(1);
   const [status, setStatusState] = useState<OrderStatusFilter | ''>('');
   const [productId, setProductIdState] = useState('');
   const [query, setQuery] = useState('');
@@ -52,24 +52,14 @@ export function useOrders() {
     order: OrderRow;
     status: OrderStatusAction;
   } | null>(null);
-  const skipSearchReset = useRef(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(query.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [campaignId]);
-
-  useEffect(() => {
-    if (skipSearchReset.current) {
-      skipSearchReset.current = false;
-      return;
-    }
-    setPage(1);
-  }, [search, status, productId]);
+  const listScope = `${campaignId}\0${status}\0${productId}\0${search}`;
+  const [page, setPage] = useScopedListPage(listScope);
 
   const productOptionsQuery = useQuery({
     queryKey: ['products', 'order-filter', 200],
@@ -105,11 +95,7 @@ export function useOrders() {
   const totalPages = ordersQuery.data?.totalPages ?? 1;
   const productOptions = productOptionsQuery.data?.products ?? [];
 
-  useEffect(() => {
-    if (ordersQuery.isSuccess && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [ordersQuery.isSuccess, page, totalPages]);
+  adjustPageToTotal(page, setPage, totalPages, ordersQuery.isSuccess);
 
   const statusMut = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -155,12 +141,10 @@ export function useOrders() {
     status,
     setStatus: (next: OrderStatusFilter | '') => {
       setStatusState(next);
-      setPage(1);
     },
     productId,
     setProductId: (next: string) => {
       setProductIdState(next);
-      setPage(1);
     },
     query,
     setQuery,
@@ -171,7 +155,6 @@ export function useOrders() {
       setProductIdState('');
       setQuery('');
       setSearch('');
-      setPage(1);
     },
   };
 }

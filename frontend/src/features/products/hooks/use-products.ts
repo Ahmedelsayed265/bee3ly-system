@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -28,6 +28,7 @@ import {
   type ProductVariants,
 } from '@/features/products/product-variants';
 import { asVariantDictionary } from '@/features/products/variant-dictionary';
+import { adjustPageToTotal, useScopedListPage } from '@/lib/list-pagination';
 
 const PAGE_SIZE = 10;
 
@@ -92,25 +93,46 @@ function axesFromProduct(
   return drafts;
 }
 
+function rebuildSkusFromDraft(
+  previousSkus: ProductVariantSku[],
+  input: {
+    enabled: boolean;
+    axes: VariantAxisDraft[];
+    priceEgp: string;
+    stockQuantity: string;
+  },
+) {
+  if (!input.enabled) return [];
+  return rebuildVariantSkus({
+    axes: input.axes.map((axis) => ({
+      name: axis.name,
+      valuesInput: axis.selectedValues.join(', '),
+    })),
+    previousSkus,
+    defaultPriceEgp: Number(input.priceEgp) || 0,
+    defaultStockQuantity: Number(input.stockQuantity) || 0,
+  }).skus;
+}
+
 export function useProducts() {
   const { t } = useLocale();
   const { business, refreshMe } = useAuth();
   const qc = useQueryClient();
   const businessType = (business?.type ?? 'OTHER') as BusinessType;
   const quantityMode = usesQuantityStock(businessType);
+  const businessDictKey = JSON.stringify(business?.variantDictionary ?? null);
   const [dictionary, setDictionary] = useState<VariantDictionaryOption[]>(() =>
     asVariantDictionary(business?.variantDictionary),
   );
-
-  useEffect(() => {
+  const [dictionaryKeySeen, setDictionaryKeySeen] = useState(businessDictKey);
+  if (businessDictKey !== dictionaryKeySeen) {
+    setDictionaryKeySeen(businessDictKey);
     setDictionary(asVariantDictionary(business?.variantDictionary));
-  }, [business?.variantDictionary]);
+  }
 
-  const [page, setPage] = useState(1);
   const [stock, setStockState] = useState<ProductStockFilter | ''>('');
   const [query, setQuery] = useState('');
   const [search, setSearch] = useState('');
-  const skipSearchReset = useRef(false);
   const [pendingDelete, setPendingDelete] = useState<{
     id: string;
     name: string;
@@ -138,13 +160,8 @@ export function useProducts() {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    if (!skipSearchReset.current) {
-      skipSearchReset.current = true;
-      return;
-    }
-    setPage(1);
-  }, [search, stock]);
+  const listScope = `${search}\0${stock}`;
+  const [page, setPage] = useScopedListPage(listScope);
 
   const productsQuery = useQuery({
     queryKey: ['products', page, PAGE_SIZE, search, stock],
@@ -159,33 +176,23 @@ export function useProducts() {
   const total = productsQuery.data?.total ?? 0;
   const totalPages = productsQuery.data?.totalPages ?? 1;
 
-  useEffect(() => {
-    if (productsQuery.isSuccess && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [productsQuery.isSuccess, page, totalPages]);
+  adjustPageToTotal(page, setPage, totalPages, productsQuery.isSuccess);
 
-  useEffect(() => {
-    if (!variantsEnabled) {
-      setVariantSkus([]);
-      return;
-    }
-    setVariantSkus((prev) => {
-      const next = rebuildVariantSkus({
-        axes: variantAxes.map((axis) => ({
-          name: axis.name,
-          valuesInput: axis.selectedValues.join(', '),
-        })),
-        previousSkus: prev,
-        defaultPriceEgp: Number(priceEgp) || 0,
-        defaultStockQuantity: Number(stockQuantity) || 0,
-      });
-      const prevKeys = prev.map((s) => s.key).join('\0');
-      const nextKeys = next.skus.map((s) => s.key).join('\0');
-      if (prevKeys === nextKeys) return prev;
-      return next.skus;
+  const syncVariantSkus = (
+    prev: ProductVariantSku[],
+    patch: Partial<{
+      enabled: boolean;
+      axes: VariantAxisDraft[];
+      priceEgp: string;
+      stockQuantity: string;
+    }> = {},
+  ) =>
+    rebuildSkusFromDraft(prev, {
+      enabled: patch.enabled ?? variantsEnabled,
+      axes: patch.axes ?? variantAxes,
+      priceEgp: patch.priceEgp ?? priceEgp,
+      stockQuantity: patch.stockQuantity ?? stockQuantity,
     });
-  }, [variantAxes, priceEgp, stockQuantity, variantsEnabled]);
 
   const hasVariants = variantsEnabled && variantSkus.length > 0;
 
@@ -345,7 +352,6 @@ export function useProducts() {
     stock,
     setStock: (next: ProductStockFilter | '') => {
       setStockState(next);
-      setPage(1);
     },
     query,
     setQuery,
@@ -354,7 +360,6 @@ export function useProducts() {
       setStockState('');
       setQuery('');
       setSearch('');
-      setPage(1);
     },
     dictionary,
     dictOpen,
@@ -378,19 +383,33 @@ export function useProducts() {
     name,
     setName,
     priceEgp,
-    setPriceEgp,
+    setPriceEgp: (next: string) => {
+      setPriceEgp(next);
+      setVariantSkus((prev) => syncVariantSkus(prev, { priceEgp: next }));
+    },
     costEgp,
     setCostEgp,
     description,
     setDescription,
     stockQuantity,
-    setStockQuantity,
+    setStockQuantity: (next: string) => {
+      setStockQuantity(next);
+      setVariantSkus((prev) => syncVariantSkus(prev, { stockQuantity: next }));
+    },
     listingAvailable,
     setListingAvailable,
     variantsEnabled,
-    setVariantsEnabled,
+    setVariantsEnabled: (next: boolean) => {
+      setVariantsEnabled(next);
+      setVariantSkus((prev) =>
+        next ? syncVariantSkus(prev, { enabled: true }) : [],
+      );
+    },
     variantAxes,
-    setVariantAxes,
+    setVariantAxes: (next: VariantAxisDraft[]) => {
+      setVariantAxes(next);
+      setVariantSkus((prev) => syncVariantSkus(prev, { axes: next }));
+    },
     variantSkus,
     onSkuChange,
     applyBasePriceToSkus,

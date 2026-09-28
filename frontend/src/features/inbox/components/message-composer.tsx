@@ -1,5 +1,5 @@
 import { LayoutTemplate, Smile, X } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { EmojiPicker } from '@/features/inbox/components/emoji-picker';
@@ -41,13 +41,14 @@ export function MessageComposer({
     bottom: number;
   } | null>(null);
   const [attached, setAttached] = useState<QuickReply[]>([]);
+  const [attachedForDraft, setAttachedForDraft] = useState(draft);
+  if (draft !== attachedForDraft) {
+    setAttachedForDraft(draft);
+    if (!draft) setAttached([]);
+  }
 
   const quickSends = buildQuickSends(t);
   const templates = buildTemplates(t, replyContext);
-
-  useEffect(() => {
-    if (!draft) setAttached([]);
-  }, [draft]);
 
   useLayoutEffect(() => {
     if (!panel) return;

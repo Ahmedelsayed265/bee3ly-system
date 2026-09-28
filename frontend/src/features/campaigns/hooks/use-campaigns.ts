@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   createCampaign,
   fetchCampaigns,
@@ -17,6 +17,7 @@ import {
 } from '@/features/campaigns/constants';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import { adjustPageToTotal } from '@/lib/list-pagination';
 
 const PAGE_SIZE = 10;
 
@@ -48,11 +49,7 @@ export function useCampaigns() {
     status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED';
   } | null>(null);
 
-  useEffect(() => {
-    if (listQuery.isSuccess && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [listQuery.isSuccess, page, totalPages]);
+  adjustPageToTotal(page, setPage, totalPages, listQuery.isSuccess);
 
   const createMut = useMutation({
     mutationFn: createCampaign,

@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import type { AiGoal, AiTone } from '@/features/ai-agent/constants';
 import { fetchAiAgent, updateAiAgent } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
+
+type AgentForm = {
+  agentId: string | null;
+  instructions: string;
+  commentReply: string;
+};
 
 export function useAiAgent() {
   const { t } = useLocale();
@@ -15,24 +21,30 @@ export function useAiAgent() {
   });
   const agent = agentQuery.data;
 
-  const [instructions, setInstructions] = useState('');
-  const [commentReply, setCommentReply] = useState('');
-  const [hydratedForId, setHydratedForId] = useState<string | null>(null);
+  const [form, setForm] = useState<AgentForm>({
+    agentId: null,
+    instructions: '',
+    commentReply: '',
+  });
 
-  useEffect(() => {
-    if (!agent) return;
-    if (hydratedForId === agent.id) return;
-    setInstructions(agent.instructions ?? '');
-    setCommentReply(agent.commentFixedReply ?? '');
-    setHydratedForId(agent.id);
-  }, [agent, hydratedForId]);
+  const agentId = agent?.id ?? null;
+  if (agentId && agentId !== form.agentId) {
+    setForm({
+      agentId,
+      instructions: agent.instructions ?? '',
+      commentReply: agent.commentFixedReply ?? '',
+    });
+  }
 
   const updateMut = useMutation({
     mutationFn: updateAiAgent,
     onSuccess: async (updated) => {
       if (updated) {
-        setInstructions(updated.instructions ?? '');
-        setCommentReply(updated.commentFixedReply ?? '');
+        setForm({
+          agentId: updated.id,
+          instructions: updated.instructions ?? '',
+          commentReply: updated.commentFixedReply ?? '',
+        });
       }
       await qc.invalidateQueries({ queryKey: ['ai-agent'] });
       toast.success(t('profileSaved'));
@@ -40,8 +52,11 @@ export function useAiAgent() {
     onError: () => toast.error(t('saveFailed')),
   });
 
+  const instructions = form.instructions;
+  const commentReply = form.commentReply;
+
   const textDirty =
-    hydratedForId === agent?.id &&
+    form.agentId === agent?.id &&
     ((instructions.trim() || null) !== (agent?.instructions ?? null) ||
       (commentReply.trim() || null) !== (agent?.commentFixedReply ?? null));
 
@@ -50,9 +65,11 @@ export function useAiAgent() {
     isLoading: agentQuery.isLoading,
     isUpdating: updateMut.isPending,
     instructions,
-    setInstructions,
+    setInstructions: (next: string) =>
+      setForm((current) => ({ ...current, instructions: next })),
     commentReply,
-    setCommentReply,
+    setCommentReply: (next: string) =>
+      setForm((current) => ({ ...current, commentReply: next })),
     textDirty,
     setActive: (isActive: boolean) => updateMut.mutate({ isActive }),
     setHandoff: (handoffEnabled: boolean) =>

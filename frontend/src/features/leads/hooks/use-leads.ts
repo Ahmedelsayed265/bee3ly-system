@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   deleteLeads,
@@ -18,12 +18,12 @@ import {
   type LeadStatus,
   type PendingLeadStatus,
 } from '@/features/leads/constants';
+import { adjustPageToTotal, useScopedListPage } from '@/lib/list-pagination';
 
 export function useLeads() {
   const qc = useQueryClient();
   const [params] = useSearchParams();
   const campaignId = params.get('campaignId') ?? '';
-  const [page, setPage] = useState(1);
   const [status, setStatusState] = useState<LeadStatus | ''>('');
   const [intent, setIntentState] = useState('');
   const [query, setQuery] = useState('');
@@ -39,25 +39,18 @@ export function useLeads() {
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(
     null,
   );
-  const skipSearchReset = useRef(true);
-
   useEffect(() => {
     const timer = window.setTimeout(() => setSearch(query.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [campaignId]);
-
-  useEffect(() => {
-    if (skipSearchReset.current) {
-      skipSearchReset.current = false;
-      return;
-    }
-    setPage(1);
+  const listScope = `${campaignId}\0${status}\0${intent}\0${search}`;
+  const [page, setPage] = useScopedListPage(listScope);
+  const [selectionScope, setSelectionScope] = useState(listScope);
+  if (listScope !== selectionScope) {
+    setSelectionScope(listScope);
     setSelected([]);
-  }, [search]);
+  }
 
   const leadsQuery = useQuery({
     queryKey: [
@@ -86,11 +79,7 @@ export function useLeads() {
   const total = leadsQuery.data?.total ?? 0;
   const totalPages = leadsQuery.data?.totalPages ?? 1;
 
-  useEffect(() => {
-    if (leadsQuery.isSuccess && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [leadsQuery.isSuccess, page, totalPages]);
+  adjustPageToTotal(page, setPage, totalPages, leadsQuery.isSuccess);
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ['leads'] });
@@ -125,11 +114,6 @@ export function useLeads() {
     },
   });
 
-  const resetPage = () => {
-    setPage(1);
-    setSelected([]);
-  };
-
   return {
     leads,
     counts,
@@ -142,13 +126,11 @@ export function useLeads() {
     setStatus: (next: LeadStatus | '') => {
       if (next === status) return;
       setStatusState(next);
-      resetPage();
     },
     intent,
     setIntent: (next: string) => {
       if (next === intent) return;
       setIntentState(next);
-      resetPage();
     },
     hasFilters: Boolean(
       status || intent || query.trim() || search || campaignId,
@@ -160,7 +142,6 @@ export function useLeads() {
       setIntentState('');
       setQuery('');
       setSearch('');
-      resetPage();
     },
     selected,
     toggleSelected: (id: string, on: boolean) => {

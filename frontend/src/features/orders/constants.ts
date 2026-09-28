@@ -19,7 +19,4 @@ export const EMPTY_ORDER_COUNTS: OrderCounts = {
 };
 
 export type OrderStatusAction =
-  | 'CONFIRMED'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'RETURNED';
+  'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'RETURNED';
