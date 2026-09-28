@@ -26,13 +26,11 @@ const navItems = [
     to: paths.campaigns,
     labelKey: 'navCampaigns' as const,
     icon: Rocket,
-    soon: true,
   },
   {
     to: paths.analytics,
     labelKey: 'navAnalytics' as const,
     icon: BarChart3,
-    soon: true,
   },
   { to: paths.leads, labelKey: 'navLeads' as const, icon: Users },
   { to: paths.orders, labelKey: 'navOrders' as const, icon: ShoppingBag },
@@ -63,7 +61,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        'border-border bg-surface flex h-full w-[260px] shrink-0 flex-col border-e',
+        'border-border bg-surface flex h-full w-65 shrink-0 flex-col border-e',
         className,
       )}
     >
@@ -72,7 +70,7 @@ export function DashboardSidebar({ className }: { className?: string }) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map(({ to, labelKey, icon: Icon, end, soon }) => (
+        {navItems.map(({ to, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -96,18 +94,6 @@ export function DashboardSidebar({ className }: { className?: string }) {
                   strokeWidth={2}
                 />
                 <span className="flex-1 truncate">{t(labelKey)}</span>
-                {soon ? (
-                  <span
-                    className={cn(
-                      'rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
-                      isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-lavender text-muted',
-                    )}
-                  >
-                    {t('comingSoonBadge')}
-                  </span>
-                ) : null}
               </>
             )}
           </NavLink>
