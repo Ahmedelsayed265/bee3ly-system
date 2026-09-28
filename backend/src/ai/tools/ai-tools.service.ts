@@ -12,11 +12,13 @@ import {
   asVariants,
   findMatchingSku,
   formatVariantLabel,
+  formatVariantsDetailForPrompt,
   formatVariantsSummary,
   hasVariantMatrix,
   variantsTotalStock,
 } from '../../products/product-variants';
 import { isAvailable } from '../../products/stock-mode';
+import { presentKnowledge } from '../../businesses/knowledge-text';
 import {
   GOVERNORATE_IDS,
   formatShippingZonesForKnowledge,
@@ -27,6 +29,30 @@ import type { BusinessContext, ToolName } from '../types';
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+/** Map tool args → variant matcher (size/color aliases + custom axis names). */
+function variantChoiceFromArgs(
+  args: Record<string, unknown>,
+): Record<string, string | null> {
+  const choice: Record<string, string | null> = {
+    size: args.size ? asString(args.size) : null,
+    color: args.color ? asString(args.color) : null,
+    flavor: args.flavor ? asString(args.flavor) : null,
+    option: args.option ? asString(args.option) : null,
+    variant: args.variant ? asString(args.variant) : null,
+  };
+  const extra = args.variantOptions;
+  if (extra && typeof extra === 'object' && !Array.isArray(extra)) {
+    for (const [key, value] of Object.entries(
+      extra as Record<string, unknown>,
+    )) {
+      const k = key.trim();
+      if (!k) continue;
+      choice[k] = asString(value);
+    }
+  }
+  return choice;
 }
 
 @Injectable()
@@ -52,6 +78,8 @@ export class AiToolsService {
         return this.getBusinessInfo(ctx);
       case 'getFAQ':
         return { faqs: ctx.business.faqs };
+      case 'quoteCheckout':
+        return this.quoteCheckout(ctx, args);
       case 'createOrder':
         return this.createOrder(ctx, args);
       case 'getOrderStatus':
@@ -104,13 +132,7 @@ export class AiToolsService {
     if (!product) return null;
     const attributes = asAttributes(product.attributes);
     const variants = asVariants(product.variants);
-    const chosen = {
-      size: args.size ? asString(args.size) : null,
-      color: args.color ? asString(args.color) : null,
-      flavor: args.flavor ? asString(args.flavor) : null,
-      option: args.option ? asString(args.option) : null,
-      variant: args.variant ? asString(args.variant) : null,
-    };
+    const chosen = variantChoiceFromArgs(args);
     const matched = hasVariantMatrix(variants)
       ? findMatchingSku(variants, chosen)
       : null;
@@ -132,6 +154,15 @@ export class AiToolsService {
       priceEgp: matched?.priceEgp ?? product.priceEgp,
       variants: hasVariantMatrix(variants)
         ? formatVariantsSummary(variants)
+        : null,
+      variantsDetail: hasVariantMatrix(variants)
+        ? formatVariantsDetailForPrompt(variants)
+        : null,
+      variantAxes: hasVariantMatrix(variants)
+        ? variants.axes.map((a) => ({
+            name: a.name,
+            values: a.values,
+          }))
         : null,
       selectedVariant: matched
         ? {
@@ -167,6 +198,95 @@ export class AiToolsService {
     };
   }
 
+  /** Price breakdown: product line + shipping + grand total (no DB write). */
+  private async quoteCheckout(
+    ctx: BusinessContext,
+    args: Record<string, unknown>,
+  ) {
+    const product = await this.getProduct(ctx, args);
+    if (!product) {
+      throw new BadRequestException('Product required for quote');
+    }
+
+    const quantity = Math.max(1, Number(args.quantity ?? 1));
+    const variants = asVariants(product.variants);
+    const chosen = variantChoiceFromArgs(args);
+
+    let unitPrice = product.priceEgp;
+    let selectedVariant: {
+      label: string;
+      options: Record<string, string>;
+      priceEgp: number;
+      stockQuantity: number;
+    } | null = null;
+
+    if (hasVariantMatrix(variants)) {
+      const matched = findMatchingSku(variants, chosen);
+      if (!matched) {
+        throw new BadRequestException(
+          `Choose a valid variant (${variants.axes.map((a) => a.name).join(' + ')})`,
+        );
+      }
+      unitPrice = matched.priceEgp;
+      selectedVariant = {
+        label: formatVariantLabel(matched.options),
+        options: matched.options,
+        priceEgp: matched.priceEgp,
+        stockQuantity: matched.stockQuantity,
+      };
+    }
+
+    const subtotalEgp = unitPrice * quantity;
+
+    const businessRow = await this.prisma.business.findUniqueOrThrow({
+      where: { id: ctx.businessId },
+      select: { shippingZones: true, paymentInfo: true },
+    });
+    const zones = parseShippingZones(businessRow.shippingZones);
+    const governorate = args.governorate
+      ? asString(args.governorate).trim()
+      : null;
+    if (
+      governorate &&
+      !GOVERNORATE_IDS.includes(governorate as (typeof GOVERNORATE_IDS)[number])
+    ) {
+      throw new BadRequestException('Invalid governorate id');
+    }
+    const shippingEgp = shippingPriceForGovernorate(zones, governorate);
+    if (zones.length > 0 && !governorate) {
+      throw new BadRequestException(
+        'Governorate required — ask customer which governorate (use id: cairo, giza, …)',
+      );
+    }
+    if (zones.length > 0 && governorate && shippingEgp == null) {
+      throw new BadRequestException('Governorate not in any shipping zone');
+    }
+
+    const shipping = shippingEgp ?? 0;
+    const grandTotalEgp = subtotalEgp + shipping;
+    const unitPriceEgp = unitPrice;
+    const zone = zones.find((z) =>
+      governorate
+        ? z.governorates.includes(governorate as (typeof GOVERNORATE_IDS)[number])
+        : false,
+    );
+
+    return {
+      productId: product.id,
+      productName: product.name,
+      quantity,
+      unitPriceEgp: unitPrice,
+      subtotalEgp,
+      shippingEgp: shippingEgp,
+      grandTotalEgp,
+      governorate,
+      shippingZoneName: zone?.name ?? null,
+      paymentInfo: presentKnowledge(businessRow.paymentInfo),
+      selectedVariant,
+      summaryAr: `سعر المنتج: ${subtotalEgp} ج.م (${quantity} × ${unitPriceEgp}) + الشحن: ${shipping} ج.م = الإجمالي ${grandTotalEgp} ج.م`,
+    };
+  }
+
   private async createOrder(
     ctx: BusinessContext,
     args: Record<string, unknown>,
@@ -198,13 +318,7 @@ export class AiToolsService {
     const quantity = Math.max(1, Number(args.quantity ?? 1));
     const size = args.size ? asString(args.size) : null;
     const color = args.color ? asString(args.color) : null;
-    const chosen = {
-      size,
-      color,
-      flavor: args.flavor ? asString(args.flavor) : null,
-      option: args.option ? asString(args.option) : null,
-      variant: args.variant ? asString(args.variant) : null,
-    };
+    const chosen = variantChoiceFromArgs(args);
 
     let unitPrice = product.priceEgp;
     let matchedSkuKey: string | null = null;
@@ -286,6 +400,15 @@ export class AiToolsService {
       },
     });
 
+    const noteParts: string[] = [];
+    const address = args.address ? asString(args.address).trim() : '';
+    if (address) noteParts.push(`العنوان: ${address}`);
+    const paymentMethod = args.paymentMethod
+      ? asString(args.paymentMethod).trim()
+      : '';
+    if (paymentMethod) noteParts.push(`الدفع: ${paymentMethod}`);
+    if (args.notes) noteParts.push(asString(args.notes).trim());
+
     const order = await this.prisma.order.create({
       data: {
         businessId: ctx.businessId,
@@ -298,6 +421,7 @@ export class AiToolsService {
         customerPhone,
         governorate,
         shippingEgp,
+        notes: noteParts.length ? noteParts.join(' | ') : null,
         createdBy: ActorType.AI,
         items: {
           create: [
@@ -406,7 +530,12 @@ export class AiToolsService {
       },
     });
 
-    return order;
+    const ship = order.shippingEgp ?? 0;
+    return {
+      ...order,
+      grandTotalEgp: order.totalEgp + ship,
+      summaryAr: `المنتج ${order.totalEgp} ج.م + الشحن ${ship} ج.م = ${order.totalEgp + ship} ج.م`,
+    };
   }
 
   private async getOrderStatus(

@@ -264,9 +264,24 @@ export class AiEngineAdapter {
       //      { "message": "..." }   (Swagger UI-style mirror)  OR
       //      { "data": { "reply": "..." } } OR raw string
       let reply: string | null = null;
+      let toolsUsed: string[] | undefined;
+      let order: unknown;
+      let lead: unknown;
+      let needsHuman = false;
+      let handoffReason: string | undefined;
       try {
         const json = JSON.parse(text) as
-          { reply?: unknown; message?: unknown; data?: unknown } | string;
+          | {
+              reply?: unknown;
+              message?: unknown;
+              data?: unknown;
+              toolsUsed?: unknown;
+              order?: unknown;
+              lead?: unknown;
+              needsHuman?: unknown;
+              handoffReason?: unknown;
+            }
+          | string;
         if (typeof json === 'string') {
           reply = json.trim() || null;
         } else {
@@ -285,6 +300,17 @@ export class AiEngineAdapter {
             ).message;
             const pick = typeof inner === 'string' ? inner : innerMsg;
             if (typeof pick === 'string' && pick.trim()) reply = pick.trim();
+          }
+          if (Array.isArray(json.toolsUsed)) {
+            toolsUsed = json.toolsUsed.filter(
+              (t): t is string => typeof t === 'string',
+            );
+          }
+          if (json.order) order = json.order;
+          if (json.lead) lead = json.lead;
+          if (json.needsHuman === true) needsHuman = true;
+          if (typeof json.handoffReason === 'string') {
+            handoffReason = json.handoffReason;
           }
         }
       } catch {
@@ -310,9 +336,40 @@ export class AiEngineAdapter {
         payload.conversationId,
         reply,
         'external',
+        { toolsUsed, order, lead, needsHuman, handoffReason },
       );
 
-      return { reply, mode: 'external' };
+      if (needsHuman) {
+        await this.prisma.conversation.update({
+          where: { id: payload.conversationId },
+          data: {
+            needsHuman: true,
+            status: 'NEEDS_HUMAN',
+            mode: 'HUMAN',
+            conversionStage: 'HUMAN_HANDOFF',
+            handoffReason: handoffReason ?? 'AI handoff',
+          },
+        });
+        this.realtime.notifyConversationUpdated(
+          payload.businessId,
+          payload.conversationId,
+        );
+      } else if (order) {
+        await this.prisma.conversation.update({
+          where: { id: payload.conversationId },
+          data: { conversionStage: 'CONVERTED' },
+        });
+      }
+
+      return {
+        reply,
+        mode: 'external',
+        toolsUsed,
+        order,
+        lead,
+        needsHuman,
+        handoffReason,
+      };
     } catch (e) {
       const aborted =
         e instanceof Error &&
@@ -416,13 +473,27 @@ export class AiEngineAdapter {
     conversationId: string,
     content: string,
     source: string,
+    extra?: {
+      toolsUsed?: string[];
+      order?: unknown;
+      lead?: unknown;
+      needsHuman?: boolean;
+      handoffReason?: string;
+    },
   ) {
     await this.prisma.message.create({
       data: {
         conversationId,
         role: MessageRole.AI,
         content,
-        meta: { source },
+        meta: {
+          source,
+          ...(extra?.toolsUsed?.length
+            ? { toolsUsed: extra.toolsUsed }
+            : {}),
+          ...(extra?.order ? { orderId: (extra.order as { id?: string }).id } : {}),
+          ...(extra?.needsHuman ? { needsHuman: true } : {}),
+        },
       },
     });
     await this.prisma.conversation.update({

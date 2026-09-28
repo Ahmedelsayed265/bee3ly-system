@@ -54,6 +54,11 @@ export type AiEngineInboundPayload = {
 export type AiEngineInboundResponse = {
   reply?: string | null;
   mode?: 'external' | 'dev_fallback' | 'fixed_fallback' | 'none';
+  toolsUsed?: string[];
+  order?: unknown;
+  lead?: unknown;
+  needsHuman?: boolean;
+  handoffReason?: string;
   /** Error classification when mode === 'none' so callers can react. */
   error?:
     | 'CHANNEL_NOT_FOUND'

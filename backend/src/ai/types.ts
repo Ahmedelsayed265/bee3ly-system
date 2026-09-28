@@ -17,6 +17,7 @@ export type ToolName =
   | 'getDeliveryInfo'
   | 'getBusinessInfo'
   | 'getFAQ'
+  | 'quoteCheckout'
   | 'createOrder'
   | 'getOrderStatus'
   | 'createLead'

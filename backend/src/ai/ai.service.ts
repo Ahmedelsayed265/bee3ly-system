@@ -2,6 +2,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
   forwardRef,
 } from '@nestjs/common';
@@ -16,10 +17,12 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { GOVERNORATE_IDS } from '../businesses/shipping-zones';
 import { ContextBuilderService } from './context/context-builder.service';
 import { LlmEngine } from './engines/llm.engine';
 import { RulesEngine } from './engines/rules.engine';
-import type { AiEngineResult } from './types';
+import { AiToolsService } from './tools/ai-tools.service';
+import type { AiEngineResult, ToolName } from './types';
 
 @Injectable()
 export class AiService {
@@ -30,6 +33,7 @@ export class AiService {
     private readonly access: BusinessAccessService,
     private readonly conversations: ConversationsService,
     private readonly contextBuilder: ContextBuilderService,
+    private readonly aiTools: AiToolsService,
     private readonly rules: RulesEngine,
     private readonly llm: LlmEngine,
     private readonly realtime: RealtimeService,
@@ -38,6 +42,71 @@ export class AiService {
     @Inject(forwardRef(() => MerchantTokenService))
     private readonly tokens: MerchantTokenService,
   ) {}
+
+  async getSessionContext(
+    userId: string,
+    input: {
+      conversationId: string;
+      customerId: string;
+      message: string;
+    },
+  ) {
+    const businessId = await this.access.requireBusinessId(userId);
+    await this.assertConversationCustomer(
+      businessId,
+      input.conversationId,
+      input.customerId,
+    );
+    const ctx = await this.contextBuilder.build({
+      businessId,
+      conversationId: input.conversationId,
+      customerId: input.customerId,
+      latestCustomerMessage: input.message,
+    });
+    return {
+      contextBlock: this.contextBuilder.toPromptBlock(ctx),
+      governorateIds: [...GOVERNORATE_IDS],
+    };
+  }
+
+  async runTool(
+    userId: string,
+    input: {
+      conversationId: string;
+      customerId: string;
+      tool: ToolName;
+      args?: Record<string, unknown>;
+      message?: string;
+    },
+  ) {
+    const businessId = await this.access.requireBusinessId(userId);
+    await this.assertConversationCustomer(
+      businessId,
+      input.conversationId,
+      input.customerId,
+    );
+    const ctx = await this.contextBuilder.build({
+      businessId,
+      conversationId: input.conversationId,
+      customerId: input.customerId,
+      latestCustomerMessage: input.message ?? '',
+    });
+    return this.aiTools.execute(input.tool, ctx, input.args ?? {});
+  }
+
+  private async assertConversationCustomer(
+    businessId: string,
+    conversationId: string,
+    customerId: string,
+  ) {
+    const row = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, businessId, customerId },
+      select: { id: true },
+    });
+    if (!row) {
+      throw new NotFoundException('Conversation not found for this customer');
+    }
+  }
 
   async getAgent(userId: string) {
     const businessId = await this.access.requireBusinessId(userId);
@@ -277,9 +346,9 @@ export class AiService {
       conversationId: input.conversationId,
       intent: intentGuess,
       reply,
-      toolsUsed: [],
-      order: null,
-      lead: null,
+      toolsUsed: adapterResult.toolsUsed ?? [],
+      order: adapterResult.order ?? null,
+      lead: adapterResult.lead ?? null,
       message: latestAi ?? customerMessage,
       mode: (adapterResult.mode ?? 'none') as
         | 'external'
@@ -289,7 +358,7 @@ export class AiService {
         | 'paused'
         | 'human',
       paused: false,
-      needsHuman: false,
+      needsHuman: adapterResult.needsHuman ?? false,
     };
   }
 

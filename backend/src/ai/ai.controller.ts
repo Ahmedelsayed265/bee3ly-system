@@ -14,7 +14,9 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AiService } from './ai.service';
 import {
+  AiSessionContextDto,
   ConversationModeDto,
+  RunAiToolDto,
   SimulateMessageDto,
   UpdateAgentDto,
 } from './dto/ai.dto';
@@ -37,6 +39,21 @@ export class AiController {
   @Post('simulate-message')
   simulate(@CurrentUser() user: AuthUser, @Body() dto: SimulateMessageDto) {
     return this.ai.simulateMessage(user.id, dto.content, dto.conversationId);
+  }
+
+  /** Session catalog + shipping/payment block for external AI service. */
+  @Post('session-context')
+  sessionContext(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: AiSessionContextDto,
+  ) {
+    return this.ai.getSessionContext(user.id, dto);
+  }
+
+  /** Execute a validated sales tool (order, lead, stock, shipping quote). */
+  @Post('run-tool')
+  runTool(@CurrentUser() user: AuthUser, @Body() dto: RunAiToolDto) {
+    return this.ai.runTool(user.id, dto);
   }
 
   @Patch('conversations/:id/mode')

@@ -18,11 +18,8 @@ def fetch_live_products(bearer_token: str) -> list:
             timeout=15
         )
 
-        print(f"DEBUG - Status Code: {response.status_code}")
-
         if response.status_code == 200:
             data = response.json()
-            print(f"DEBUG - Raw Response: {data}")
 
             if isinstance(data, list):
                 return data

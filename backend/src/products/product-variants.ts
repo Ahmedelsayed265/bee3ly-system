@@ -222,6 +222,32 @@ export function formatVariantsSummary(variants: ProductVariants): string {
   return `${variants.skus.length} variants (${axes})`;
 }
 
+/** Full SKU matrix for AI prompts (price + stock per combination). */
+export function formatVariantsDetailForPrompt(
+  variants: ProductVariants,
+  maxSkus = 48,
+): string {
+  if (!hasVariantMatrix(variants)) return '';
+  const axisLine = variants.axes
+    .map((axis) => `${axis.name}=[${axis.values.join(', ')}]`)
+    .join(' · ');
+  const skuLines = variants.skus.slice(0, maxSkus).map((sku) => {
+    const opts = formatVariantLabel(sku.options);
+    return `  • ${opts} | ${sku.priceEgp} EGP | stock:${sku.stockQuantity}`;
+  });
+  const tail =
+    variants.skus.length > maxSkus
+      ? `\n  … +${variants.skus.length - maxSkus} more SKUs`
+      : '';
+  return `variants (${variants.skus.length} SKUs) ${axisLine}\n${skuLines.join('\n')}${tail}`;
+}
+
+function optionValuesMatch(got: string, want: string): boolean {
+  const a = got.trim().toLocaleLowerCase('ar');
+  const b = want.trim().toLocaleLowerCase('ar');
+  return a === b || a.includes(b) || b.includes(a);
+}
+
 /**
  * Match a SKU from chosen option values (by axis name or common aliases).
  */
@@ -246,7 +272,11 @@ export function findMatchingSku(
       const got = aliases
         .map((a) => normalizedChosen[a.toLowerCase()])
         .find(Boolean);
-      return got === want;
+      if (!got) {
+        const byAxis = normalizedChosen[axis.name.trim().toLowerCase()];
+        return byAxis ? optionValuesMatch(byAxis, want) : false;
+      }
+      return optionValuesMatch(got, want);
     });
     if (ok) return sku;
   }

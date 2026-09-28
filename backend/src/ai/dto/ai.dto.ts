@@ -2,10 +2,12 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsObject,
   IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
+import type { ToolName } from '../types';
 
 export class SimulateMessageDto {
   @IsString()
@@ -51,4 +53,49 @@ export class UpdateAgentDto {
 export class ConversationModeDto {
   @IsIn(['AI', 'HUMAN'])
   mode!: 'AI' | 'HUMAN';
+}
+
+export class AiSessionContextDto {
+  @IsString()
+  conversationId!: string;
+
+  @IsString()
+  customerId!: string;
+
+  @IsString()
+  @MinLength(1)
+  message!: string;
+}
+
+const TOOL_NAMES = [
+  'getProduct',
+  'checkStock',
+  'getDeliveryInfo',
+  'getBusinessInfo',
+  'getFAQ',
+  'quoteCheckout',
+  'createOrder',
+  'getOrderStatus',
+  'createLead',
+  'notifyOwner',
+  'transferToHuman',
+] as const satisfies readonly ToolName[];
+
+export class RunAiToolDto {
+  @IsString()
+  conversationId!: string;
+
+  @IsString()
+  customerId!: string;
+
+  @IsIn(TOOL_NAMES)
+  tool!: ToolName;
+
+  @IsOptional()
+  @IsObject()
+  args?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  message?: string;
 }

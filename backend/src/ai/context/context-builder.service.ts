@@ -7,6 +7,7 @@ import {
 } from '../../products/product-attributes';
 import {
   asVariants,
+  formatVariantsDetailForPrompt,
   formatVariantsSummary,
   hasVariantMatrix,
 } from '../../products/product-variants';
@@ -105,7 +106,7 @@ export class ContextBuilderService {
           stockQuantity: p.stockQuantity,
           inStock: p.inStock,
           variantsSummary: hasVariantMatrix(variants)
-            ? formatVariantsSummary(variants)
+            ? formatVariantsDetailForPrompt(variants)
             : undefined,
         };
       }),
@@ -141,13 +142,15 @@ export class ContextBuilderService {
           ]
             .filter(Boolean)
             .join(' · ');
-        return `- ${p.name} | ${p.priceEgp} EGP | ${
+        const base = `- id:${p.id} | ${p.name} | from ${p.priceEgp} EGP | ${
           p.stockQuantity != null
             ? `qty:${p.stockQuantity}`
             : `available:${p.inStock ? 'yes' : 'no'}`
-        }${details ? ` | ${details}` : ''}${
-          p.variantsSummary ? ` | ${p.variantsSummary}` : ''
-        }`;
+        }${details ? ` | ${details}` : ''}`;
+        if (p.variantsSummary) {
+          return `${base}\n${p.variantsSummary}`;
+        }
+        return base;
       })
       .join('\n');
 

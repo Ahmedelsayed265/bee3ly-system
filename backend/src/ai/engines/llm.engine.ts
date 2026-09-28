@@ -245,19 +245,48 @@ export class LlmEngine {
       {
         type: 'function',
         function: {
+          name: 'quoteCheckout',
+          description:
+            'Quote product + shipping + grand total before confirming order',
+          parameters: prop({
+            productId: { type: 'string' },
+            name: { type: 'string' },
+            quantity: { type: 'number' },
+            size: { type: 'string' },
+            color: { type: 'string' },
+            governorate: {
+              type: 'string',
+              description: 'Governorate id: cairo, giza, alexandria, …',
+            },
+          }),
+        },
+      },
+      {
+        type: 'function',
+        function: {
           name: 'createOrder',
           description: 'Create validated order when name+phone known',
           parameters: prop(
             {
               productId: { type: 'string' },
+              name: { type: 'string' },
               customerName: { type: 'string' },
               customerPhone: { type: 'string' },
               size: { type: 'string' },
+              color: { type: 'string' },
               quantity: { type: 'number' },
               governorate: {
                 type: 'string',
                 description:
                   'Egypt governorate id (cairo, giza, alexandria, …) for shipping',
+              },
+              address: {
+                type: 'string',
+                description: 'Full delivery address text',
+              },
+              paymentMethod: {
+                type: 'string',
+                description: 'How customer will pay (from business payment options)',
               },
             },
             ['customerName', 'customerPhone'],
