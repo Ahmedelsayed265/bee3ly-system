@@ -1,5 +1,7 @@
-import uvicorn
+import asyncio
+
 import jwt
+import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -54,7 +56,8 @@ async def handle_customer_message(
     token = auth_data["token"]
 
     try:
-        res = execute_customer_chat(
+        res = await asyncio.to_thread(
+            execute_customer_chat,
             conversation_id=payload.conversationId,
             customer_id=payload.customerId,
             message=payload.message,
@@ -80,10 +83,11 @@ async def handle_merchant_message(
 ):
     token = auth_data["token"]
     try:
-        res = execute_merchant_chat(
-            business_id=auth_data.get("business_id") or "default",
-            message=payload.message,
-            bearer_token=token,
+        res = await asyncio.to_thread(
+            execute_merchant_chat,
+            auth_data.get("business_id") or "default",
+            payload.message,
+            token,
         )
         return res
     except Exception as e:

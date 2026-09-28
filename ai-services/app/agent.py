@@ -1,16 +1,12 @@
-from google import genai
 from google.genai import types
 
 from app.bee3ly_client import fetch_session_context, run_tool
-from app.config import settings
+from app.gemini_client import gemini_client, generate_content
 from app.gemini_tools import SALES_TOOLS
 from app.memory import get_session_history, save_session_history
+from app.tools import resolve_handoff_after_tool
 
 MAX_TOOL_ROUNDS = 4
-
-
-def _gemini_client() -> genai.Client:
-    return genai.Client(api_key=settings.GEMINI_API_KEY)
 
 
 def execute_customer_chat(
@@ -59,18 +55,19 @@ def execute_customer_chat(
         types.Content(role="user", parts=[types.Part.from_text(text=message)])
     )
 
-    client = _gemini_client()
+    client = gemini_client()
     tools_used: list[str] = []
     order = None
     lead = None
     needs_human = False
     handoff_reason = None
     reply_text = ""
+    handoff_done = False
 
     try:
         for _ in range(MAX_TOOL_ROUNDS):
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
+            response = generate_content(
+                client,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -90,13 +87,13 @@ def execute_customer_chat(
 
             for call in response.function_calls:
                 name = call.name
+                if not name:
+                    continue
                 args = dict(call.args) if call.args else {}
                 tools_used.append(name)
 
                 if name == "transferToHuman":
-                    needs_human = True
-                    handoff_reason = args.get("reason") or args.get("summary")
-                    tool_result = run_tool(
+                    raw = run_tool(
                         bearer_token,
                         conversation_id,
                         customer_id,
@@ -104,6 +101,13 @@ def execute_customer_chat(
                         args,
                         message,
                     )
+                    tool_result, flagged, reason = resolve_handoff_after_tool(
+                        raw, args
+                    )
+                    if flagged:
+                        needs_human = True
+                        handoff_reason = reason
+                        handoff_done = True
                 else:
                     tool_result = run_tool(
                         bearer_token,
@@ -130,9 +134,25 @@ def execute_customer_chat(
                         ],
                     )
                 )
+
+            if handoff_done:
+                closing = generate_content(
+                    client,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.3,
+                    ),
+                )
+                reply_text = (
+                    closing.text
+                    or "حاضر يا فندم، هحوّلك لحد من الفريق يخدمك في أقرب وقت."
+                )
+                break
+
         if not reply_text:
-            final = client.models.generate_content(
-                model=settings.GEMINI_MODEL,
+            final = generate_content(
+                client,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,

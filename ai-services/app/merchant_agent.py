@@ -1,6 +1,7 @@
-from google import genai
 from google.genai import types
+
 from app.config import settings
+from app.gemini_client import gemini_client, generate_content
 from app.tools import fetch_live_products, format_products_for_prompt
 
 def execute_merchant_chat(business_id: str, message: str, bearer_token: str) -> dict:
@@ -27,9 +28,9 @@ def execute_merchant_chat(business_id: str, message: str, bearer_token: str) -> 
     - اقترح مع الإعلان: الفئة المستهدفة المناسبة (Target Audience) وأفكار للصور/الفيديو وهاشتاجات مناسبة.
     """
 
-    client = genai.Client()
-    response = client.models.generate_content(
-        model=settings.GEMINI_MODEL,
+    client = gemini_client()
+    response = generate_content(
+        client,
         contents=message,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,

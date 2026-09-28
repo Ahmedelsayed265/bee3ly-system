@@ -67,16 +67,53 @@ def update_product_stock(bearer_token: str, product_id: str, quantity_ordered: i
         return {"status": "error", "message": str(e)}
 
 
-def trigger_human_handoff(reason: str = "Customer requested human support") -> dict:
+def trigger_human_handoff(
+    reason: str = "Customer requested human support",
+    *,
+    summary: str | None = None,
+) -> dict:
     """
-    Triggers a handoff to a human customer support agent when the AI cannot fulfill the request 
-    or when the customer explicitly asks to talk to a human.
+    Normalized handoff result for Gemini (matches Nest ``transferToHuman``: ok + reason).
+    DB updates happen via ``POST /ai/run-tool``; this shapes the function response only.
     """
-    return {
+    out: dict = {
+        "ok": True,
         "status": "handoff_triggered",
         "action": "human_handoff",
-        "reason": reason
+        "reason": reason,
     }
+    if summary:
+        out["summary"] = summary
+    return out
+
+
+def resolve_handoff_after_tool(
+    tool_result: dict,
+    args: dict | None,
+) -> tuple[dict, bool, str | None]:
+    """After Nest run-tool for transferToHuman — flags for ``/api/v1/chat`` + model feedback."""
+    args = args or {}
+    fallback_reason = (
+        args.get("reason")
+        if isinstance(args.get("reason"), str)
+        else None
+    ) or (
+        args.get("summary")
+        if isinstance(args.get("summary"), str)
+        else None
+    ) or "Customer requested human support"
+    summary = args.get("summary") if isinstance(args.get("summary"), str) else None
+
+    if "error" not in tool_result:
+        reason = str(tool_result.get("reason") or fallback_reason)
+        return trigger_human_handoff(reason, summary=summary), True, reason
+
+    payload = {
+        **trigger_human_handoff(fallback_reason, summary=summary),
+        "ok": False,
+        "error": tool_result.get("error"),
+    }
+    return payload, True, fallback_reason
 
 
 def format_products_for_prompt(products: list) -> str:
