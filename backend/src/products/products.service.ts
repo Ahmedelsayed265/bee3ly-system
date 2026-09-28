@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { AiContextCacheService } from '../ai/context/ai-context-cache.service';
 import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
@@ -25,6 +26,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    private readonly aiContextCache: AiContextCacheService,
   ) {}
 
   private async businessType(businessId: string) {
@@ -176,7 +178,7 @@ export class ProductsService {
       inStock: dto.inStock,
     });
 
-    const product = await this.prisma.product.create({
+    const created = await this.prisma.product.create({
       data: {
         businessId,
         name: dto.name.trim(),
@@ -189,7 +191,8 @@ export class ProductsService {
         inStock: derived.inStock,
       },
     });
-    return { product };
+    this.aiContextCache.invalidate(businessId);
+    return { product: created };
   }
 
   async update(userId: string, id: string, dto: UpdateProductDto) {
@@ -261,6 +264,7 @@ export class ProductsService {
           : {}),
       },
     });
+    this.aiContextCache.invalidate(businessId);
     return { product };
   }
 
@@ -271,6 +275,7 @@ export class ProductsService {
     });
     if (!existing) throw new NotFoundException('Product not found');
     await this.prisma.product.delete({ where: { id } });
+    this.aiContextCache.invalidate(businessId);
     return { success: true };
   }
 }

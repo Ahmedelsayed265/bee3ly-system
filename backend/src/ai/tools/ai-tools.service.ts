@@ -25,6 +25,7 @@ import {
   parseShippingZones,
   shippingPriceForGovernorate,
 } from '../../businesses/shipping-zones';
+import { AiContextCacheService } from '../context/ai-context-cache.service';
 import type { BusinessContext, ToolName } from '../types';
 
 function asString(value: unknown, fallback = ''): string {
@@ -60,6 +61,7 @@ export class AiToolsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly aiContextCache: AiContextCacheService,
   ) {}
 
   async execute(
@@ -529,6 +531,8 @@ export class AiToolsService {
         campaignId: ctx.campaignId,
       },
     });
+
+    this.aiContextCache.invalidate(ctx.businessId);
 
     const ship = order.shippingEgp ?? 0;
     return {

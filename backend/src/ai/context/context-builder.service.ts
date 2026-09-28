@@ -8,7 +8,6 @@ import {
 import {
   asVariants,
   formatVariantsDetailForPrompt,
-  formatVariantsSummary,
   hasVariantMatrix,
 } from '../../products/product-variants';
 import { presentKnowledge } from '../../businesses/knowledge-text';
@@ -18,55 +17,55 @@ import {
   parseShippingZones,
 } from '../../businesses/shipping-zones';
 import type { BusinessContext } from '../types';
+import { AiContextCacheService } from './ai-context-cache.service';
 
 @Injectable()
 export class ContextBuilderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly catalogCache: AiContextCacheService,
+  ) {}
 
-  async build(params: {
-    businessId: string;
-    conversationId: string;
-    customerId: string;
-    latestCustomerMessage: string;
-  }): Promise<BusinessContext> {
-    const [business, agent, products, conversation, customer] =
-      await Promise.all([
-        this.prisma.business.findUniqueOrThrow({
-          where: { id: params.businessId },
-        }),
-        this.prisma.aIAgent.findUnique({
-          where: { businessId: params.businessId },
-        }),
-        this.prisma.product.findMany({
-          where: { businessId: params.businessId },
-          orderBy: { createdAt: 'asc' },
-          take: 20,
-        }),
-        this.prisma.conversation.findUniqueOrThrow({
-          where: { id: params.conversationId },
-          include: {
-            campaign: true,
-            messages: {
-              orderBy: { createdAt: 'desc' },
-              take: 16,
-            },
-          },
-        }),
-        this.prisma.customer.findUniqueOrThrow({
-          where: { id: params.customerId },
-        }),
-      ]);
+  /** Cached catalog + business settings (TTL). Stock tools still read DB live. */
+  async loadCatalogSnapshot(businessId: string) {
+    const cached = this.catalogCache.get(businessId);
+    if (cached) return cached;
 
-    const historyAsc = [...conversation.messages].reverse();
+    const [business, agent, products] = await Promise.all([
+      this.prisma.business.findUniqueOrThrow({
+        where: { id: businessId },
+      }),
+      this.prisma.aIAgent.findUnique({
+        where: { businessId },
+      }),
+      this.prisma.product.findMany({
+        where: { businessId },
+        orderBy: { createdAt: 'asc' },
+        take: 20,
+      }),
+    ]);
 
-    return {
-      businessId: params.businessId,
-      conversationId: params.conversationId,
-      customerId: params.customerId,
-      campaignId: conversation.campaignId,
-      mode: conversation.mode,
-      conversionStage: conversation.conversionStage,
-      channel: conversation.channel,
+    const mappedProducts = products.map((p) => {
+      const attributes = asAttributes(p.attributes);
+      const variants = asVariants(p.variants);
+      const lists = productSizeColorLists(p);
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        priceEgp: p.priceEgp,
+        attributes,
+        sizes: lists.sizes,
+        colors: lists.colors,
+        stockQuantity: p.stockQuantity,
+        inStock: p.inStock,
+        variantsSummary: hasVariantMatrix(variants)
+          ? formatVariantsDetailForPrompt(variants)
+          : undefined,
+      };
+    });
+
+    const snapshot = {
       business: {
         name: business.name,
         type: business.type,
@@ -91,25 +90,62 @@ export class ContextBuilderService {
         instructions: agent?.instructions ?? null,
         handoffEnabled: agent?.handoffEnabled ?? true,
       },
-      products: products.map((p) => {
-        const attributes = asAttributes(p.attributes);
-        const variants = asVariants(p.variants);
-        const lists = productSizeColorLists(p);
-        return {
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          priceEgp: p.priceEgp,
-          attributes,
-          sizes: lists.sizes,
-          colors: lists.colors,
-          stockQuantity: p.stockQuantity,
-          inStock: p.inStock,
-          variantsSummary: hasVariantMatrix(variants)
-            ? formatVariantsDetailForPrompt(variants)
-            : undefined,
-        };
+      products: mappedProducts,
+      catalogPromptBlock: this.renderCatalogBlock(mappedProducts),
+    };
+
+    this.catalogCache.set(businessId, snapshot);
+    return snapshot;
+  }
+
+  async build(
+    params: {
+      businessId: string;
+      conversationId: string;
+      customerId: string;
+      latestCustomerMessage: string;
+    },
+    options: { includeMessageHistory?: boolean } = {},
+  ): Promise<BusinessContext> {
+    const includeHistory = options.includeMessageHistory ?? true;
+    const snapshot = await this.loadCatalogSnapshot(params.businessId);
+
+    const [conversation, customer] = await Promise.all([
+      this.prisma.conversation.findUniqueOrThrow({
+        where: { id: params.conversationId },
+        include: {
+          campaign: true,
+          ...(includeHistory
+            ? {
+                messages: {
+                  orderBy: { createdAt: 'desc' as const },
+                  take: 16,
+                },
+              }
+            : {}),
+        },
       }),
+      this.prisma.customer.findUniqueOrThrow({
+        where: { id: params.customerId },
+      }),
+    ]);
+
+    const historyAsc =
+      includeHistory && 'messages' in conversation && conversation.messages
+        ? [...conversation.messages].reverse()
+        : [];
+
+    return {
+      businessId: params.businessId,
+      conversationId: params.conversationId,
+      customerId: params.customerId,
+      campaignId: conversation.campaignId,
+      mode: conversation.mode,
+      conversionStage: conversation.conversionStage,
+      channel: conversation.channel,
+      business: snapshot.business,
+      agent: snapshot.agent,
+      products: snapshot.products,
       customer: {
         name: customer.name,
         phone: customer.phone,
@@ -131,8 +167,10 @@ export class ContextBuilderService {
     };
   }
 
-  toPromptBlock(ctx: BusinessContext): string {
-    const productLines = ctx.products
+  private renderCatalogBlock(
+    products: BusinessContext['products'],
+  ): string {
+    return products
       .map((p) => {
         const details =
           formatAttributesLine(p.attributes) ||
@@ -153,6 +191,12 @@ export class ContextBuilderService {
         return base;
       })
       .join('\n');
+  }
+
+  toPromptBlock(ctx: BusinessContext): string {
+    const snapshot = this.catalogCache.get(ctx.businessId);
+    const productLines =
+      snapshot?.catalogPromptBlock ?? this.renderCatalogBlock(ctx.products);
 
     return [
       `Business: ${ctx.business.name} (${ctx.business.type})`,

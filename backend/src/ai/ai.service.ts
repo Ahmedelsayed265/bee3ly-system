@@ -21,6 +21,7 @@ import { GOVERNORATE_IDS } from '../businesses/shipping-zones';
 import { ContextBuilderService } from './context/context-builder.service';
 import { LlmEngine } from './engines/llm.engine';
 import { RulesEngine } from './engines/rules.engine';
+import { AiContextCacheService } from './context/ai-context-cache.service';
 import { AiToolsService } from './tools/ai-tools.service';
 import type { AiEngineResult, ToolName } from './types';
 
@@ -34,6 +35,7 @@ export class AiService {
     private readonly conversations: ConversationsService,
     private readonly contextBuilder: ContextBuilderService,
     private readonly aiTools: AiToolsService,
+    private readonly aiContextCache: AiContextCacheService,
     private readonly rules: RulesEngine,
     private readonly llm: LlmEngine,
     private readonly realtime: RealtimeService,
@@ -57,12 +59,15 @@ export class AiService {
       input.conversationId,
       input.customerId,
     );
-    const ctx = await this.contextBuilder.build({
-      businessId,
-      conversationId: input.conversationId,
-      customerId: input.customerId,
-      latestCustomerMessage: input.message,
-    });
+    const ctx = await this.contextBuilder.build(
+      {
+        businessId,
+        conversationId: input.conversationId,
+        customerId: input.customerId,
+        latestCustomerMessage: input.message,
+      },
+      { includeMessageHistory: false },
+    );
     return {
       contextBlock: this.contextBuilder.toPromptBlock(ctx),
       governorateIds: [...GOVERNORATE_IDS],
@@ -85,12 +90,15 @@ export class AiService {
       input.conversationId,
       input.customerId,
     );
-    const ctx = await this.contextBuilder.build({
-      businessId,
-      conversationId: input.conversationId,
-      customerId: input.customerId,
-      latestCustomerMessage: input.message ?? '',
-    });
+    const ctx = await this.contextBuilder.build(
+      {
+        businessId,
+        conversationId: input.conversationId,
+        customerId: input.customerId,
+        latestCustomerMessage: input.message ?? '',
+      },
+      { includeMessageHistory: false },
+    );
     return this.aiTools.execute(input.tool, ctx, input.args ?? {});
   }
 
@@ -166,6 +174,7 @@ export class AiService {
           : {}),
       },
     });
+    this.aiContextCache.invalidate(businessId);
     return { agent };
   }
 

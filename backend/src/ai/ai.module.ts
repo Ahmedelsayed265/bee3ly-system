@@ -4,6 +4,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { SocialModule } from '../social/social.module';
 import { AiController } from './ai.controller';
 import { AiService } from './ai.service';
+import { AiContextCacheModule } from './context/ai-context-cache.module';
 import { ContextBuilderService } from './context/context-builder.service';
 import { LlmEngine } from './engines/llm.engine';
 import { RulesEngine } from './engines/rules.engine';
@@ -11,6 +12,7 @@ import { AiToolsService } from './tools/ai-tools.service';
 
 @Module({
   imports: [
+    AiContextCacheModule,
     forwardRef(() => ConversationsModule),
     forwardRef(() => SocialModule),
     NotificationsModule,
@@ -23,6 +25,6 @@ import { AiToolsService } from './tools/ai-tools.service';
     RulesEngine,
     LlmEngine,
   ],
-  exports: [AiService, AiToolsService, RulesEngine],
+  exports: [AiService, AiToolsService, RulesEngine, AiContextCacheModule],
 })
 export class AiModule {}

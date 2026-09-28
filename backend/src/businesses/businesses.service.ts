@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { AiContextCacheService } from '../ai/context/ai-context-cache.service';
 import { Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +12,7 @@ export class BusinessesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    private readonly aiContextCache: AiContextCacheService,
   ) {}
 
   async getMine(userId: string) {
@@ -71,6 +73,7 @@ export class BusinessesService {
       },
     });
 
+    this.aiContextCache.invalidate(businessId);
     return { business };
   }
 }
