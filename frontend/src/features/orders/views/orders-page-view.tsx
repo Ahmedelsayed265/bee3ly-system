@@ -12,23 +12,36 @@ export function OrdersPageView() {
   const orders = useOrders();
   const [params] = useSearchParams();
   const campaignId = params.get('campaignId');
+  const showEmpty =
+    !orders.isLoading &&
+    orders.total === 0 &&
+    !orders.hasFilters &&
+    !orders.isFetching &&
+    !campaignId;
 
   return (
     <PageLayout title={t('navOrders')} description={t('ordersIntro')}>
       <CampaignFilterBanner />
-      {orders.total === 0 && !orders.isLoading ? (
-        <p className="text-muted text-sm">
-          {campaignId ? t('campaignFilteredEmpty') : t('noOrders')}
-        </p>
+      {showEmpty ? (
+        <p className="text-muted text-sm">{t('noOrders')}</p>
       ) : (
         <OrdersTable
           orders={orders.orders}
+          counts={orders.counts}
+          productOptions={orders.productOptions}
           page={orders.page}
           totalPages={orders.totalPages}
           isLoading={orders.isLoading}
           isFetching={orders.isFetching}
           isStatusPending={orders.isStatusPending}
+          status={orders.status}
+          productId={orders.productId}
+          query={orders.query}
           money={orders.money}
+          onStatusFilter={orders.setStatus}
+          onProductFilter={orders.setProductId}
+          onQuery={orders.setQuery}
+          onClearFilters={orders.clearFilters}
           onView={orders.setViewing}
           onAsk={orders.ask}
           onPage={orders.setPage}

@@ -18,7 +18,8 @@ import {
   variantsTotalStock,
   type ProductVariants,
 } from './product-variants';
-import { resolveInStock } from './stock-mode';
+import { resolveInStock, usesQuantityStock } from './stock-mode';
+import type { ProductStockFilter } from './product-query.dto';
 
 @Injectable()
 export class ProductsService {
@@ -103,10 +104,16 @@ export class ProductsService {
     };
   }
 
-  async list(userId: string, page = 1, limit = 10) {
+  async list(
+    userId: string,
+    page = 1,
+    limit = 10,
+    filters: { q?: string; stock?: ProductStockFilter } = {},
+  ) {
     const businessId = await this.access.requireBusinessId(userId);
+    const type = await this.businessType(businessId);
     const window = pageWindow(page, limit);
-    const where = { businessId };
+    const where = this.productWhere(businessId, type, filters);
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
@@ -117,6 +124,39 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
     return { products, ...pageMeta(total, window.page, window.limit) };
+  }
+
+  private productWhere(
+    businessId: string,
+    businessType: string,
+    filters: { q?: string; stock?: ProductStockFilter },
+  ): Prisma.ProductWhereInput {
+    const q = filters.q?.trim();
+    const quantityMode = usesQuantityStock(businessType);
+    let stockClause: Prisma.ProductWhereInput = {};
+    if (filters.stock === 'in_stock') {
+      stockClause = quantityMode
+        ? { stockQuantity: { gt: 0 } }
+        : { inStock: true };
+    } else if (filters.stock === 'out_of_stock') {
+      stockClause = quantityMode
+        ? { OR: [{ stockQuantity: { lte: 0 } }, { stockQuantity: null }] }
+        : { inStock: false };
+    } else if (filters.stock === 'low_stock' && quantityMode) {
+      stockClause = { stockQuantity: { gt: 0, lte: 5 } };
+    }
+    return {
+      businessId,
+      ...stockClause,
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { description: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
   }
 
   async create(userId: string, dto: CreateProductDto) {

@@ -1,6 +1,12 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { BusinessType, Product } from '@/features/business/api';
+import { FilterChip } from '@/components/ui/filter-chip';
+import { InputField } from '@/components/ui/input-field';
+import type {
+  BusinessType,
+  Product,
+  ProductStockFilter,
+} from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import { resolveAttributeEntries } from '@/features/products/attribute-templates';
 import {
@@ -16,6 +22,11 @@ type ProductsTableProps = {
   isLoading?: boolean;
   businessType: BusinessType;
   quantityMode: boolean;
+  stock: ProductStockFilter | '';
+  query: string;
+  onStockFilter: (stock: ProductStockFilter | '') => void;
+  onQuery: (query: string) => void;
+  onClearFilters: () => void;
   onEdit: (product: Product) => void;
   onDelete: (product: { id: string; name: string }) => void;
 };
@@ -25,13 +36,55 @@ export function ProductsTable({
   isLoading = false,
   businessType,
   quantityMode,
+  stock,
+  query,
+  onStockFilter,
+  onQuery,
+  onClearFilters,
   onEdit,
   onDelete,
 }: ProductsTableProps) {
   const { t, locale } = useLocale();
+  const hasFilters = Boolean(stock || query.trim());
+  const stockFilters: Array<{ id: ProductStockFilter | ''; label: string }> = [
+    { id: '', label: t('productFilterAll') },
+    { id: 'in_stock', label: t('productFilterInStock') },
+    { id: 'out_of_stock', label: t('productFilterOutOfStock') },
+    ...(quantityMode
+      ? [{ id: 'low_stock' as const, label: t('productFilterLowStock') }]
+      : []),
+  ];
 
   return (
-    <div className="border-border bg-surface w-full overflow-x-auto rounded-2xl border">
+    <div className="border-border/70 bg-surface w-full overflow-hidden rounded-[1.75rem] border">
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap gap-2">
+          {stockFilters.map((item) => (
+            <FilterChip
+              key={item.id || 'ALL'}
+              label={item.label}
+              active={stock === item.id}
+              onClick={() => onStockFilter(item.id)}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <InputField
+            icon={Search}
+            value={query}
+            onChange={(event) => onQuery(event.target.value)}
+            placeholder={t('productSearchPlaceholder')}
+            containerClassName="min-w-56 flex-1"
+            aria-label={t('productSearchPlaceholder')}
+          />
+          {hasFilters ? (
+            <Button type="button" variant="ghost" size="sm" onClick={onClearFilters}>
+              {t('leadClearFilters')}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <div className="border-border border-t overflow-x-auto">
       <table className="w-full min-w-[52rem] border-collapse text-sm">
         <thead>
           <tr className="border-border bg-canvas/60 text-muted border-b text-xs font-semibold tracking-wide uppercase">
@@ -45,6 +98,12 @@ export function ProductsTable({
         <tbody>
           {isLoading ? (
             <TableRowsSkeleton rows={6} cols={5} />
+          ) : products.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="text-muted px-4 py-10 text-center text-sm">
+                {hasFilters ? t('productsFilteredEmpty') : t('noProducts')}
+              </td>
+            </tr>
           ) : (
             products.map((product) => {
               const variants = asVariants(product.variants);
@@ -191,6 +250,7 @@ export function ProductsTable({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -71,7 +71,10 @@ export function ProductsPageView() {
         onSubmit={products.submit}
       />
 
-      {products.total === 0 && !products.isLoading ? (
+      {products.total === 0 &&
+      !products.isLoading &&
+      !products.hasFilters &&
+      !products.isFetching ? (
         <ProductEmptyState onAdd={products.openCreate} />
       ) : (
         <ProductsTable
@@ -79,6 +82,11 @@ export function ProductsPageView() {
           isLoading={products.isLoading && products.products.length === 0}
           businessType={products.businessType}
           quantityMode={products.quantityMode}
+          stock={products.stock}
+          query={products.query}
+          onStockFilter={products.setStock}
+          onQuery={products.setQuery}
+          onClearFilters={products.clearFilters}
           onEdit={products.openEdit}
           onDelete={products.setPendingDelete}
         />

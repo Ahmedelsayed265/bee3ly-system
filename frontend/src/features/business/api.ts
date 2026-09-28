@@ -111,11 +111,22 @@ export type PageResult<T> = {
   totalPages: number;
 } & T;
 
-export async function fetchProducts(page = 1, limit = 10) {
+export type ProductStockFilter = 'in_stock' | 'out_of_stock' | 'low_stock';
+
+export async function fetchProducts(
+  page = 1,
+  limit = 10,
+  filters: { q?: string; stock?: ProductStockFilter } = {},
+) {
   const { data } = await api.get<PageResult<{ products: Product[] }>>(
     '/products',
     {
-      params: { page, limit },
+      params: {
+        page,
+        limit,
+        ...(filters.q ? { q: filters.q } : {}),
+        ...(filters.stock ? { stock: filters.stock } : {}),
+      },
     },
   );
   return data;
@@ -195,15 +206,40 @@ export type OrderRow = {
   }>;
 };
 
-export async function fetchOrders(page = 1, limit = 10, campaignId?: string) {
+export async function fetchOrders(
+  input: {
+    page?: number;
+    limit?: number;
+    campaignId?: string;
+    status?: string;
+    q?: string;
+    productId?: string;
+  } = {},
+) {
+  const page = input.page ?? 1;
+  const limit = input.limit ?? 10;
   const { data } = await api.get<{
     orders: OrderRow[];
+    counts: {
+      PENDING: number;
+      CONFIRMED: number;
+      COMPLETED: number;
+      CANCELLED: number;
+      RETURNED: number;
+    };
     page: number;
     limit: number;
     total: number;
     totalPages: number;
   }>('/orders', {
-    params: { page, limit, ...(campaignId ? { campaignId } : {}) },
+    params: {
+      page,
+      limit,
+      ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.q ? { q: input.q } : {}),
+      ...(input.productId ? { productId: input.productId } : {}),
+    },
   });
   return data;
 }

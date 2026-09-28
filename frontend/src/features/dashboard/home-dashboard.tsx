@@ -417,7 +417,7 @@ export function HomeDashboard() {
   });
   const ordersQuery = useQuery({
     queryKey: ['orders', 'dashboard'],
-    queryFn: () => fetchOrders(1, 4),
+    queryFn: () => fetchOrders({ page: 1, limit: 4 }),
   });
   const convQuery = useQuery({
     queryKey: ['conversations'],

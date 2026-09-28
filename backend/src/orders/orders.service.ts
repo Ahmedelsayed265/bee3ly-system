@@ -16,14 +16,26 @@ export class OrdersService {
     private readonly access: BusinessAccessService,
   ) {}
 
-  async list(userId: string, page = 1, limit = 10, campaignId?: string) {
+  async list(
+    userId: string,
+    page = 1,
+    limit = 10,
+    filters: {
+      campaignId?: string;
+      status?: OrderStatus;
+      q?: string;
+      productId?: string;
+    } = {},
+  ) {
     const businessId = await this.access.requireBusinessId(userId);
     const window = pageWindow(page, limit);
-    const where = {
-      businessId,
-      ...(campaignId ? { campaignId } : {}),
-    };
-    const [orders, total] = await Promise.all([
+    const where = this.orderWhere(businessId, filters);
+    const facetWhere = this.orderWhere(businessId, {
+      campaignId: filters.campaignId,
+      q: filters.q,
+      productId: filters.productId,
+    });
+    const [orders, total, grouped] = await Promise.all([
       this.prisma.order.findMany({
         where,
         include: { items: true, customer: true },
@@ -32,8 +44,54 @@ export class OrdersService {
         take: window.limit,
       }),
       this.prisma.order.count({ where }),
+      this.prisma.order.groupBy({
+        by: ['status'],
+        where: facetWhere,
+        _count: { _all: true },
+      }),
     ]);
-    return { orders, ...pageMeta(total, window.page, window.limit) };
+    const counts: Record<OrderStatus, number> = {
+      PENDING: 0,
+      CONFIRMED: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      RETURNED: 0,
+    };
+    for (const row of grouped) counts[row.status] = row._count._all;
+    return { orders, counts, ...pageMeta(total, window.page, window.limit) };
+  }
+
+  private orderWhere(
+    businessId: string,
+    filters: {
+      campaignId?: string;
+      status?: OrderStatus;
+      q?: string;
+      productId?: string;
+    },
+  ): Prisma.OrderWhereInput {
+    const q = filters.q?.trim();
+    const orderNumber = q ? Number.parseInt(q.replace(/^#/, ''), 10) : Number.NaN;
+    return {
+      businessId,
+      ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.productId
+        ? { items: { some: { productId: filters.productId } } }
+        : {}),
+      ...(q
+        ? {
+            OR: [
+              { customerName: { contains: q, mode: 'insensitive' } },
+              { customerPhone: { contains: q, mode: 'insensitive' } },
+              { items: { some: { name: { contains: q, mode: 'insensitive' } } } },
+              ...(Number.isFinite(orderNumber)
+                ? [{ orderNumber }]
+                : []),
+            ],
+          }
+        : {}),
+    };
   }
 
   async getOne(userId: string, id: string) {

@@ -2,9 +2,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 
+import type { OrderStatusAction } from '@/features/orders/constants';
+
 type PendingAction = {
   order: OrderRow;
-  status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED';
+  status: OrderStatusAction;
 } | null;
 
 type OrderConfirmDialogProps = {
@@ -30,7 +32,9 @@ export function OrderConfirmDialog({
           ? t('cancelOrderTitle')
           : pendingAction?.status === 'RETURNED'
             ? t('returnOrderTitle')
-            : t('confirmOrderTitle')
+            : pendingAction?.status === 'COMPLETED'
+              ? t('completeOrderTitle')
+              : t('confirmOrderTitle')
       }
       description={
         pendingAction
@@ -39,7 +43,9 @@ export function OrderConfirmDialog({
                 ? 'cancelOrderBody'
                 : pendingAction.status === 'RETURNED'
                   ? 'returnOrderBody'
-                  : 'confirmOrderBody',
+                  : pendingAction.status === 'COMPLETED'
+                    ? 'completeOrderBody'
+                    : 'confirmOrderBody',
               {
                 number: String(pendingAction.order.orderNumber),
                 customer:
@@ -53,7 +59,9 @@ export function OrderConfirmDialog({
           ? t('cancelOrder')
           : pendingAction?.status === 'RETURNED'
             ? t('returnOrder')
-            : t('confirmOrder')
+            : pendingAction?.status === 'COMPLETED'
+              ? t('completeOrder')
+              : t('confirmOrder')
       }
       cancelLabel={t('back')}
       pending={isPending}

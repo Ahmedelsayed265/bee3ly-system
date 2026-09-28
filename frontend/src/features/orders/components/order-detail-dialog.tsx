@@ -11,8 +11,10 @@ import {
 import type { OrderRow } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import type { OrderStatusAction } from '@/features/orders/constants';
 import {
   canCancel,
+  canComplete,
   canConfirm,
   canReturn,
 } from '@/features/orders/hooks/use-orders';
@@ -23,10 +25,7 @@ type OrderDetailDialogProps = {
   isStatusPending: boolean;
   money: (value: number) => string;
   onOpenChange: (open: boolean) => void;
-  onAsk: (
-    order: OrderRow,
-    status: 'CONFIRMED' | 'CANCELLED' | 'RETURNED',
-  ) => void;
+  onAsk: (order: OrderRow, status: OrderStatusAction) => void;
 };
 
 export function OrderDetailDialog({
@@ -131,6 +130,14 @@ export function OrderDetailDialog({
                 onClick={() => onAsk(order, 'CANCELLED')}
               >
                 {t('cancelOrder')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!canComplete(order.status) || isStatusPending}
+                onClick={() => onAsk(order, 'COMPLETED')}
+              >
+                {t('completeOrderShort')}
               </Button>
               <Button
                 type="button"

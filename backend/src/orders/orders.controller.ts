@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrderStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import {
   CurrentUser,
   type AuthUser,
@@ -26,6 +26,19 @@ class OrderQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsUUID()
   campaignId?: string;
+
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
 }
 
 @Controller('orders')
@@ -35,12 +48,12 @@ export class OrdersController {
 
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() query: OrderQueryDto) {
-    return this.orders.list(
-      user.id,
-      query.page ?? 1,
-      query.limit ?? 10,
-      query.campaignId,
-    );
+    return this.orders.list(user.id, query.page ?? 1, query.limit ?? 10, {
+      campaignId: query.campaignId,
+      status: query.status,
+      q: query.q,
+      productId: query.productId,
+    });
   }
 
   @Get(':id')

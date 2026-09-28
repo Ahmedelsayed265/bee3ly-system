@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -14,6 +14,7 @@ import {
   updateProduct,
   type BusinessType,
   type Product,
+  type ProductStockFilter,
   type VariantDictionaryOption,
 } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
@@ -106,6 +107,10 @@ export function useProducts() {
   }, [business?.variantDictionary]);
 
   const [page, setPage] = useState(1);
+  const [stock, setStockState] = useState<ProductStockFilter | ''>('');
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const skipSearchReset = useRef(false);
   const [pendingDelete, setPendingDelete] = useState<{
     id: string;
     name: string;
@@ -128,9 +133,26 @@ export function useProducts() {
   const [variantAxes, setVariantAxes] = useState<VariantAxisDraft[]>([]);
   const [variantSkus, setVariantSkus] = useState<ProductVariantSku[]>([]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(query.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    if (!skipSearchReset.current) {
+      skipSearchReset.current = true;
+      return;
+    }
+    setPage(1);
+  }, [search, stock]);
+
   const productsQuery = useQuery({
-    queryKey: ['products', page, PAGE_SIZE],
-    queryFn: () => fetchProducts(page, PAGE_SIZE),
+    queryKey: ['products', page, PAGE_SIZE, search, stock],
+    queryFn: () =>
+      fetchProducts(page, PAGE_SIZE, {
+        q: search || undefined,
+        stock: stock || undefined,
+      }),
     placeholderData: keepPreviousData,
   });
   const products = productsQuery.data?.products ?? [];
@@ -315,9 +337,25 @@ export function useProducts() {
     await refreshMe();
   };
 
+  const hasFilters = Boolean(stock || search);
+
   return {
     businessType,
     quantityMode,
+    stock,
+    setStock: (next: ProductStockFilter | '') => {
+      setStockState(next);
+      setPage(1);
+    },
+    query,
+    setQuery,
+    hasFilters,
+    clearFilters: () => {
+      setStockState('');
+      setQuery('');
+      setSearch('');
+      setPage(1);
+    },
     dictionary,
     dictOpen,
     setDictOpen,
