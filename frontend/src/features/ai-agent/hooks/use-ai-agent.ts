@@ -28,7 +28,7 @@ export function useAiAgent() {
   });
 
   const agentId = agent?.id ?? null;
-  if (agentId && agentId !== form.agentId) {
+  if (agent && agentId !== form.agentId) {
     setForm({
       agentId,
       instructions: agent.instructions ?? '',

@@ -1,5 +1,5 @@
 import { LayoutTemplate, Smile, X } from 'lucide-react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { EmojiPicker } from '@/features/inbox/components/emoji-picker';

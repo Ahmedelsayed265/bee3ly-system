@@ -4,7 +4,13 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useEffect, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useState,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -406,10 +412,13 @@ export function useProducts() {
       );
     },
     variantAxes,
-    setVariantAxes: (next: VariantAxisDraft[]) => {
-      setVariantAxes(next);
-      setVariantSkus((prev) => syncVariantSkus(prev, { axes: next }));
-    },
+    setVariantAxes: ((next: SetStateAction<VariantAxisDraft[]>) => {
+      setVariantAxes((prev) => {
+        const axes = typeof next === 'function' ? next(prev) : next;
+        setVariantSkus((skus) => syncVariantSkus(skus, { axes }));
+        return axes;
+      });
+    }) as Dispatch<SetStateAction<VariantAxisDraft[]>>,
     variantSkus,
     onSkuChange,
     applyBasePriceToSkus,
