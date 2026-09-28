@@ -20,7 +20,9 @@ export function OnboardingDetailsStep({
         value={workingHours}
         onChange={(e) => onWorkingHoursChange(e.target.value)}
       />
-      <p className="text-muted text-xs leading-5">{t('knowledgeShippingNote')}</p>
+      <p className="text-muted text-xs leading-5">
+        {t('knowledgeShippingNote')}
+      </p>
     </>
   );
 }

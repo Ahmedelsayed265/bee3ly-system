@@ -166,9 +166,7 @@ export function KnowledgeForm({
               id="hours-open"
               type="time"
               value={hours.open}
-              onChange={(e) =>
-                updateHours({ ...hours, open: e.target.value })
-              }
+              onChange={(e) => updateHours({ ...hours, open: e.target.value })}
             />
           </div>
           <div>
@@ -177,9 +175,7 @@ export function KnowledgeForm({
               id="hours-close"
               type="time"
               value={hours.close}
-              onChange={(e) =>
-                updateHours({ ...hours, close: e.target.value })
-              }
+              onChange={(e) => updateHours({ ...hours, close: e.target.value })}
             />
           </div>
         </div>
@@ -285,7 +281,9 @@ export function KnowledgeForm({
         </div>
       </Section>
 
-      <p className="text-muted text-xs leading-5">{t('knowledgeShippingNote')}</p>
+      <p className="text-muted text-xs leading-5">
+        {t('knowledgeShippingNote')}
+      </p>
     </div>
   );
 }
