@@ -114,4 +114,9 @@ export type BusinessContext = {
   latestCustomerMessage: string;
   paymentReviewPending: boolean;
   paymentConfirmedForAi: boolean;
+  openOrder: {
+    id: string;
+    orderNumber: number;
+    status: string;
+  } | null;
 };

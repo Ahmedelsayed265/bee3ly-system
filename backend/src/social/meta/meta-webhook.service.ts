@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  buildInboundText,
+  parseMetaMessageAttachments,
+} from '../../channels/inbound-content';
 import { InboundMessageService } from '../../channels/inbound-message.service';
 import type { InboundMessageEvent } from '../../channels/channel.types';
 import { PageCommentsService } from '../page-comments.service';
@@ -118,9 +122,18 @@ export class MetaWebhookService {
           mid?: string;
           text?: string;
           is_echo?: boolean;
+          attachments?: unknown;
         }
       | undefined;
-    if (!sender?.id || !recipient?.id || !message?.text || message.is_echo) {
+    if (!sender?.id || !recipient?.id || !message || message.is_echo) {
+      return;
+    }
+
+    const attachments = parseMetaMessageAttachments(
+      message as Record<string, unknown>,
+    );
+    const inboundText = buildInboundText(message.text ?? '', attachments);
+    if (!inboundText) {
       return;
     }
 
@@ -130,7 +143,7 @@ export class MetaWebhookService {
         : Date.now();
     const externalEventId =
       message.mid ??
-      `${pageId}:${sender.id}:${timestamp}:${message.text.slice(0, 24)}`;
+      `${pageId}:${sender.id}:${timestamp}:${inboundText.slice(0, 24)}`;
 
     const created = await this.claimEvent('META', externalEventId, event);
     if (!created) {
@@ -149,7 +162,8 @@ export class MetaWebhookService {
       externalAccountId: recipient.id,
       externalSenderId: sender.id,
       externalMessageId: message.mid,
-      text: message.text,
+      text: inboundText,
+      attachments: attachments.length ? attachments : undefined,
       timestamp: Number(timestamp),
       raw: event,
     };

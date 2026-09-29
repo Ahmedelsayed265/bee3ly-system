@@ -15,6 +15,13 @@ import type {
   InboundMessageEvent,
 } from './channel.types';
 import { MerchantTokenService } from './merchant-token.service';
+import { ContextBuilderService } from '../ai/context/context-builder.service';
+import { PAYMENT_REVIEW_HANDOFF } from '../ai/payment-review.constants';
+import { AiToolsService } from '../ai/tools/ai-tools.service';
+import {
+  inboundPrefersEnglish,
+  paymentScreenshotAckReply,
+} from './payment-screenshot-inbound';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
 
 @Injectable()
@@ -27,6 +34,8 @@ export class InboundMessageService {
     private readonly tokens: MerchantTokenService,
     private readonly outbound: MetaOutboundService,
     private readonly realtime: RealtimeService,
+    private readonly contextBuilder: ContextBuilderService,
+    private readonly aiTools: AiToolsService,
   ) {}
 
   async ingest(event: InboundMessageEvent): Promise<InboundIngestResult> {
@@ -157,6 +166,8 @@ export class InboundMessageService {
       });
     }
 
+    const attachments = event.attachments ?? [];
+
     const message = await this.prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -167,6 +178,10 @@ export class InboundMessageService {
           externalMessageId: event.externalMessageId ?? null,
           externalSenderId: event.externalSenderId,
           externalAccountId: event.externalAccountId,
+          ...(attachments.length ? { attachments } : {}),
+          ...(attachments.some((a) => a.type === 'image')
+            ? { paymentReceipt: true }
+            : {}),
         },
       },
     });
@@ -181,7 +196,34 @@ export class InboundMessageService {
     // Merchant token + full context are built here; AiEngineAdapter owns
     // all error handling + safe fallback (so we don't double-fallback).
     // ------------------------------------------------------------------
-    if (conversation.mode !== 'HUMAN' && !conversation.needsHuman) {
+    const paymentReviewPending =
+      conversation.needsHuman &&
+      conversation.handoffReason === PAYMENT_REVIEW_HANDOFF;
+    const hasImage = attachments.some((a) => a.type === 'image');
+
+    if (hasImage && !paymentReviewPending && conversation.mode !== 'HUMAN') {
+      await this.handlePaymentScreenshot({
+        businessId,
+        conversationId: conversation.id,
+        customerId: customer.id,
+        customerMessage: event.text,
+        account,
+        externalSenderId: event.externalSenderId,
+      });
+      this.realtime.notifyConversationUpdated(businessId, conversation.id);
+      return {
+        businessId,
+        conversationId: conversation.id,
+        customerId: customer.id,
+        messageId: message.id,
+        duplicate: false,
+      };
+    }
+
+    const shouldRunAi =
+      conversation.mode !== 'HUMAN' && !paymentReviewPending;
+
+    if (shouldRunAi) {
       // Issue a short-lived signed JWT so the AI Service can securely
       // identify + scope itself to this merchant.
       const authorizationToken = await this.tokens.issueForMerchant(businessId);
@@ -261,5 +303,65 @@ export class InboundMessageService {
       messageId: message.id,
       duplicate: false,
     };
+  }
+
+  /** Prepaid screenshot: merchant review only — never Gemini createOrder on this turn. */
+  private async handlePaymentScreenshot(input: {
+    businessId: string;
+    conversationId: string;
+    customerId: string;
+    customerMessage: string;
+    account: { id: string; status: SocialConnectionStatus };
+    externalSenderId: string;
+  }) {
+    const ctx = await this.contextBuilder.build(
+      {
+        businessId: input.businessId,
+        conversationId: input.conversationId,
+        customerId: input.customerId,
+        latestCustomerMessage: input.customerMessage,
+      },
+      { includeMessageHistory: true },
+    );
+
+    const customerLabel = ctx.customer.name?.trim() || 'عميل';
+    await this.aiTools.execute('transferToHuman', ctx, {
+      reason: PAYMENT_REVIEW_HANDOFF,
+      summary: `${customerLabel} — تم استلام إيصال تحويل ويحتاج تأكيد`,
+    });
+
+    const english = inboundPrefersEnglish(
+      input.customerMessage,
+      ctx.history.map((m) => ({ role: m.role, content: m.content })),
+    );
+    const reply = paymentScreenshotAckReply(english);
+
+    await this.prisma.message.create({
+      data: {
+        conversationId: input.conversationId,
+        role: MessageRole.AI,
+        content: reply,
+        meta: {
+          source: 'payment_screenshot_ack',
+          needsHuman: true,
+          handoffReason: PAYMENT_REVIEW_HANDOFF,
+        },
+      },
+    });
+    await this.prisma.conversation.update({
+      where: { id: input.conversationId },
+      data: { lastMessageAt: new Date() },
+    });
+
+    if (
+      input.account.status === SocialConnectionStatus.CONNECTED &&
+      reply
+    ) {
+      await this.outbound.sendText(
+        input.account.id,
+        input.externalSenderId,
+        reply,
+      );
+    }
   }
 }

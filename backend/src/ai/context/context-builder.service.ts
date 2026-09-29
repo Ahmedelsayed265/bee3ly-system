@@ -20,6 +20,7 @@ import {
   formatShippingZonesForKnowledge,
   parseShippingZones,
 } from '../../businesses/shipping-zones';
+import { OPEN_ORDER_STATUSES } from '../payment-order.guards';
 import type { BusinessContext } from '../types';
 import { AiContextCacheService } from './ai-context-cache.service';
 
@@ -114,7 +115,7 @@ export class ContextBuilderService {
     const includeHistory = options.includeMessageHistory ?? true;
     const snapshot = await this.loadCatalogSnapshot(params.businessId);
 
-    const [conversation, customer] = await Promise.all([
+    const [conversation, customer, openOrder] = await Promise.all([
       this.prisma.conversation.findUniqueOrThrow({
         where: { id: params.conversationId },
         include: {
@@ -131,6 +132,14 @@ export class ContextBuilderService {
       }),
       this.prisma.customer.findUniqueOrThrow({
         where: { id: params.customerId },
+      }),
+      this.prisma.order.findFirst({
+        where: {
+          conversationId: params.conversationId,
+          status: { in: OPEN_ORDER_STATUSES },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, orderNumber: true, status: true },
       }),
     ]);
 
@@ -174,6 +183,13 @@ export class ContextBuilderService {
       paymentConfirmedForAi: (conversation.aiSummary ?? '').startsWith(
         'PAYMENT_CONFIRMED:',
       ),
+      openOrder: openOrder
+        ? {
+            id: openOrder.id,
+            orderNumber: openOrder.orderNumber,
+            status: openOrder.status,
+          }
+        : null,
     };
   }
 
@@ -226,10 +242,13 @@ export class ContextBuilderService {
       `Customer known: name=${ctx.customer.name ?? '-'} phone=${ctx.customer.phone ?? '-'}`,
       `Stage: ${ctx.conversionStage}`,
       ctx.paymentReviewPending
-        ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet.'
+        ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet; never tell customer the order is officially confirmed.'
         : '',
       ctx.paymentConfirmedForAi
-        ? 'Payment: merchant CONFIRMED transfer — collect address if needed and createOrder.'
+        ? 'Payment: merchant CONFIRMED transfer — you may createOrder if details are complete.'
+        : '',
+      ctx.openOrder
+        ? `Open order for this chat: #${ctx.openOrder.orderNumber} (${ctx.openOrder.status}) — do NOT createOrder again; update payment notes or wait for merchant.`
         : '',
       ctx.campaign
         ? `Campaign: ${ctx.campaign.name} / ${ctx.campaign.objective} / offer: ${ctx.campaign.offer}`

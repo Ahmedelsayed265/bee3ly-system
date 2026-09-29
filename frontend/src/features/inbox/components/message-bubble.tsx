@@ -1,4 +1,5 @@
 import { Bot, UserRound, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +8,10 @@ type MessageBubbleProps = {
   content: string;
   customerName?: string | null;
   quickReplies?: Array<{ title: string; payload: string }>;
+  attachments?: Array<{ type: string; url: string }>;
+  paymentConfirmOnImage?: boolean;
+  onConfirmPayment?: () => void;
+  isConfirmPaymentPending?: boolean;
 };
 
 export function MessageBubble({
@@ -14,8 +19,13 @@ export function MessageBubble({
   content,
   customerName,
   quickReplies,
+  attachments = [],
+  paymentConfirmOnImage = false,
+  onConfirmPayment,
+  isConfirmPaymentPending = false,
 }: MessageBubbleProps) {
   const { t } = useLocale();
+  const images = attachments.filter((a) => a.type === 'image' && a.url);
   const isCustomer = role === 'CUSTOMER';
   const isHuman = role === 'HUMAN';
   const speaker = isCustomer
@@ -67,7 +77,48 @@ export function MessageBubble({
               : 'bg-lavender text-ink rounded-ss-md',
         )}
       >
-        <p className="whitespace-pre-wrap">{content}</p>
+        {images.length ? (
+          <div className="flex flex-col gap-2">
+            {images.map((item) => (
+              <div key={item.url} className="relative inline-block max-w-full">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-lg"
+                >
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="max-h-72 max-w-full object-contain"
+                  />
+                </a>
+                {paymentConfirmOnImage && onConfirmPayment ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="absolute end-2 bottom-2 h-7 px-2.5 text-[11px] shadow-md"
+                    disabled={isConfirmPaymentPending}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onConfirmPayment();
+                    }}
+                  >
+                    {t('confirmPaymentShort')}
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {content.trim() ? (
+          <p className={cn('whitespace-pre-wrap', images.length ? 'mt-2' : '')}>
+            {content}
+          </p>
+        ) : images.length ? (
+          <p className="text-[11px] opacity-80">{t('inboxAttachmentImage')}</p>
+        ) : null}
         {quickReplies?.length ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {quickReplies.map((item) => (

@@ -288,6 +288,7 @@ export async function fetchConversation(id: string) {
         createdAt: string;
         meta?: {
           quickReplies?: Array<{ title: string; payload: string }>;
+          attachments?: Array<{ type: string; url: string }>;
         } | null;
       }>;
       leads?: Array<{ id: string; status: string; intent: string | null }>;
@@ -386,6 +387,7 @@ export async function fetchNotifications() {
       type: string;
       title: string;
       body: string;
+      data?: { conversationId?: string; kind?: string } | null;
       readAt: string | null;
       createdAt: string;
     }>;

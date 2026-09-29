@@ -25,6 +25,12 @@ import { AiToolsService } from './tools/ai-tools.service';
     RulesEngine,
     LlmEngine,
   ],
-  exports: [AiService, AiToolsService, RulesEngine, AiContextCacheModule],
+  exports: [
+    AiService,
+    AiToolsService,
+    ContextBuilderService,
+    RulesEngine,
+    AiContextCacheModule,
+  ],
 })
 export class AiModule {}

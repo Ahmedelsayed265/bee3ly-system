@@ -8,12 +8,15 @@ import { useLocale } from '@/features/i18n/locale-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { paths } from '@/routes/paths';
 
 export function DashboardTopBar() {
   const { t } = useLocale();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const notifQuery = useQuery({
     queryKey: ['notifications'],
@@ -113,6 +116,13 @@ export function DashboardTopBar() {
                     }`}
                     onClick={() => {
                       if (!n.readAt) markReadMut.mutate(n.id);
+                      const conversationId = n.data?.conversationId;
+                      if (conversationId) {
+                        navigate(
+                          `${paths.inbox}?conversationId=${encodeURIComponent(conversationId)}`,
+                        );
+                        setOpen(false);
+                      }
                     }}
                   >
                     <p className="text-ink text-sm font-semibold">{n.title}</p>

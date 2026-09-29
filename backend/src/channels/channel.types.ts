@@ -2,6 +2,11 @@ export type ChannelProvider = 'META' | 'WHATSAPP' | 'TIKTOK';
 
 export type ChannelType = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK';
 
+export type InboundAttachment = {
+  type: string;
+  url: string;
+};
+
 export type InboundMessageEvent = {
   provider: ChannelProvider;
   channel: ChannelType;
@@ -10,6 +15,7 @@ export type InboundMessageEvent = {
   externalMessageId?: string;
   senderName?: string;
   text: string;
+  attachments?: InboundAttachment[];
   timestamp?: number;
   raw?: unknown;
 };

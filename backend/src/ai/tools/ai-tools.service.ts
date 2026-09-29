@@ -25,6 +25,10 @@ import {
   shippingPriceForGovernorate,
 } from '../../businesses/shipping-zones';
 import { AiContextCacheService } from '../context/ai-context-cache.service';
+import {
+  assertCreateOrderAllowed,
+  OPEN_ORDER_STATUSES,
+} from '../payment-order.guards';
 import type { BusinessContext, ToolName } from '../types';
 
 function asString(value: unknown, fallback = ''): string {
@@ -292,6 +296,31 @@ export class AiToolsService {
     ctx: BusinessContext,
     args: Record<string, unknown>,
   ) {
+    const paymentMethod = args.paymentMethod
+      ? asString(args.paymentMethod).trim()
+      : '';
+    try {
+      assertCreateOrderAllowed(ctx, paymentMethod);
+    } catch (e) {
+      throw new BadRequestException(
+        e instanceof Error ? e.message : 'createOrder not allowed',
+      );
+    }
+
+    const existingOpen = await this.prisma.order.findFirst({
+      where: {
+        conversationId: ctx.conversationId,
+        status: { in: OPEN_ORDER_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { items: true },
+    });
+    if (existingOpen) {
+      throw new BadRequestException(
+        `Order #${existingOpen.orderNumber} already exists for this chat — do not create another order`,
+      );
+    }
+
     const product = await this.getProduct(ctx, args);
     if (!product) {
       throw new BadRequestException('Product required for order');
@@ -404,9 +433,6 @@ export class AiToolsService {
     const noteParts: string[] = [];
     const address = args.address ? asString(args.address).trim() : '';
     if (address) noteParts.push(`العنوان: ${address}`);
-    const paymentMethod = args.paymentMethod
-      ? asString(args.paymentMethod).trim()
-      : '';
     if (paymentMethod) noteParts.push(`الدفع: ${paymentMethod}`);
     if (args.notes) noteParts.push(asString(args.notes).trim());
 
@@ -622,12 +648,18 @@ export class AiToolsService {
       },
     });
     await this.notifications.create(ctx.businessId, {
-      type: NotificationType.HANDOFF,
-      title: paymentReview ? 'مراجعة تحويل' : 'تحويل لممثل',
+      type: paymentReview ? NotificationType.ORDER : NotificationType.HANDOFF,
+      title: paymentReview ? 'إيصال يحتاج تأكيد' : 'تحويل لممثل',
       body: paymentReview
-        ? asString(args.summary, 'عميل أرسل / بانتظار صورة تحويل')
+        ? asString(
+            args.summary,
+            'تم استلام إيصال تحويل — راجع الصورة وأكد من صندوق الوارد',
+          )
         : reason,
-      data: { conversationId: ctx.conversationId },
+      data: {
+        conversationId: ctx.conversationId,
+        ...(paymentReview ? { kind: 'PAYMENT_RECEIPT' } : {}),
+      },
     });
     return { ok: true, reason };
   }

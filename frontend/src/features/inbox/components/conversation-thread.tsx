@@ -5,6 +5,11 @@ import { MessageBubble } from '@/features/inbox/components/message-bubble';
 import { MessageComposer } from '@/features/inbox/components/message-composer';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
+import {
+  customerMessageDisplayText,
+  messageAttachments,
+} from '@/features/inbox/message-display';
+import { latestPaymentReceiptMessageId } from '@/features/inbox/payment-receipt';
 import { InboxThreadSkeleton } from '@/components/ui/skeleton-blocks';
 import type { QuickReply, ReplyContext } from '@/features/inbox/reply-kit';
 
@@ -12,7 +17,10 @@ type Message = {
   id: string;
   role: string;
   content: string;
-  meta?: { quickReplies?: QuickReply[] } | null;
+  meta?: {
+    quickReplies?: QuickReply[];
+    attachments?: Array<{ type: string; url: string }>;
+  } | null;
 };
 
 type Conversation = {
@@ -68,6 +76,9 @@ export function ConversationThread({
   onDeleteRequest,
 }: ConversationThreadProps) {
   const { t } = useLocale();
+  const receiptMessageId = paymentReviewPending
+    ? latestPaymentReceiptMessageId(messages)
+    : null;
 
   if (isLoading) {
     return <InboxThreadSkeleton />;
@@ -131,9 +142,19 @@ export function ConversationThread({
           <MessageBubble
             key={m.id}
             role={m.role}
-            content={m.content}
+            content={
+              m.role === 'CUSTOMER'
+                ? customerMessageDisplayText(m.content)
+                : m.content
+            }
             customerName={conversation?.customer.name}
             quickReplies={m.meta?.quickReplies}
+            attachments={messageAttachments(m.meta)}
+            paymentConfirmOnImage={
+              paymentReviewPending && m.id === receiptMessageId
+            }
+            onConfirmPayment={onConfirmPayment}
+            isConfirmPaymentPending={isConfirmPaymentPending}
           />
         ))}
         {!selectedId ? (

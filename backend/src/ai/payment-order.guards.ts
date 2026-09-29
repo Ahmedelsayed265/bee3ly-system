@@ -1,0 +1,41 @@
+import { OrderStatus } from '@prisma/client';
+import { isImageAttachmentMessage } from '../channels/inbound-content';
+import type { BusinessContext } from './types';
+
+const PREPAID_RE =
+  /instapay|insta\s*pay|vodafone|فودافون|bank|بنك|transfer|تحويل|wallet|محفظة|ipn/i;
+const COD_RE =
+  /cod|cash\s*on\s*delivery|cash\s*at\s*delivery|كاش|الاستلام|upon\s*delivery|عند\s*الاستلام/i;
+
+export function isPrepaidPaymentMethod(method: string): boolean {
+  const m = method.trim();
+  if (!m) return false;
+  if (COD_RE.test(m)) return false;
+  return PREPAID_RE.test(m);
+}
+
+export function assertCreateOrderAllowed(
+  ctx: BusinessContext,
+  paymentMethod: string,
+): void {
+  if (ctx.paymentReviewPending) {
+    throw new Error(
+      'Payment review pending — wait for merchant to confirm transfer before createOrder',
+    );
+  }
+  if (isImageAttachmentMessage(ctx.latestCustomerMessage)) {
+    throw new Error(
+      'Customer sent a transfer image — use transferToHuman PAYMENT_REVIEW only; do not createOrder',
+    );
+  }
+  if (isPrepaidPaymentMethod(paymentMethod) && !ctx.paymentConfirmedForAi) {
+    throw new Error(
+      'Prepaid transfer: merchant must confirm payment in inbox before createOrder',
+    );
+  }
+}
+
+export const OPEN_ORDER_STATUSES: OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.CONFIRMED,
+];
