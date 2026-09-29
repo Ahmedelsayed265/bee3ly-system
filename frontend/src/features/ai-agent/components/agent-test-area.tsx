@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { ChatFormattedText } from '@/lib/chat-formatted-text';
 import { useLocale } from '@/features/i18n/locale-context';
 
 type AgentTestAreaProps = {
@@ -50,7 +51,7 @@ export function AgentTestArea({
           <p className="text-muted mb-1 text-[11px] font-medium tracking-wide uppercase">
             {t('aiTestReply')}
           </p>
-          <p className="text-ink whitespace-pre-wrap">{reply}</p>
+          <ChatFormattedText text={reply} className="text-ink" />
         </div>
       ) : (
         <p className="text-muted text-xs">{t('aiTestEmpty')}</p>

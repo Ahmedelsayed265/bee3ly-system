@@ -1,6 +1,7 @@
 import { Bot, UserRound, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/features/i18n/locale-context';
+import { ChatFormattedText } from '@/lib/chat-formatted-text';
 import { cn } from '@/lib/utils';
 
 type MessageBubbleProps = {
@@ -113,9 +114,10 @@ export function MessageBubble({
           </div>
         ) : null}
         {content.trim() ? (
-          <p className={cn('whitespace-pre-wrap', images.length ? 'mt-2' : '')}>
-            {content}
-          </p>
+          <ChatFormattedText
+            text={content}
+            className={images.length ? 'mt-2' : undefined}
+          />
         ) : images.length ? (
           <p className="text-[11px] opacity-80">{t('inboxAttachmentImage')}</p>
         ) : null}
