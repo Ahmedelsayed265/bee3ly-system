@@ -1,6 +1,7 @@
 /**
- * Demo seed for ahmedelsayed2102@icloud.com — fills products, chats, leads, orders, notifications.
- * Run: node prisma/seed-demo-user.mjs
+ * Demo seed for ahmedelsayed2102@icloud.com — full vertical slice:
+ * campaigns ↔ conversations / leads / orders, products, inbox, notifications.
+ * Run: npm run db:seed:demo  (from backend/)
  */
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
@@ -55,6 +56,9 @@ const DEFAULT_SHIPPING_ZONES = [
   },
 ]
 
+const DEMO_RECEIPT_IMAGE =
+  'https://images.unsplash.com/photo-1563013547-7f1c26502fd4?w=480&h=640&fit=crop'
+
 function shippingFor(governorate) {
   const zone = DEFAULT_SHIPPING_ZONES.find((item) =>
     item.governorates.includes(governorate),
@@ -69,8 +73,19 @@ function defaultCost(priceEgp) {
 function daysAgo(n, hour = 12) {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  d.setHours(hour, 15 + n, 0, 0)
+  d.setHours(hour, 15 + (n % 8), 0, 0)
   return d
+}
+
+function daysFromNow(n, hour = 12) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  d.setHours(hour, 0, 0, 0)
+  return d
+}
+
+function hoursAgo(n) {
+  return new Date(Date.now() - n * 3600_000)
 }
 
 async function main() {
@@ -86,18 +101,22 @@ async function main() {
   await prisma.business.update({
     where: { id: businessId },
     data: {
-      name: 'Ahmed-dev',
+      name: 'Hillix Pharm',
       type: 'ECOMMERCE',
       plan: 'GROWTH',
-      description: 'مكملات غذائية وبروتين للرياضيين',
+      description:
+        'مكملات غذائية وبروتين للرياضيين — استيراد رسمي · توصيل لكل المحافظات',
       averagePriceEgp: 850,
-      operatingArea: 'القاهرة والإسكندرية',
+      operatingArea: 'مصر — القاهرة · الدلتا · الصعيد',
       contactChannels: ['FACEBOOK', 'INSTAGRAM'],
       primaryGoal: 'INCREASE_SALES',
-      deliveryInfo: 'توصيل خلال 24–48 ساعة · 50 ج.م داخل القاهرة · مجاني فوق 1500 ج.م',
+      deliveryInfo:
+        'توصيل 24–48 ساعة · شحن حسب المنطقة من إعدادات التوصيل · مجاني فوق 2000 ج.م',
       workingHours: 'السبت–الخميس 10 ص – 11 م',
-      paymentInfo: 'كاش عند الاستلام · فودافون كاش · إنستاباي',
-      faqs: 'هل المنتج أصلي؟ نعم، استيراد رسمي.\nممكن أرجع؟ خلال 14 يوم بشرط عدم الفتح.',
+      paymentInfo:
+        'كاش عند الاستلام · فودافون كاش 010010111213 · إنستاباي 010010111213',
+      faqs:
+        'هل المنتج أصلي؟ نعم، استيراد رسمي.\nممكن أرجع؟ خلال 14 يوم بشرط عدم الفتح.\nالشحن للمنوفية؟ أيوه، حسب منطقة الشحن.',
       onboardingCompletedAt: new Date(),
       shippingZones: DEFAULT_SHIPPING_ZONES,
     },
@@ -109,25 +128,35 @@ async function main() {
       businessId,
       primaryGoal: 'GET_ORDERS',
       secondaryGoals: ['ANSWER_QUESTIONS', 'QUALIFY', 'HUMAN_HANDOFF'],
+      tone: 'FRIENDLY_PROFESSIONAL',
+      instructions:
+        'ركّز على واي بروتين والكرياتين. اذكر الشحن من مناطق التوصيل. لا تخمّن المخزون.',
+      handoffEnabled: true,
       isActive: true,
     },
     update: {
       primaryGoal: 'GET_ORDERS',
+      tone: 'FRIENDLY_PROFESSIONAL',
+      handoffEnabled: true,
       isActive: true,
+      instructions:
+        'ركّز على واي بروتين والكرياتين. اذكر الشحن من مناطق التوصيل. لا تخمّن المخزون.',
     },
   })
 
-  // Wipe demo domain rows for a clean fill (keep user/business)
+  // Wipe demo domain (keep user / business / agent)
   await prisma.orderItem.deleteMany({
     where: { order: { businessId } },
   })
   await prisma.order.deleteMany({ where: { businessId } })
+  await prisma.pageComment.deleteMany({ where: { businessId } })
   await prisma.lead.deleteMany({ where: { businessId } })
   await prisma.message.deleteMany({
     where: { conversation: { businessId } },
   })
   await prisma.conversation.deleteMany({ where: { businessId } })
   await prisma.notification.deleteMany({ where: { businessId } })
+  await prisma.campaign.deleteMany({ where: { businessId } })
   await prisma.product.deleteMany({ where: { businessId } })
   await prisma.customer.deleteMany({ where: { businessId } })
   await prisma.socialAccount.deleteMany({ where: { businessId } })
@@ -137,25 +166,101 @@ async function main() {
       {
         businessId,
         platform: 'FACEBOOK',
-        externalId: 'demo-fb-page-ahmed',
-        displayName: 'Ahmed-dev · Facebook',
+        externalId: 'demo-fb-hillix',
+        displayName: 'Hillix Pharm · Facebook',
         accessTokenEnc: 'demo',
+        status: 'SIMULATION',
       },
       {
         businessId,
         platform: 'INSTAGRAM',
-        externalId: 'demo-ig-ahmed',
-        displayName: 'Ahmed-dev · Instagram',
+        externalId: 'demo-ig-hillix',
+        displayName: 'Hillix Pharm · Instagram',
         accessTokenEnc: 'demo',
+        status: 'SIMULATION',
       },
     ],
   })
+
+  const [campWhey, campLeads, campRetarget, campDraft] = await Promise.all([
+    prisma.campaign.create({
+      data: {
+        businessId,
+        name: 'واي بروتين 2كجم — إنستجرام',
+        objective: 'MORE_ORDERS',
+        status: 'ACTIVE',
+        offer: 'واي بروتين شوكولاتة 2كجم — شحن مخفّض داخل القاهرة الكبرى',
+        audienceDescription: 'INTERESTED',
+        budget: 4200,
+        currency: 'EGP',
+        valueProposition: '26g بروتين للسكoop · استيراد رسمي',
+        suggestedMessaging:
+          'عايز تكبير؟ واي بروتين Hillix ب1850 ج.م — اطلب من DM',
+        suggestedCta: 'اطلب الآن',
+        suggestedCreative: 'صورة العبوة + قبل/بعد تمرين',
+        channel: 'INSTAGRAM',
+        startDate: daysAgo(18),
+        endDate: daysFromNow(12),
+        createdAt: daysAgo(20),
+      },
+    }),
+    prisma.campaign.create({
+      data: {
+        businessId,
+        name: 'كرياتين + BCAA — فيسبوك',
+        objective: 'MORE_LEADS',
+        status: 'ACTIVE',
+        offer: 'استفسار عن الكرياتين أو BCAA — رد AI فوري',
+        audienceDescription: 'ENGAGED',
+        budget: 2800,
+        currency: 'EGP',
+        valueProposition: 'تأهيل العملاء قبل الطلب',
+        suggestedMessaging: 'اسأل عن جرعة الكرياتين المناسبة ليك',
+        suggestedCta: 'ابعت رسالة',
+        channel: 'FACEBOOK',
+        startDate: daysAgo(10),
+        endDate: daysFromNow(20),
+        createdAt: daysAgo(11),
+      },
+    }),
+    prisma.campaign.create({
+      data: {
+        businessId,
+        name: 'إعادة استهداف BCAA',
+        objective: 'RETARGETING',
+        status: 'PAUSED',
+        offer: 'BCAA مانجو — خصم 10% للي فتحوا المحادثة',
+        audienceDescription: 'MESSAGED',
+        budget: 1500,
+        currency: 'EGP',
+        channel: 'INSTAGRAM',
+        startDate: daysAgo(45),
+        endDate: daysAgo(5),
+        createdAt: daysAgo(46),
+      },
+    }),
+    prisma.campaign.create({
+      data: {
+        businessId,
+        name: 'أوميغا 3 — مسودة مارس',
+        objective: 'AWARENESS',
+        status: 'READY',
+        offer: 'أوميغا 3 فيش أويل — الوعي بالبراند',
+        audienceDescription: 'NEARBY',
+        budget: 2000,
+        currency: 'EGP',
+        suggestedCta: 'اعرف أكتر',
+        channel: 'FACEBOOK',
+        createdAt: daysAgo(2),
+      },
+    }),
+  ])
 
   const products = await Promise.all(
     [
       {
         name: 'واي بروتين شوكولاتة 2كجم',
-        description: '26g بروتين لكل سكوب',
+        description: '26g بروتين لكل سكoop',
         priceEgp: 1850,
         costEgp: 980,
         attributes: { sizes: ['2كجم'], flavors: ['شوكولاتة'], protein_g: 26 },
@@ -215,6 +320,11 @@ async function main() {
     { name: 'كريم يوسف', phone: '01000001111', platform: 'FACEBOOK' },
     { name: 'هدى سمير', phone: '01112223334', platform: 'INSTAGRAM' },
     { name: 'ياسين فادي', phone: '01055667788', platform: 'FACEBOOK' },
+    {
+      name: 'احمد السيد محمد عبد المحسن',
+      phone: '01027964469',
+      platform: 'INSTAGRAM',
+    },
   ]
 
   const customers = []
@@ -232,70 +342,126 @@ async function main() {
     )
   }
 
+  const paymentReviewCustomer = customers[8]
+
   const chatScripts = [
     {
       customer: customers[0],
+      campaign: campWhey,
       channel: 'INSTAGRAM',
+      conversionStage: 'CONVERTED',
       messages: [
-        { role: 'CUSTOMER', content: 'الواي بروتين بكام؟', hoursAgo: 2 },
+        { role: 'CUSTOMER', content: 'الواي بروتين بكام؟', hoursAgo: 26 },
         {
           role: 'AI',
-          content: 'واي بروتين شوكولاتة 2كجم بـ 1,850 ج.م 💪',
-          hoursAgo: 1.9,
+          content: 'واي بروتين شوكولاتة 2كجم بـ 1,850 ج.م + الشحن حسب المحافظة 💪',
+          hoursAgo: 25.8,
         },
-        { role: 'CUSTOMER', content: 'تمام عايزة أطلب — سارة أحمد - 01012345678', hoursAgo: 1.5 },
+        {
+          role: 'CUSTOMER',
+          content: 'تمام — سارة أحمد · 01012345678 · المعادي',
+          hoursAgo: 25,
+        },
         {
           role: 'AI',
-          content: 'تم تسجيل الطلب ✅ هيتأكد خلال شوية.',
-          hoursAgo: 1.4,
+          content: 'تم تسجيل الطلب ✅ هيتأكد من الفريق.',
+          hoursAgo: 24.8,
         },
       ],
     },
     {
       customer: customers[3],
+      campaign: campLeads,
       channel: 'FACEBOOK',
+      conversionStage: 'CONSIDERATION',
       messages: [
-        { role: 'CUSTOMER', content: 'المقاس / العبوة متوفرة؟', hoursAgo: 0.5 },
+        { role: 'CUSTOMER', content: 'الكرياتين 300جم متوفر؟', hoursAgo: 4 },
         {
           role: 'AI',
-          content: 'الكرياتين متوفر حالياً. تحب أجهّزلك طلب؟',
-          hoursAgo: 0.4,
+          content: 'أيوه متوفر. 450 ج.م — تحب أجهّزلك طلب؟',
+          hoursAgo: 3.8,
         },
       ],
     },
     {
       customer: customers[4],
+      campaign: campRetarget,
       channel: 'INSTAGRAM',
+      conversionStage: 'PURCHASE_INTENT',
       messages: [
-        { role: 'CUSTOMER', content: 'عايزة أطلب قطعتين BCAA مانجو', hoursAgo: 3 },
+        { role: 'CUSTOMER', content: 'عايزة قطعتين BCAA مانجو', hoursAgo: 8 },
         {
           role: 'AI',
-          content: 'تمام! ابعتي الاسم والموبايل عشان نثبّت الأوردر.',
-          hoursAgo: 2.8,
+          content: 'تمام! ابعتي الاسم والموبايل والمحافظة.',
+          hoursAgo: 7.7,
         },
       ],
     },
     {
       customer: customers[5],
+      campaign: campWhey,
       channel: 'FACEBOOK',
+      conversionStage: 'CONVERTED',
       messages: [
-        { role: 'CUSTOMER', content: 'تم الدفع، متى الشحن؟', hoursAgo: 5 },
+        { role: 'CUSTOMER', content: 'تم الدفع، متى الشحن؟', hoursAgo: 48 },
         {
           role: 'AI',
-          content: 'الشحن خلال 24–48 ساعة داخل القاهرة 🚚',
-          hoursAgo: 4.8,
+          content: 'الشحن خلال 24–48 ساعة 🚚',
+          hoursAgo: 47.5,
         },
       ],
     },
     {
       customer: customers[6],
+      campaign: campLeads,
       channel: 'INSTAGRAM',
+      conversionStage: 'QUALIFICATION',
       messages: [
-        { role: 'CUSTOMER', content: 'في توصيل للإسكندرية؟', hoursAgo: 8 },
+        { role: 'CUSTOMER', content: 'في توصيل للإسكندرية؟', hoursAgo: 12 },
         {
           role: 'AI',
-          content: 'أيوه، بنوصل القاهرة والإسكندرية. التوصيل 50 ج.م.',
-          hoursAgo: 7.9,
+          content: 'أيوه — منطقة الإسكندرية والدلتا 65 ج.م.',
+          hoursAgo: 11.8,
+        },
+      ],
+    },
+    {
+      customer: paymentReviewCustomer,
+      campaign: campWhey,
+      channel: 'INSTAGRAM',
+      conversionStage: 'DATA_COLLECTION',
+      needsHuman: true,
+      handoffReason: 'PAYMENT_REVIEW',
+      mode: 'AI',
+      messages: [
+        { role: 'CUSTOMER', content: 'السلام عليكم، عايز واي بروتين 2كجم', hoursAgo: 3 },
+        {
+          role: 'AI',
+          content: 'وعليكم السلام! 1850 ج.م — تحبي كاش ولا إنستاباي؟',
+          hoursAgo: 2.9,
+        },
+        { role: 'CUSTOMER', content: 'هدفع انستا باي', hoursAgo: 2.2 },
+        {
+          role: 'AI',
+          content:
+            'حلو! حوّلي 1915 ج.م (مع الشحن) على 010010111213 وابعتي صورة التحويل.',
+          hoursAgo: 2.1,
+        },
+        {
+          role: 'CUSTOMER',
+          content:
+            '[IMAGE_ATTACHMENT: customer sent an image — treat as transfer/payment screenshot if checkout asked for one; use transferToHuman PAYMENT_REVIEW when prepaid flow applies]',
+          hoursAgo: 1.5,
+          meta: {
+            paymentReceipt: true,
+            attachments: [{ type: 'image', url: DEMO_RECEIPT_IMAGE }],
+          },
+        },
+        {
+          role: 'AI',
+          content:
+            'تم استلام الإيصال ✅ سيتم مراجعته وإنشاء الطلب بعد تأكيد صاحب المتجر للتحويل.',
+          hoursAgo: 1.4,
         },
       ],
     },
@@ -303,49 +469,100 @@ async function main() {
 
   const convByCustomer = new Map()
   for (const script of chatScripts) {
-    const lastAt = new Date(Date.now() - script.messages[0].hoursAgo * 3600_000)
+    const lastAt = hoursAgo(script.messages[0].hoursAgo)
     const conv = await prisma.conversation.create({
       data: {
         businessId,
         customerId: script.customer.id,
+        campaignId: script.campaign.id,
         channel: script.channel,
-        status: 'OPEN',
+        status: script.needsHuman ? 'NEEDS_HUMAN' : 'OPEN',
+        mode: script.mode ?? 'AI',
+        conversionStage: script.conversionStage ?? 'NEW',
+        needsHuman: script.needsHuman ?? false,
+        handoffReason: script.handoffReason ?? null,
+        aiSummary: script.handoffReason
+          ? 'Customer sent transfer screenshot — awaiting merchant verification'
+          : null,
         lastMessageAt: lastAt,
-        createdAt: daysAgo(2),
+        createdAt: daysAgo(3),
       },
     })
-    convByCustomer.set(script.customer.id, conv.id)
+    convByCustomer.set(script.customer.id, conv)
     for (const m of script.messages) {
       await prisma.message.create({
         data: {
           conversationId: conv.id,
           role: m.role,
           content: m.content,
-          createdAt: new Date(Date.now() - m.hoursAgo * 3600_000),
+          meta: m.meta ?? undefined,
+          createdAt: hoursAgo(m.hoursAgo),
         },
       })
     }
   }
 
   const leadSpecs = [
-    { customer: customers[1], status: 'NEW', intent: 'سأل عن السعر' },
-    { customer: customers[2], status: 'QUALIFIED', intent: 'مهتم بالطلب' },
-    { customer: customers[3], status: 'QUALIFIED', intent: 'توفر المنتج' },
-    { customer: customers[4], status: 'NEW', intent: 'طلب قطعتين' },
-    { customer: customers[6], status: 'NEW', intent: 'استفسار توصيل' },
-    { customer: customers[0], status: 'CONVERTED', intent: 'طلب مؤكد' },
-    { customer: customers[5], status: 'CONVERTED', intent: 'متابعة شحن' },
-    { customer: customers[7], status: 'LOST', intent: 'سأل وماكمّلش' },
+    {
+      customer: customers[1],
+      campaign: campLeads,
+      status: 'NEW',
+      intent: 'سأل عن السعر',
+    },
+    {
+      customer: customers[2],
+      campaign: campLeads,
+      status: 'QUALIFIED',
+      intent: 'مهتم بالطلب',
+    },
+    {
+      customer: customers[3],
+      campaign: campLeads,
+      status: 'QUALIFIED',
+      intent: 'توفر الكرياتين',
+    },
+    {
+      customer: customers[4],
+      campaign: campRetarget,
+      status: 'NEW',
+      intent: 'طلب قطعتين BCAA',
+    },
+    {
+      customer: customers[6],
+      campaign: campLeads,
+      status: 'NEW',
+      intent: 'استفسار توصيل',
+    },
+    {
+      customer: customers[0],
+      campaign: campWhey,
+      status: 'CONVERTED',
+      intent: 'طلب واي بروتين',
+    },
+    {
+      customer: customers[5],
+      campaign: campWhey,
+      status: 'CONVERTED',
+      intent: 'متابعة شحن',
+    },
+    {
+      customer: customers[7],
+      campaign: null,
+      status: 'LOST',
+      intent: 'سأل وماكمّلش',
+    },
   ]
   for (const l of leadSpecs) {
+    const conv = convByCustomer.get(l.customer.id)
     await prisma.lead.create({
       data: {
         businessId,
         customerId: l.customer.id,
-        conversationId: convByCustomer.get(l.customer.id) ?? null,
+        campaignId: l.campaign?.id ?? null,
+        conversationId: conv?.id ?? null,
         status: l.status,
         intent: l.intent,
-        createdAt: daysAgo(Math.floor(Math.random() * 6)),
+        createdAt: daysAgo(Math.floor(Math.random() * 8) + 1),
       },
     })
   }
@@ -354,16 +571,18 @@ async function main() {
     {
       day: 0,
       customer: customers[0],
+      campaign: campWhey,
       product: products[0],
       status: 'PENDING',
       size: '2كجم',
       governorate: 'cairo',
       address: 'شارع 9، المعادي، برج 12، الدور 3',
-      payment: 'تحويل',
+      payment: 'إنستاباي',
     },
     {
       day: 0,
       customer: customers[5],
+      campaign: campWhey,
       product: products[1],
       status: 'CONFIRMED',
       size: '300جم',
@@ -374,6 +593,7 @@ async function main() {
     {
       day: 1,
       customer: customers[2],
+      campaign: campWhey,
       product: products[2],
       status: 'COMPLETED',
       size: '60 سيرف',
@@ -381,38 +601,45 @@ async function main() {
       qty: 2,
       governorate: 'alexandria',
       address: 'سموحة، شارع فوزي معاذ، عمارة 15',
+      payment: 'كاش عند الاستلام',
     },
     {
       day: 2,
       customer: customers[1],
+      campaign: campLeads,
       product: products[3],
       status: 'COMPLETED',
       size: '90 قرص',
       governorate: 'sharqia',
-      address: 'الزقازيق، شارع الجلاء، بجوار البنك الأهلي',
+      address: 'الزقازيق، شارع الجلاء',
+      payment: 'كاش عند الاستلام',
     },
     {
       day: 3,
       customer: customers[6],
+      campaign: campLeads,
       product: products[5],
       status: 'CONFIRMED',
       size: '60 كبسولة',
       governorate: 'cairo',
-      address: 'مدينة نصر، عباس العقاد، مول City Stars — استلام من الريسيبشن',
+      address: 'مدينة نصر، عباس العقاد',
       payment: 'Instapay',
     },
     {
       day: 4,
       customer: customers[7],
+      campaign: null,
       product: products[0],
       status: 'COMPLETED',
       size: '2كجم',
       governorate: 'qalyubia',
       address: 'شبرا الخيمة، شارع مسجد الفتح',
+      payment: 'كاش عند الاستلام',
     },
     {
       day: 5,
       customer: customers[3],
+      campaign: campRetarget,
       product: products[2],
       status: 'CANCELLED',
       size: '60 سيرف',
@@ -423,24 +650,29 @@ async function main() {
     {
       day: 6,
       customer: customers[4],
+      campaign: campRetarget,
       product: products[1],
       status: 'COMPLETED',
       size: '300جم',
       governorate: 'ismailia',
       address: 'الإسماعيلية، شارع صلاح سالم',
+      payment: 'كاش عند الاستلام',
     },
     {
       day: 1,
       customer: customers[1],
+      campaign: campLeads,
       product: products[5],
       status: 'COMPLETED',
       size: '60 كبسولة',
       governorate: 'cairo',
-      address: 'مصر الجديدة، شارع الخمسين، عمارة 22',
+      address: 'مصر الجديدة، شارع الخمسين',
+      payment: 'فودافون كاش',
     },
     {
       day: 2,
       customer: customers[0],
+      campaign: campWhey,
       product: products[3],
       status: 'CONFIRMED',
       size: '90 قرص',
@@ -467,10 +699,13 @@ async function main() {
     if (o.payment && o.status !== 'CANCELLED') {
       noteParts.push(`الدفع: ${o.payment}`)
     }
+    const conv = convByCustomer.get(o.customer.id)
     const order = await prisma.order.create({
       data: {
         businessId,
         customerId: o.customer.id,
+        conversationId: conv?.id ?? null,
+        campaignId: o.campaign?.id ?? null,
         orderNumber: orderNumber++,
         status: o.status,
         totalEgp: total,
@@ -503,7 +738,7 @@ async function main() {
           type: 'ORDER',
           title: `طلب جديد #${order.orderNumber}`,
           body: `${o.customer.name} · ${total.toLocaleString()} ج.م`,
-          data: { orderId: order.id },
+          data: { orderId: order.id, campaignId: o.campaign?.id ?? null },
           readAt: o.status === 'CONFIRMED' ? new Date() : null,
           createdAt,
         },
@@ -511,36 +746,57 @@ async function main() {
     }
   }
 
+  const paymentConv = convByCustomer.get(paymentReviewCustomer.id)
+  await prisma.notification.create({
+    data: {
+      businessId,
+      type: 'ORDER',
+      title: 'إيصال يحتاج تأكيد',
+      body: `${paymentReviewCustomer.name} — تم استلام إيصال تحويل`,
+      data: {
+        conversationId: paymentConv?.id,
+        kind: 'PAYMENT_RECEIPT',
+        campaignId: campWhey.id,
+      },
+      readAt: null,
+      createdAt: hoursAgo(1.4),
+    },
+  })
+
   await prisma.notification.createMany({
     data: [
       {
         businessId,
         type: 'LEAD',
-        title: 'ليد جديد مهتم',
-        body: 'عمر خالد بيسأل عن توفر الكرياتين',
+        title: 'ليد من حملة فيسبوك',
+        body: 'محمد علي — سأل عن السعر (كرياتين + BCAA)',
+        data: { campaignId: campLeads.id },
         readAt: null,
         createdAt: daysAgo(0, 14),
       },
       {
         businessId,
-        type: 'HANDOFF',
-        title: 'تحويل لممثل',
-        body: 'ليلى طلبت تتكلم مع حد من الفريق',
-        readAt: null,
-        createdAt: daysAgo(0, 11),
+        type: 'CAMPAIGN',
+        title: 'حملة نشطة',
+        body: `«${campWhey.name}» — ${4200} ج.م ميزانية`,
+        data: { campaignId: campWhey.id },
+        readAt: new Date(),
+        createdAt: daysAgo(1, 9),
       },
       {
         businessId,
         type: 'AI_RECOMMENDATION',
         title: 'اقتراح من الوكيل',
-        body: 'فعّل رد آلي عن التوصيل المجاني فوق 1500 ج.م',
+        body: 'فعّل رد آلي عن الشحن المجاني فوق 2000 ج.م في حملة الوي',
+        data: { campaignId: campWhey.id },
         readAt: new Date(),
-        createdAt: daysAgo(1, 9),
+        createdAt: daysAgo(2, 9),
       },
     ],
   })
 
   const summary = {
+    campaigns: await prisma.campaign.count({ where: { businessId } }),
     products: await prisma.product.count({ where: { businessId } }),
     customers: await prisma.customer.count({ where: { businessId } }),
     conversations: await prisma.conversation.count({ where: { businessId } }),
@@ -549,6 +805,12 @@ async function main() {
     notifications: await prisma.notification.count({ where: { businessId } }),
   }
   console.log('Seeded demo for', EMAIL, summary)
+  console.log('Campaigns:', {
+    whey: campWhey.id,
+    leads: campLeads.id,
+    retarget: campRetarget.id,
+    draft: campDraft.id,
+  })
 }
 
 main()
