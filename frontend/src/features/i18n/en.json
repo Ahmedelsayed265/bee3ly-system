@@ -414,6 +414,7 @@
   "confirmOrderTitle": "Confirm this order?",
   "confirmOrderBody": "Confirm order #{number} for {customer}. Continue?",
   "viewOrder": "View details",
+  "orderMoreActions": "More actions",
   "cancelOrder": "Cancel",
   "cancelOrderTitle": "Cancel this order?",
   "cancelOrderBody": "Cancel order #{number} for {customer}.",

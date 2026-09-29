@@ -414,6 +414,7 @@
   "confirmOrderTitle": "تأكيد الطلب؟",
   "confirmOrderBody": "هتتأكد طلب #{number} لـ {customer}. تقدر تكمّل؟",
   "viewOrder": "عرض التفاصيل",
+  "orderMoreActions": "إجراءات أخرى",
   "cancelOrder": "إلغاء",
   "cancelOrderTitle": "إلغاء الطلب؟",
   "cancelOrderBody": "هتلغي طلب #{number} لـ {customer}.",

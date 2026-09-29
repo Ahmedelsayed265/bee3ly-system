@@ -14,12 +14,8 @@ import {
   type OrderStatusAction,
   type OrderStatusFilter,
 } from '@/features/orders/constants';
-import {
-  canCancel,
-  canComplete,
-  canConfirm,
-  canReturn,
-} from '@/features/orders/hooks/use-orders';
+import { OrderRowActions } from '@/features/orders/components/order-row-actions';
+import { OrderStatusBadge } from '@/features/orders/components/order-status-badge';
 
 type OrdersTableProps = {
   orders: OrderRow[];
@@ -181,57 +177,16 @@ export function OrdersTable({
                     <td className="text-ink px-4 py-3 text-start font-medium tabular-nums">
                       {money(o.totalEgp)}
                     </td>
-                    <td className="px-4 py-3 text-start">
-                      <span className="bg-lavender text-ink inline-flex rounded-full px-2.5 py-1 text-xs font-semibold">
-                        {t(`orderStatus_${o.status}` as MessageKey)}
-                      </span>
+                    <td className="px-4 py-3 text-start align-top">
+                      <OrderStatusBadge status={o.status} />
                     </td>
-                    <td className="px-4 py-3 text-start">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-8 px-3 text-xs font-semibold"
-                          onClick={() => onView(o)}
-                        >
-                          {t('viewOrder')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2.5 text-xs"
-                          disabled={!canReturn(o.status) || isStatusPending}
-                          onClick={() => onAsk(o, 'RETURNED')}
-                        >
-                          {t('returnOrder')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2.5 text-xs"
-                          disabled={!canCancel(o.status) || isStatusPending}
-                          onClick={() => onAsk(o, 'CANCELLED')}
-                        >
-                          {t('cancelOrder')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2.5 text-xs"
-                          disabled={!canComplete(o.status) || isStatusPending}
-                          onClick={() => onAsk(o, 'COMPLETED')}
-                        >
-                          {t('completeOrderShort')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-8 px-2.5 text-xs"
-                          disabled={!canConfirm(o.status) || isStatusPending}
-                          onClick={() => onAsk(o, 'CONFIRMED')}
-                        >
-                          {t('confirmOrderShort')}
-                        </Button>
-                      </div>
+                    <td className="px-4 py-3 text-start align-top">
+                      <OrderRowActions
+                        order={o}
+                        disabled={isStatusPending}
+                        onView={() => onView(o)}
+                        onAsk={(next) => onAsk(o, next)}
+                      />
                     </td>
                   </tr>
                 ))
