@@ -11,6 +11,14 @@ export function isImageAttachmentMessage(text: string): boolean {
   return text.includes('[IMAGE_ATTACHMENT:');
 }
 
+export function stripInboundAiHints(text: string): string {
+  return text
+    .split('\n')
+    .filter((line) => !line.trimStart().startsWith('[IMAGE_ATTACHMENT:'))
+    .join('\n')
+    .trim();
+}
+
 export function buildInboundText(
   text: string,
   attachments: InboundAttachment[],

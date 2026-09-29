@@ -102,15 +102,6 @@ export function ConversationThread({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {paymentReviewPending && onConfirmPayment ? (
-              <Button
-                size="sm"
-                onClick={onConfirmPayment}
-                disabled={isConfirmPaymentPending}
-              >
-                {t('confirmPaymentTransfer')}
-              </Button>
-            ) : null}
             {isHumanMode ? (
               <Button
                 size="sm"

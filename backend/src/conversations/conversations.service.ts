@@ -10,6 +10,7 @@ import {
   LeadStatus,
   MessageRole,
   Prisma,
+  SocialConnectionStatus,
 } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
@@ -20,6 +21,14 @@ import {
   PAYMENT_CONFIRMED_AI_SUMMARY,
   PAYMENT_REVIEW_HANDOFF,
 } from '../ai/payment-review.constants';
+import { AiEngineAdapter } from '../channels/ai-engine.adapter';
+import {
+  MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT,
+  type AiEngineInboundPayload,
+  type AiEngineInboundResponse,
+  type ChannelType,
+} from '../channels/channel.types';
+import { MerchantTokenService } from '../channels/merchant-token.service';
 
 @Injectable()
 export class ConversationsService {
@@ -29,6 +38,9 @@ export class ConversationsService {
     @Inject(forwardRef(() => MetaOutboundService))
     private readonly outbound: MetaOutboundService,
     private readonly realtime: RealtimeService,
+    @Inject(forwardRef(() => AiEngineAdapter))
+    private readonly aiEngine: AiEngineAdapter,
+    private readonly merchantTokens: MerchantTokenService,
   ) {}
 
   async list(userId: string) {
@@ -230,8 +242,100 @@ export class ConversationsService {
         aiSummary: PAYMENT_CONFIRMED_AI_SUMMARY,
       },
     });
+    await this.runAiAfterPaymentConfirmed(businessId, conversationId);
     this.realtime.notifyConversationUpdated(businessId, conversationId);
     return { conversation: updated };
+  }
+
+  private async runAiAfterPaymentConfirmed(
+    businessId: string,
+    conversationId: string,
+  ) {
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, businessId },
+      include: { customer: true },
+    });
+    if (!conversation) return;
+
+    const authorizationToken: string =
+      await this.merchantTokens.issueForMerchant(businessId);
+    const [historyRows, agentRow] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
+        take: 40,
+        select: { role: true, content: true, createdAt: true },
+      }),
+      this.prisma.aIAgent.findUnique({
+        where: { businessId },
+        select: {
+          primaryGoal: true,
+          secondaryGoals: true,
+          tone: true,
+          instructions: true,
+        },
+      }),
+    ]);
+
+    const inboundPayload: AiEngineInboundPayload = {
+      businessId,
+      conversationId,
+      customerId: conversation.customerId,
+      channel: conversation.channel as ChannelType,
+      messageId: `payment-confirmed-${Date.now()}`,
+      text: MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT,
+      authorizationToken: authorizationToken,
+      customer: {
+        name: conversation.customer.name,
+        phone: conversation.customer.phone,
+        externalId: conversation.customer.externalId,
+      },
+      history: historyRows.map((m) => ({
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+      })),
+      agent: agentRow
+        ? {
+            primaryGoal: agentRow.primaryGoal,
+            secondaryGoals: agentRow.secondaryGoals,
+            tone: agentRow.tone,
+            instructions: agentRow.instructions,
+          }
+        : undefined,
+    };
+
+    const aiResult: AiEngineInboundResponse =
+      await this.aiEngine.handleInbound(inboundPayload);
+
+    const reply = aiResult.reply?.trim();
+    if (!reply) return;
+
+    if (
+      (conversation.channel === ConversationChannel.FACEBOOK ||
+        conversation.channel === ConversationChannel.INSTAGRAM) &&
+      conversation.customer.externalId
+    ) {
+      const account = await this.prisma.socialAccount.findFirst({
+        where: {
+          businessId,
+          platform: conversation.channel,
+          status: {
+            in: [
+              SocialConnectionStatus.CONNECTED,
+              SocialConnectionStatus.SIMULATION,
+            ],
+          },
+        },
+      });
+      if (account?.status === SocialConnectionStatus.CONNECTED) {
+        await this.outbound.sendText(
+          account.id,
+          conversation.customer.externalId,
+          reply,
+        );
+      }
+    }
   }
 
   async sendHumanMessage(

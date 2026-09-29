@@ -1,4 +1,4 @@
-import { Bot, UserRound, Zap } from 'lucide-react';
+import { Bot, Check, UserRound, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/features/i18n/locale-context';
 import { ChatFormattedText } from '@/lib/chat-formatted-text';
@@ -81,12 +81,15 @@ export function MessageBubble({
         {images.length ? (
           <div className="flex flex-col gap-2">
             {images.map((item) => (
-              <div key={item.url} className="relative inline-block max-w-full">
+              <div
+                key={item.url}
+                className="relative inline-block max-w-full overflow-hidden rounded-xl"
+              >
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block overflow-hidden rounded-lg"
+                  className="block"
                 >
                   <img
                     src={item.url}
@@ -95,19 +98,24 @@ export function MessageBubble({
                   />
                 </a>
                 {paymentConfirmOnImage && onConfirmPayment ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="absolute end-2 bottom-2 h-7 px-2.5 text-[11px] shadow-md"
-                    disabled={isConfirmPaymentPending}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onConfirmPayment();
-                    }}
-                  >
-                    {t('confirmPaymentShort')}
-                  </Button>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/55 via-black/15 to-transparent backdrop-blur-[1px]">
+                    <div className="pointer-events-auto flex justify-center p-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="text-brand h-9 gap-1.5 rounded-full border border-white/40 bg-white/85 px-4 text-xs font-bold shadow-lg backdrop-blur-md hover:bg-white"
+                        disabled={isConfirmPaymentPending}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onConfirmPayment();
+                        }}
+                      >
+                        <Check className="size-3.5" strokeWidth={3} />
+                        {t('confirmPaymentReceipt')}
+                      </Button>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             ))}

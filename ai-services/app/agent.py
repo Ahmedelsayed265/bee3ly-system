@@ -9,6 +9,7 @@ from app.memory import get_session_history, save_session_history
 from app.tools import resolve_handoff_after_tool
 
 MAX_TOOL_ROUNDS = 4
+MERCHANT_PAYMENT_CONFIRMED = "[PAYMENT_CONFIRMED_BY_MERCHANT]"
 
 _ARABIC_RE = re.compile(r"[\u0600-\u06FF]")
 _LATIN_RE = re.compile(r"[A-Za-z]")
@@ -99,6 +100,7 @@ Rules (apply for Arabic or English messages — same tools & flow):
 11. {discount_rule}
 12. Do not repeat the full order confirmation if they asked something new.
 13. Keep replies short (2–4 sentences).
+14. Internal only: if the message is exactly `[PAYMENT_CONFIRMED_BY_MERCHANT]`, do NOT echo that tag. The merchant confirmed the transfer in the dashboard. Reply to the customer in their language (default Egyptian Arabic): confirm payment is approved, createOrder if details are in the chat and no open order yet, give order number, and state shipping/delivery window from business delivery info (e.g. 24–48 hours). Be warm and clear.
 """
 
 
@@ -117,7 +119,12 @@ def execute_customer_chat(
     handoff_enabled = session.get("handoffEnabled") is not False
 
     history = get_session_history(conversation_id, customer_id)
-    english = _customer_prefers_english(message, history)
+    internal_merchant = message.strip() == MERCHANT_PAYMENT_CONFIRMED
+    english = (
+        False
+        if internal_merchant
+        else _customer_prefers_english(message, history)
+    )
     fb = _fallbacks(english)
 
     system_instruction = _build_system_instruction(
@@ -250,7 +257,8 @@ def execute_customer_chat(
             "handoffReason": handoff_reason,
         }
 
-    history.append({"role": "user", "text": message})
+    if not internal_merchant:
+        history.append({"role": "user", "text": message})
     history.append({"role": "model", "text": reply_text})
     save_session_history(conversation_id, customer_id, history)
 

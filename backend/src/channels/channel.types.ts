@@ -1,3 +1,7 @@
+/** Internal AI trigger after merchant confirms a prepaid transfer (not customer-visible). */
+export const MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT =
+  '[PAYMENT_CONFIRMED_BY_MERCHANT]';
+
 export type ChannelProvider = 'META' | 'WHATSAPP' | 'TIKTOK';
 
 export type ChannelType = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK';
