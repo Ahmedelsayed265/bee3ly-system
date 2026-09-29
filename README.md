@@ -263,6 +263,11 @@ npm run db:seed:demo
 **Meta channel foundation**
 
 - `META_APP_ID` / `META_APP_SECRET` / `META_WEBHOOK_VERIFY_TOKEN` / `META_REDIRECT_URI`
+- **Privacy / Terms (Meta App URLs):** `https://bee3ly-system.vercel.app/privacy` و `https://bee3ly-system.vercel.app/terms` (أو دومينك + `/privacy` و `/terms`)
+- **WhatsApp (رقم حقيقي للتاجر):** في Meta App → WhatsApp → Embedded Signup أنشئ Configuration ID ثم على السيرفر:
+  - `META_WHATSAPP_EMBEDDED_CONFIG_ID=<configuration id>`
+  - `META_OAUTH_INCLUDE_WHATSAPP=true` (اختياري لو بتربط WA مع OAuth الصفحة)
+  - في الإعدادات → واتساب → **«ربط رقم واتساب»** يفتح Embedded Signup لإضافة/اختيار رقم الاستقبال
 - Flow: Connect → OAuth → **select Facebook Page** → store tokens → subscribe webhooks
 - Instagram attaches via the Page’s Instagram Business account when present
 - Connection statuses: `DISCONNECTED | CONNECTING | CONNECTED | REAUTH_REQUIRED | ERROR | SIMULATION`

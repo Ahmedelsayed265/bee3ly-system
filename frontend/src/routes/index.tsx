@@ -6,6 +6,8 @@ import { LoginPage } from '@/pages/login-page';
 import { OnboardingPage } from '@/pages/onboarding-page';
 import { RegisterPage } from '@/pages/register-page';
 import { ResetPasswordPage } from '@/pages/reset-password-page';
+import { PrivacyPolicyPage } from '@/pages/privacy-policy-page';
+import { TermsPage } from '@/pages/terms-page';
 import { WelcomePage } from '@/pages/welcome-page';
 import { appRoutes } from '@/routes/app-routes';
 import { paths } from '@/routes/paths';
@@ -15,6 +17,8 @@ export const router = createBrowserRouter([
     path: paths.home,
     element: <WelcomePage />,
   },
+  { path: paths.privacyPolicy, element: <PrivacyPolicyPage /> },
+  { path: paths.terms, element: <TermsPage /> },
   {
     element: <GuestRoute />,
     children: [

@@ -1,6 +1,8 @@
 /** Central path constants — use these instead of string literals in routes/nav. */
 export const paths = {
   home: '/',
+  privacyPolicy: '/privacy',
+  terms: '/terms',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',

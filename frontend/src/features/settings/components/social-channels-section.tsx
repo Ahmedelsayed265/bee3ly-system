@@ -19,10 +19,13 @@ type SocialChannelsSectionProps = {
   instagram?: SocialAccount;
   whatsapp?: SocialAccount;
   metaReady: boolean;
+  whatsappEmbeddedReady: boolean;
   metaBusy: boolean;
   isDisconnecting: boolean;
   isSelectingPage: boolean;
   onConnectMeta: () => void;
+  onConnectWhatsApp: () => void;
+  whatsappBusy: boolean;
   onDisconnect: (platform: ChannelId) => void;
   onSelectPage: (pageId: string) => void;
 };
@@ -36,13 +39,20 @@ export function SocialChannelsSection({
   instagram,
   whatsapp,
   metaReady,
+  whatsappEmbeddedReady,
   metaBusy,
   isDisconnecting,
   isSelectingPage,
   onConnectMeta,
+  onConnectWhatsApp,
+  whatsappBusy,
   onDisconnect,
   onSelectPage,
 }: SocialChannelsSectionProps) {
+  const whatsappLinked =
+    whatsapp &&
+    whatsapp.status !== 'DISCONNECTED' &&
+    whatsapp.status !== undefined;
   const { t } = useLocale();
 
   return (
@@ -146,20 +156,38 @@ export function SocialChannelsSection({
           icon={<WhatsAppIcon className="h-5 w-5" />}
           iconClassName="bg-[#25D366]/10 text-[#25D366]"
           title={t('channelWhatsApp')}
-          description={t('channelWhatsAppHint')}
+          description={
+            whatsappEmbeddedReady
+              ? t('channelWhatsAppHint')
+              : t('channelWhatsAppEmbeddedSetupHint')
+          }
           account={whatsapp}
           action={
-            whatsapp && whatsapp.status !== 'DISCONNECTED' ? (
+            <>
               <Button
                 size="sm"
-                variant="ghost"
-                className="text-danger hover:bg-danger/10 hover:text-danger"
-                disabled={isDisconnecting}
-                onClick={() => onDisconnect('WHATSAPP')}
+                variant={
+                  whatsapp?.status === 'CONNECTED' ? 'outline' : 'default'
+                }
+                disabled={whatsappBusy || !whatsappEmbeddedReady}
+                onClick={onConnectWhatsApp}
               >
-                {t('disconnectAccount')}
+                {whatsapp?.status === 'CONNECTED'
+                  ? t('channelReconnect')
+                  : t('channelConnectWhatsAppNumber')}
               </Button>
-            ) : null
+              {whatsappLinked ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-danger hover:bg-danger/10 hover:text-danger"
+                  disabled={isDisconnecting}
+                  onClick={() => onDisconnect('WHATSAPP')}
+                >
+                  {t('disconnectAccount')}
+                </Button>
+              ) : null}
+            </>
           }
         />
 

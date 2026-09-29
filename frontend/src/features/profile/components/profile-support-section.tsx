@@ -1,5 +1,7 @@
-import { HelpCircle, MessageCircle } from 'lucide-react';
+import { FileText, HelpCircle, MessageCircle, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { MessageKey } from '@/features/i18n/messages';
+import { paths } from '@/routes/paths';
 
 export const SUPPORT_EMAIL = 'support@bee3ly.com';
 
@@ -52,6 +54,34 @@ export function ProfileSupportSection({ t }: ProfileSupportSectionProps) {
             </span>
           </span>
         </a>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          to={paths.privacyPolicy}
+          className="border-border bg-page hover:border-brand/30 hover:bg-lavender flex items-start gap-3 rounded-xl border p-4 transition-colors"
+        >
+          <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <Shield className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="text-ink block text-sm font-semibold">
+              {t('navPrivacyPolicy')}
+            </span>
+          </span>
+        </Link>
+        <Link
+          to={paths.terms}
+          className="border-border bg-page hover:border-brand/30 hover:bg-lavender flex items-start gap-3 rounded-xl border p-4 transition-colors"
+        >
+          <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <FileText className="h-5 w-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="text-ink block text-sm font-semibold">
+              {t('navTermsConditions')}
+            </span>
+          </span>
+        </Link>
       </div>
     </section>
   );

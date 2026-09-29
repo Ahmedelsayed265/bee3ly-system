@@ -53,7 +53,13 @@ export class MetaOauthService {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    const scopes = [...new Set([...baseScopes, ...extra])].join(',');
+    const waScopes =
+      this.config.get<string>('META_OAUTH_INCLUDE_WHATSAPP') === 'true'
+        ? ['whatsapp_business_management', 'whatsapp_business_messaging']
+        : [];
+    const scopes = [...new Set([...baseScopes, ...waScopes, ...extra])].join(
+      ',',
+    );
     return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}&auth_type=rerequest`;
   }
 
@@ -278,6 +284,64 @@ export class MetaOauthService {
       });
     }
 
+    let wa = null;
+    try {
+      const userToken = this.decrypt(pending.userAccessTokenEnc);
+      const phones = await this.graph.discoverWhatsAppPhoneNumbers(userToken);
+      if (phones.length > 0) {
+        const pick = phones[0];
+        const waRow = await this.prisma.socialAccount.upsert({
+          where: {
+            businessId_platform: {
+              businessId,
+              platform: SocialPlatform.WHATSAPP,
+            },
+          },
+          create: {
+            businessId,
+            provider: 'META',
+            platform: SocialPlatform.WHATSAPP,
+            externalId: pick.phoneNumberId,
+            displayName: pick.displayName,
+            accessTokenEnc: this.encrypt(userToken),
+            status: SocialConnectionStatus.CONNECTED,
+            parentExternalId: pick.wabaId,
+            capabilities: ['messages', 'send'],
+            metadata: {
+              wabaId: pick.wabaId,
+              metaBusinessId: pick.businessId,
+              phoneNumberId: pick.phoneNumberId,
+            },
+          },
+          update: {
+            externalId: pick.phoneNumberId,
+            displayName: pick.displayName,
+            accessTokenEnc: this.encrypt(userToken),
+            status: SocialConnectionStatus.CONNECTED,
+            parentExternalId: pick.wabaId,
+            capabilities: ['messages', 'send'],
+            metadata: {
+              wabaId: pick.wabaId,
+              metaBusinessId: pick.businessId,
+              phoneNumberId: pick.phoneNumberId,
+            },
+          },
+        });
+        wa = {
+          id: waRow.id,
+          displayName: waRow.displayName,
+          status: waRow.status,
+        };
+        this.logger.log(
+          `WhatsApp linked phoneNumberId=${pick.phoneNumberId} business=${businessId}`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `WhatsApp discovery after page select failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     await this.prisma.pendingMetaConnection.delete({
       where: { id: pending.id },
     });
@@ -296,9 +360,14 @@ export class MetaOauthService {
             status: ig.status,
           }
         : null,
+      whatsapp: wa,
       notice: ig
-        ? 'Facebook & Instagram connected'
-        : 'Facebook Page connected (no Instagram on this Page). In Meta App add Instagram Graph API with Facebook Login, then set META_OAUTH_EXTRA_SCOPES=instagram_basic and reconnect.',
+        ? wa
+          ? 'Facebook, Instagram & WhatsApp connected'
+          : 'Facebook & Instagram connected'
+        : wa
+          ? 'Facebook Page & WhatsApp connected'
+          : 'Facebook Page connected (no Instagram on this Page). In Meta App add Instagram Graph API with Facebook Login, then set META_OAUTH_EXTRA_SCOPES=instagram_basic and reconnect.',
     };
   }
 

@@ -38,6 +38,27 @@ class SelectPageDto {
   pageId!: string;
 }
 
+class WhatsAppEmbeddedCompleteDto {
+  @IsString()
+  code!: string;
+
+  @IsOptional()
+  @IsString()
+  phoneNumberId?: string;
+
+  @IsOptional()
+  @IsString()
+  wabaId?: string;
+
+  @IsOptional()
+  @IsString()
+  displayPhoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  frontendOrigin?: string;
+}
+
 @Controller('social')
 export class SocialController {
   constructor(private readonly social: SocialService) {}
@@ -89,6 +110,21 @@ export class SocialController {
   @UseGuards(JwtAuthGuard)
   selectPage(@CurrentUser() user: AuthUser, @Body() dto: SelectPageDto) {
     return this.social.selectPage(user.id, dto.pendingId, dto.pageId);
+  }
+
+  @Get('whatsapp/embedded-config')
+  @UseGuards(JwtAuthGuard)
+  whatsAppEmbeddedConfig() {
+    return this.social.getWhatsAppEmbeddedConfig();
+  }
+
+  @Post('whatsapp/embedded-complete')
+  @UseGuards(JwtAuthGuard)
+  whatsAppEmbeddedComplete(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: WhatsAppEmbeddedCompleteDto,
+  ) {
+    return this.social.completeWhatsAppEmbeddedSignup(user.id, dto);
   }
 
   @Get('meta/webhook')

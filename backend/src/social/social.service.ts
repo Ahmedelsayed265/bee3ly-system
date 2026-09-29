@@ -10,6 +10,10 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaWebhookService } from './meta/meta-webhook.service';
+import {
+  WhatsappEmbeddedService,
+  type WhatsAppEmbeddedCompleteInput,
+} from './meta/whatsapp-embedded.service';
 
 /**
  * Channel facade for Bee3ly.
@@ -25,6 +29,7 @@ export class SocialService implements OnModuleInit {
     private readonly config: ConfigService,
     private readonly metaOauth: MetaOauthService,
     private readonly metaWebhook: MetaWebhookService,
+    private readonly whatsappEmbedded: WhatsappEmbeddedService,
   ) {}
 
   async onModuleInit() {
@@ -118,7 +123,19 @@ export class SocialService implements OnModuleInit {
       metaConfigured: Boolean(this.config.get('META_APP_ID')),
       oauthUrl: this.metaOauth.buildOAuthUrl(businessId, userId),
       connectLabel: 'Connect Facebook & Instagram',
+      whatsappEmbedded: this.whatsappEmbedded.getClientConfig(),
     };
+  }
+
+  getWhatsAppEmbeddedConfig() {
+    return this.whatsappEmbedded.getClientConfig();
+  }
+
+  completeWhatsAppEmbeddedSignup(
+    userId: string,
+    input: WhatsAppEmbeddedCompleteInput,
+  ) {
+    return this.whatsappEmbedded.completeSignup(userId, input);
   }
 
   async connectDemo(

@@ -58,7 +58,9 @@ export function ChannelCard({
 }: ChannelCardProps) {
   const { t } = useLocale();
   const connected =
-    account?.status === 'CONNECTED' || account?.status === 'CONNECTING';
+    account?.status === 'CONNECTED' ||
+    account?.status === 'CONNECTING' ||
+    account?.status === 'SIMULATION';
 
   return (
     <article

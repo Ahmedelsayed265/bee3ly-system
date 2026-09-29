@@ -60,6 +60,149 @@ export class MetaGraphClient {
     };
   }
 
+  /** Token exchange for WhatsApp Embedded Signup (FB.login + config_id). */
+  async exchangeEmbeddedSignupCode(
+    code: string,
+    hints: { frontendOrigin?: string } = {},
+  ) {
+    const appId = this.config.get<string>('META_APP_ID')?.trim();
+    const appSecret = this.config.get<string>('META_APP_SECRET')?.trim();
+    if (!appId || !appSecret) {
+      throw new Error('META_APP_ID / META_APP_SECRET not configured');
+    }
+
+    const redirectCandidates = new Set<string | undefined>();
+    redirectCandidates.add(undefined);
+    redirectCandidates.add('');
+    const configured = this.config
+      .get<string>('META_WHATSAPP_EMBEDDED_REDIRECT_URI')
+      ?.trim();
+    if (configured) redirectCandidates.add(configured);
+    const frontendUrls = (this.config.get<string>('FRONTEND_URL') ?? '')
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
+    for (const frontendUrl of frontendUrls) {
+      redirectCandidates.add(frontendUrl);
+      redirectCandidates.add(
+        frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`,
+      );
+    }
+    const origin = hints.frontendOrigin?.trim();
+    if (origin) {
+      redirectCandidates.add(origin);
+      redirectCandidates.add(origin.endsWith('/') ? origin : `${origin}/`);
+    }
+    redirectCandidates.add('https://www.facebook.com/connect/login_success.html');
+
+    const tokenUrl = `${this.base()}/oauth/access_token`;
+    let lastBody = '';
+
+    for (const redirectUri of redirectCandidates) {
+      const getUrl = new URL(tokenUrl);
+      getUrl.searchParams.set('client_id', appId);
+      getUrl.searchParams.set('client_secret', appSecret);
+      getUrl.searchParams.set('code', code);
+      if (redirectUri !== undefined) {
+        getUrl.searchParams.set('redirect_uri', redirectUri);
+      }
+
+      const attempts: Array<() => Promise<Response>> = [
+        () =>
+          fetch(getUrl.toString(), {
+            method: 'GET',
+          }),
+      ];
+
+      const form = new URLSearchParams();
+      form.set('client_id', appId);
+      form.set('client_secret', appSecret);
+      form.set('code', code);
+      form.set('grant_type', 'authorization_code');
+      if (redirectUri !== undefined) {
+        form.set('redirect_uri', redirectUri);
+      }
+      attempts.push(() =>
+        fetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: form,
+        }),
+      );
+
+      if (redirectUri === undefined) {
+        const bareForm = new URLSearchParams();
+        bareForm.set('client_id', appId);
+        bareForm.set('client_secret', appSecret);
+        bareForm.set('code', code);
+        attempts.push(() =>
+          fetch(tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: bareForm,
+          }),
+        );
+      }
+
+      for (const attempt of attempts) {
+        const res = await attempt();
+        lastBody = await res.text();
+        if (!res.ok) continue;
+        try {
+          const parsed = JSON.parse(lastBody) as {
+            access_token?: string;
+          };
+          if (parsed.access_token) {
+            this.logger.log(
+              `Embedded Signup token exchange ok (redirect_uri=${redirectUri ?? 'omitted'})`,
+            );
+            return parsed as {
+              access_token: string;
+              expires_in?: number;
+              token_type?: string;
+            };
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+
+    this.logger.warn(
+      `Embedded Signup token exchange failed: ${lastBody.slice(0, 400)}`,
+    );
+    let detail = 'META_EMBEDDED_TOKEN_EXCHANGE_FAILED';
+    try {
+      const parsed = JSON.parse(lastBody) as {
+        error?: { message?: string; error_subcode?: number };
+      };
+      if (parsed.error?.error_subcode === 36008) {
+        detail =
+          'WhatsApp signup code exchange failed (redirect_uri). Add your HTTPS app URL to Meta → Facebook Login for Business → Valid OAuth Redirect URIs, and set FRONTEND_URL in backend .env to match where you open Settings.';
+      } else if (parsed.error?.message) {
+        detail = parsed.error.message;
+      }
+    } catch {
+      /* keep default */
+    }
+    throw new Error(detail);
+  }
+
+  async subscribeWhatsAppWaba(wabaId: string, accessToken: string) {
+    const url = `${this.base()}/${wabaId}/subscribed_apps`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(`WABA subscribe failed: ${text.slice(0, 300)}`);
+      return { success: false as const, error: text };
+    }
+    return { success: true as const };
+  }
+
   async listPages(userAccessToken: string): Promise<MetaPage[]> {
     const fields =
       'id,name,access_token,instagram_business_account,connected_instagram_account';
@@ -126,6 +269,82 @@ export class MetaGraphClient {
    * Pages linked to a Meta Business often omit from /me/accounts unless
    * business_management is granted. Fallback: businesses → owned_pages → page token.
    */
+  /** WhatsApp Cloud phone numbers under Meta businesses the user admins. */
+  async discoverWhatsAppPhoneNumbers(userAccessToken: string) {
+    const bizUrl = `${this.base()}/me/businesses?fields=id,name&access_token=${encodeURIComponent(userAccessToken)}`;
+    const bizRes = await fetch(bizUrl);
+    const bizText = await bizRes.text();
+    if (!bizRes.ok) {
+      this.logger.warn(
+        `WhatsApp discovery: list businesses failed: ${bizText.slice(0, 300)}`,
+      );
+      return [];
+    }
+    let businesses: Array<{ id: string; name?: string }> = [];
+    try {
+      businesses =
+        (
+          JSON.parse(bizText) as {
+            data?: Array<{ id: string; name?: string }>;
+          }
+        ).data ?? [];
+    } catch {
+      return [];
+    }
+
+    const found: Array<{
+      phoneNumberId: string;
+      displayName: string;
+      wabaId: string;
+      businessId: string;
+    }> = [];
+
+    for (const biz of businesses) {
+      const wabaUrl = `${this.base()}/${biz.id}/owned_whatsapp_business_accounts?fields=id,name&access_token=${encodeURIComponent(userAccessToken)}`;
+      const wabaRes = await fetch(wabaUrl);
+      if (!wabaRes.ok) {
+        this.logger.debug(
+          `No WABA on business ${biz.id}: ${(await wabaRes.text()).slice(0, 120)}`,
+        );
+        continue;
+      }
+      const wabaJson = (await wabaRes.json()) as {
+        data?: Array<{ id: string; name?: string }>;
+      };
+      for (const waba of wabaJson.data ?? []) {
+        if (!waba.id) continue;
+        const phonesUrl = `${this.base()}/${waba.id}/phone_numbers?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(userAccessToken)}`;
+        const phonesRes = await fetch(phonesUrl);
+        if (!phonesRes.ok) continue;
+        const phonesJson = (await phonesRes.json()) as {
+          data?: Array<{
+            id: string;
+            display_phone_number?: string;
+            verified_name?: string;
+          }>;
+        };
+        for (const phone of phonesJson.data ?? []) {
+          if (!phone.id) continue;
+          found.push({
+            phoneNumberId: phone.id,
+            displayName:
+              phone.verified_name?.trim() ||
+              phone.display_phone_number?.trim() ||
+              waba.name?.trim() ||
+              'WhatsApp',
+            wabaId: waba.id,
+            businessId: biz.id,
+          });
+        }
+      }
+    }
+
+    this.logger.log(
+      `WhatsApp discovery: ${found.length} phone number(s) across ${businesses.length} business(es)`,
+    );
+    return found;
+  }
+
   private async listPagesViaBusinesses(
     userAccessToken: string,
   ): Promise<MetaPage[]> {

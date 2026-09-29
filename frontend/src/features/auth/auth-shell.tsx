@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { PrefsControls } from '@/components/preferences';
+import { AuthLegalLinks } from '@/features/auth/auth-legal-links';
 
 export function AuthShell({
   title,
@@ -42,6 +43,7 @@ export function AuthShell({
             <p className="text-muted mt-6 text-center text-sm">{footer}</p>
           ) : null}
         </div>
+        <AuthLegalLinks />
       </div>
     </main>
   );

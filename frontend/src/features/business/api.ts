@@ -485,7 +485,31 @@ export async function fetchSocial() {
     metaConfigured: boolean;
     oauthUrl: string | null;
     connectLabel?: string;
+    whatsappEmbedded?: {
+      configured: boolean;
+      appId: string | null;
+      configId: string | null;
+    };
   }>('/social');
+  return data;
+}
+
+export async function completeWhatsAppEmbeddedSignup(body: {
+  code: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+  displayPhoneNumber?: string;
+  frontendOrigin?: string;
+}) {
+  const { data } = await api.post<{
+    account: {
+      id: string;
+      platform: string;
+      displayName: string | null;
+      externalId: string;
+      status: string;
+    };
+  }>('/social/whatsapp/embedded-complete', body);
   return data;
 }
 
@@ -510,12 +534,19 @@ export async function selectMetaPage(pendingId: string, pageId: string) {
       displayName: string | null;
       status: string;
     } | null;
+    whatsapp: {
+      id: string;
+      displayName: string | null;
+      status: string;
+    } | null;
     notice: string;
   }>('/social/meta/select-page', { pendingId, pageId });
   return data;
 }
 
-export async function connectSocialDemo(platform: 'FACEBOOK' | 'INSTAGRAM') {
+export async function connectSocialDemo(
+  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP',
+) {
   const { data } = await api.post('/social/connect-demo', { platform });
   return data;
 }

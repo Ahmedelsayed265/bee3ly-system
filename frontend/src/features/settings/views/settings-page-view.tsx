@@ -81,10 +81,13 @@ export function SettingsPageView() {
           instagram={social.instagram}
           whatsapp={social.whatsapp}
           metaReady={social.metaReady}
+          whatsappEmbeddedReady={social.whatsappEmbeddedReady}
           metaBusy={social.metaBusy}
           isDisconnecting={social.isDisconnecting}
           isSelectingPage={social.isSelectingPage}
           onConnectMeta={social.connectMeta}
+          onConnectWhatsApp={social.connectWhatsApp}
+          whatsappBusy={social.whatsappBusy}
           onDisconnect={social.disconnect}
           onSelectPage={social.selectPage}
         />
