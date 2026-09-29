@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,14 +13,7 @@ import {
 import { useLocale } from '@/features/i18n/locale-context';
 import { launchWhatsAppEmbeddedSignup } from '@/features/settings/lib/whatsapp-embedded';
 import type { ChannelId, SocialAccount } from '@/features/settings/types';
-
-function apiErrorMessage(err: unknown): string | null {
-  if (!axios.isAxiosError(err)) return null;
-  const data = err.response?.data as
-    { message?: string | string[] } | undefined;
-  if (!data?.message) return null;
-  return Array.isArray(data.message) ? data.message.join(', ') : data.message;
-}
+import { getApiErrorMessage } from '@/lib/api';
 
 function viteWhatsAppEmbeddedConfig() {
   const appId = import.meta.env.VITE_META_APP_ID?.trim();
@@ -58,8 +50,8 @@ export function useSocialSettings() {
       await qc.invalidateQueries({ queryKey: ['social'] });
       toast.success(t('connectionDisconnected'));
     },
-    onError: () => {
-      toast.error(t('connectionError'));
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err) ?? t('connectionError'));
     },
   });
 
@@ -68,8 +60,8 @@ export function useSocialSettings() {
     onSuccess: (data) => {
       window.location.href = data.oauthUrl;
     },
-    onError: () => {
-      toast.error(t('connectionError'));
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err) ?? t('connectionError'));
     },
   });
 
@@ -136,8 +128,10 @@ export function useSocialSettings() {
         toast.error(t('whatsappEmbeddedNotConfigured'));
         return;
       }
-      const apiMsg = apiErrorMessage(err);
-      toast.error(apiMsg ?? t('connectionError'));
+      const detail = getApiErrorMessage(err);
+      toast.error(detail ?? t('whatsappConnectFailed'), {
+        duration: detail && detail.length > 80 ? 12_000 : 5_000,
+      });
     },
   });
 

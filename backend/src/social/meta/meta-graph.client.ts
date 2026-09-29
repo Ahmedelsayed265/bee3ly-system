@@ -71,99 +71,115 @@ export class MetaGraphClient {
       throw new Error('META_APP_ID / META_APP_SECRET not configured');
     }
 
-    const redirectCandidates = new Set<string | undefined>();
-    redirectCandidates.add(undefined);
-    redirectCandidates.add('');
     const configured = this.config
       .get<string>('META_WHATSAPP_EMBEDDED_REDIRECT_URI')
       ?.trim();
-    if (configured) redirectCandidates.add(configured);
+    const redirectOrdered: Array<string | undefined> = [];
+    const origin = hints.frontendOrigin?.trim();
+    if (origin) {
+      redirectOrdered.push(origin.endsWith('/') ? origin : `${origin}/`);
+      redirectOrdered.push(origin.replace(/\/$/, ''));
+    }
+    if (configured) redirectOrdered.push(configured);
     const frontendUrls = (this.config.get<string>('FRONTEND_URL') ?? '')
       .split(',')
       .map((u) => u.trim())
       .filter(Boolean);
     for (const frontendUrl of frontendUrls) {
-      redirectCandidates.add(frontendUrl);
-      redirectCandidates.add(
+      redirectOrdered.push(
         frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`,
       );
+      redirectOrdered.push(frontendUrl.replace(/\/$/, ''));
     }
-    const origin = hints.frontendOrigin?.trim();
-    if (origin) {
-      redirectCandidates.add(origin);
-      redirectCandidates.add(origin.endsWith('/') ? origin : `${origin}/`);
-    }
-    redirectCandidates.add('https://www.facebook.com/connect/login_success.html');
+    redirectOrdered.push(undefined, '', 'https://www.facebook.com/connect/login_success.html');
 
-    const tokenUrl = `${this.base()}/oauth/access_token`;
+    const apiVersions = ['v25.0', this.version];
     let lastBody = '';
 
-    for (const redirectUri of redirectCandidates) {
-      const getUrl = new URL(tokenUrl);
-      getUrl.searchParams.set('client_id', appId);
-      getUrl.searchParams.set('client_secret', appSecret);
-      getUrl.searchParams.set('code', code);
-      if (redirectUri !== undefined) {
-        getUrl.searchParams.set('redirect_uri', redirectUri);
-      }
+    for (const graphVersion of apiVersions) {
+      const tokenUrl = `https://graph.facebook.com/${graphVersion}/oauth/access_token`;
 
-      const attempts: Array<() => Promise<Response>> = [
-        () =>
-          fetch(getUrl.toString(), {
-            method: 'GET',
-          }),
-      ];
+      for (const redirectUri of redirectOrdered) {
+        const getUrl = new URL(tokenUrl);
+        getUrl.searchParams.set('client_id', appId);
+        getUrl.searchParams.set('client_secret', appSecret);
+        getUrl.searchParams.set('code', code);
+        if (redirectUri !== undefined) {
+          getUrl.searchParams.set('redirect_uri', redirectUri);
+        }
 
-      const form = new URLSearchParams();
-      form.set('client_id', appId);
-      form.set('client_secret', appSecret);
-      form.set('code', code);
-      form.set('grant_type', 'authorization_code');
-      if (redirectUri !== undefined) {
-        form.set('redirect_uri', redirectUri);
-      }
-      attempts.push(() =>
-        fetch(tokenUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: form,
-        }),
-      );
+        const attempts: Array<() => Promise<Response>> = [
+          () => fetch(getUrl.toString(), { method: 'GET' }),
+        ];
 
-      if (redirectUri === undefined) {
-        const bareForm = new URLSearchParams();
-        bareForm.set('client_id', appId);
-        bareForm.set('client_secret', appSecret);
-        bareForm.set('code', code);
+        const form = new URLSearchParams();
+        form.set('client_id', appId);
+        form.set('client_secret', appSecret);
+        form.set('code', code);
+        form.set('grant_type', 'authorization_code');
+        if (redirectUri !== undefined) {
+          form.set('redirect_uri', redirectUri);
+        }
         attempts.push(() =>
           fetch(tokenUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: bareForm,
+            body: form,
           }),
         );
-      }
 
-      for (const attempt of attempts) {
-        const res = await attempt();
-        lastBody = await res.text();
-        if (!res.ok) continue;
-        try {
-          const parsed = JSON.parse(lastBody) as {
-            access_token?: string;
-          };
-          if (parsed.access_token) {
-            this.logger.log(
-              `Embedded Signup token exchange ok (redirect_uri=${redirectUri ?? 'omitted'})`,
-            );
-            return parsed as {
-              access_token: string;
-              expires_in?: number;
-              token_type?: string;
+        const jsonBody: Record<string, string> = {
+          client_id: appId,
+          client_secret: appSecret,
+          code,
+          grant_type: 'authorization_code',
+        };
+        if (redirectUri !== undefined) {
+          jsonBody.redirect_uri = redirectUri;
+        }
+        attempts.push(() =>
+          fetch(tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(jsonBody),
+          }),
+        );
+
+        if (redirectUri === undefined) {
+          const bareForm = new URLSearchParams();
+          bareForm.set('client_id', appId);
+          bareForm.set('client_secret', appSecret);
+          bareForm.set('code', code);
+          attempts.push(() =>
+            fetch(tokenUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: bareForm,
+            }),
+          );
+        }
+
+        for (const attempt of attempts) {
+          const res = await attempt();
+          lastBody = await res.text();
+          if (!res.ok) continue;
+          try {
+            const parsed = JSON.parse(lastBody) as {
+              access_token?: string;
             };
+            if (parsed.access_token) {
+              this.logger.log(
+                `Embedded Signup token exchange ok (${graphVersion}, redirect_uri=${redirectUri ?? 'omitted'})`,
+              );
+              return parsed as {
+                access_token: string;
+                expires_in?: number;
+                token_type?: string;
+              };
+            }
+          } catch {
+            continue;
           }
-        } catch {
-          continue;
         }
       }
     }
@@ -178,7 +194,7 @@ export class MetaGraphClient {
       };
       if (parsed.error?.error_subcode === 36008) {
         detail =
-          'WhatsApp signup code exchange failed (redirect_uri). Add your HTTPS app URL to Meta → Facebook Login for Business → Valid OAuth Redirect URIs, and set FRONTEND_URL in backend .env to match where you open Settings.';
+          'WhatsApp code exchange failed (redirect_uri). From Meta → WhatsApp → Embedded Signup Launch → Exchange Token, copy the exact redirect_uri from the JS snippet into backend META_WHATSAPP_EMBEDDED_REDIRECT_URI, or open Settings on the same URL as FRONTEND_URL / Valid OAuth Redirect URIs.';
       } else if (parsed.error?.message) {
         detail = parsed.error.message;
       }

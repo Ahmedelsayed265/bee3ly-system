@@ -749,6 +749,7 @@
   "whatsappSignupPopupClosed": "The popup closed without WhatsApp onboarding. Try Edit Settings in Meta, or use a Configuration from WhatsApp → Embedded Signup.",
   "whatsappSignupNoCallback": "No response from Meta — check HTTPS domain allowlist and retry.",
   "whatsappSignupCancelled": "WhatsApp connection cancelled.",
+  "whatsappConnectFailed": "Could not connect WhatsApp — complete Meta signup in the popup and ensure the API (ngrok) is running.",
   "metaConnectedOk": "Connected successfully.",
   "metaConnectedFbOnly": "Facebook Page connected — no Instagram Business account on this Page.",
   "metaConnectedFbIg": "Facebook and Instagram connected successfully.",

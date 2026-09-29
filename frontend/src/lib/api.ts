@@ -34,6 +34,39 @@ export function getAccessToken() {
   return accessToken;
 }
 
+/** Human-readable message from API/network errors (for toasts). */
+export function getApiErrorMessage(err: unknown): string | null {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data;
+    if (typeof data === 'string' && data.trim()) {
+      const trimmed = data.trim();
+      if (trimmed.startsWith('<!') || trimmed.includes('<html')) {
+        const status = err.response?.status;
+        return status
+          ? `Server returned HTML (${status}) — check VITE_API_URL / ngrok tunnel.`
+          : 'Server returned HTML — check VITE_API_URL / ngrok tunnel.';
+      }
+      return trimmed.slice(0, 600);
+    }
+    if (data && typeof data === 'object') {
+      const msg = (data as { message?: unknown }).message;
+      if (typeof msg === 'string' && msg.trim()) return msg.trim();
+      if (Array.isArray(msg) && msg.length) {
+        return msg.map(String).join(', ');
+      }
+      const errField = (data as { error?: unknown }).error;
+      if (typeof errField === 'string' && errField.trim())
+        return errField.trim();
+    }
+    if (err.message?.trim()) return err.message.trim();
+    return null;
+  }
+  if (err instanceof Error && err.message.trim()) {
+    return err.message.trim();
+  }
+  return null;
+}
+
 api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;

@@ -746,6 +746,7 @@
   "whatsappConnectedOk": "تم ربط رقم واتساب بنجاح — الرسائل هتوصل للـ Inbox.",
   "whatsappEmbeddedNotConfigured": "ربط واتساب غير مفعّل على السيرفر — راجع إعداد Meta Embedded Signup.",
   "whatsappSignupCancelled": "تم إلغاء ربط واتساب.",
+  "whatsappConnectFailed": "تعذّر ربط واتساب — أكمل التسجيل في نافذة Meta وتأكد إن الـ API (ngrok) شغّال.",
   "whatsappSignupWaiting": "أكمل إعداد واتساب في نافذة Meta…",
   "whatsappSignupPopupClosed": "النافذة اتقفلت من غير ما يظهر إعداد واتساب. جرّب «Edit Settings» في Meta أو تأكد إن Configuration من WhatsApp → Embedded Signup (مش Login عادي بس).",
   "whatsappSignupNoCallback": "Meta ما رجّعتش رد — تأكد من allowlist الدومين (HTTPS) وجرّب تاني.",

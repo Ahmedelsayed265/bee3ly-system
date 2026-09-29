@@ -264,6 +264,7 @@ npm run db:seed:demo
 
 - `META_APP_ID` / `META_APP_SECRET` / `META_WEBHOOK_VERIFY_TOKEN` / `META_REDIRECT_URI`
 - **Privacy / Terms (Meta App URLs):** `https://bee3ly-system.vercel.app/privacy` و `https://bee3ly-system.vercel.app/terms` (أو دومينك + `/privacy` و `/terms`)
+- **WhatsApp token exchange (36008):** انسخ `redirect_uri` من **Embedded Signup Launch → Exchange Token** (JavaScript) إلى `META_WHATSAPP_EMBEDDED_REDIRECT_URI` في backend `.env`
 - **WhatsApp (رقم حقيقي للتاجر):** في Meta App → WhatsApp → Embedded Signup أنشئ Configuration ID ثم على السيرفر:
   - `META_WHATSAPP_EMBEDDED_CONFIG_ID=<configuration id>`
   - `META_OAUTH_INCLUDE_WHATSAPP=true` (اختياري لو بتربط WA مع OAuth الصفحة)
