@@ -47,6 +47,7 @@ type ProductFormDialogProps = {
   variantSkus: ProductVariantSku[];
   onSkuChange: (key: string, patch: Partial<ProductVariantSku>) => void;
   onApplyDefaults: () => void;
+  onApplyCostDefaults: () => void;
   isPending: boolean;
   onSubmit: (e: FormEvent) => void;
 };
@@ -78,6 +79,7 @@ export function ProductFormDialog({
   variantSkus,
   onSkuChange,
   onApplyDefaults,
+  onApplyCostDefaults,
   isPending,
   onSubmit,
 }: ProductFormDialogProps) {
@@ -182,14 +184,20 @@ export function ProductFormDialog({
                   type="number"
                   min={0}
                   step="1"
-                  label={t('productCost')}
+                  label={hasVariants ? t('productBaseCost') : t('productCost')}
                   value={costEgp}
                   onChange={(e) => onCostChange(e.target.value)}
                   placeholder="0"
                 />
-                <p className="text-muted text-xs leading-5">
-                  {t('productCostNote')}
-                </p>
+                {!hasVariants ? (
+                  <p className="text-muted text-xs leading-5">
+                    {t('productCostNote')}
+                  </p>
+                ) : (
+                  <p className="text-muted text-xs leading-5">
+                    {t('productBaseCostHint')}
+                  </p>
+                )}
 
                 <div className="space-y-1.5">
                   <Label htmlFor="productDescription">
@@ -221,6 +229,7 @@ export function ProductFormDialog({
               skus={variantSkus}
               onSkuChange={onSkuChange}
               onApplyDefaults={onApplyDefaults}
+              onApplyCostDefaults={onApplyCostDefaults}
               onOpenDictionary={onOpenDictionary}
               quantityMode={quantityMode}
             />

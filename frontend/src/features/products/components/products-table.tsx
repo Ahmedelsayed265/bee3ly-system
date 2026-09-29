@@ -12,6 +12,7 @@ import { resolveAttributeEntries } from '@/features/products/attribute-templates
 import {
   asVariants,
   hasVariantMatrix,
+  variantsCostSummary,
   variantsTotalStock,
 } from '@/features/products/product-variants';
 import { TableRowsSkeleton } from '@/components/ui/skeleton-blocks';
@@ -159,19 +160,42 @@ export function ProductsTable({
                       <span className="text-muted text-xs font-medium">
                         {t('egp')}
                       </span>
-                      {product.costEgp != null ? (
-                        <p className="text-muted mt-1 text-[11px] font-medium">
-                          {t('productCost')}{' '}
-                          {product.costEgp.toLocaleString(
-                            locale === 'ar' ? 'ar-EG' : 'en-US',
-                          )}{' '}
-                          {t('egp')}
-                        </p>
-                      ) : (
-                        <p className="text-muted mt-1 text-[11px] font-medium">
-                          {t('productCostMissing')}
-                        </p>
-                      )}
+                      {(() => {
+                        const costRange = withVariants
+                          ? variantsCostSummary(variants)
+                          : null;
+                        if (costRange) {
+                          const fmt = (n: number) =>
+                            n.toLocaleString(
+                              locale === 'ar' ? 'ar-EG' : 'en-US',
+                            );
+                          const label =
+                            costRange.min === costRange.max
+                              ? fmt(costRange.min)
+                              : `${fmt(costRange.min)}–${fmt(costRange.max)}`;
+                          return (
+                            <p className="text-muted mt-1 text-[11px] font-medium">
+                              {t('productCost')} {label} {t('egp')}
+                            </p>
+                          );
+                        }
+                        if (product.costEgp != null) {
+                          return (
+                            <p className="text-muted mt-1 text-[11px] font-medium">
+                              {t('productCost')}{' '}
+                              {product.costEgp.toLocaleString(
+                                locale === 'ar' ? 'ar-EG' : 'en-US',
+                              )}{' '}
+                              {t('egp')}
+                            </p>
+                          );
+                        }
+                        return (
+                          <p className="text-muted mt-1 text-[11px] font-medium">
+                            {t('productCostMissing')}
+                          </p>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 text-start align-top">
                       <span

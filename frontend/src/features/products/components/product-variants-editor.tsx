@@ -22,6 +22,7 @@ type ProductVariantsEditorProps = {
   skus: ProductVariantSku[];
   onSkuChange: (key: string, patch: Partial<ProductVariantSku>) => void;
   onApplyDefaults: () => void;
+  onApplyCostDefaults: () => void;
   onOpenDictionary: () => void;
   quantityMode: boolean;
 };
@@ -35,6 +36,7 @@ export function ProductVariantsEditor({
   skus,
   onSkuChange,
   onApplyDefaults,
+  onApplyCostDefaults,
   onOpenDictionary,
   quantityMode,
 }: ProductVariantsEditorProps) {
@@ -177,18 +179,29 @@ export function ProductVariantsEditor({
                 <p className="text-ink text-xs font-semibold">
                   {t('variantMatrixTitle', { count: String(skus.length) })}
                 </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={onApplyDefaults}
-                >
-                  {t('variantApplyBasePrice')}
-                </Button>
+                <div className="flex flex-wrap gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={onApplyDefaults}
+                  >
+                    {t('variantApplyBasePrice')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={onApplyCostDefaults}
+                  >
+                    {t('variantApplyBaseCost')}
+                  </Button>
+                </div>
               </div>
               <div className="border-border bg-surface overflow-x-auto rounded-xl border">
-                <table className="w-full min-w-[28rem] border-collapse text-sm">
+                <table className="w-full min-w-[36rem] border-collapse text-sm">
                   <thead>
                     <tr className="border-border bg-canvas/60 text-muted border-b text-xs font-semibold tracking-wide uppercase">
                       <th className="px-3 py-2.5 text-start">
@@ -196,6 +209,9 @@ export function ProductVariantsEditor({
                       </th>
                       <th className="px-3 py-2.5 text-start">
                         {t('variantColPrice')}
+                      </th>
+                      <th className="px-3 py-2.5 text-start">
+                        {t('variantColCost')}
                       </th>
                       {quantityMode ? (
                         <th className="px-3 py-2.5 text-start">
@@ -228,6 +244,28 @@ export function ProductVariantsEditor({
                             }
                             className="border-border bg-surface text-ink focus-visible:border-brand focus-visible:ring-brand/20 w-28 rounded-lg border px-2.5 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2"
                             aria-label={t('variantColPrice')}
+                          />
+                          <span className="text-muted ms-1 text-xs">
+                            {t('egp')}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-start align-middle">
+                          <input
+                            type="number"
+                            min={0}
+                            value={sku.costEgp ?? ''}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              onSkuChange(sku.key, {
+                                costEgp:
+                                  raw === ''
+                                    ? null
+                                    : Math.max(0, Math.floor(Number(raw) || 0)),
+                              });
+                            }}
+                            className="border-border bg-surface text-ink focus-visible:border-brand focus-visible:ring-brand/20 w-28 rounded-lg border px-2.5 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2"
+                            aria-label={t('variantColCost')}
+                            placeholder="—"
                           />
                           <span className="text-muted ms-1 text-xs">
                             {t('egp')}

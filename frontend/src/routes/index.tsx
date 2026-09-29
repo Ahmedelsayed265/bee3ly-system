@@ -3,7 +3,6 @@ import { GuestRoute, ProtectedRoute } from '@/features/auth/auth-guards';
 import { DashboardShell } from '@/features/dashboard/dashboard-shell';
 import { ForgotPasswordPage } from '@/pages/forgot-password-page';
 import { LoginPage } from '@/pages/login-page';
-import { OnboardingPage } from '@/pages/onboarding-page';
 import { RegisterPage } from '@/pages/register-page';
 import { ResetPasswordPage } from '@/pages/reset-password-page';
 import { PrivacyPolicyPage } from '@/pages/privacy-policy-page';
@@ -31,14 +30,6 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
-      {
-        path: 'app/onboarding',
-        element: (
-          <div className="bg-page min-h-svh px-4 py-10">
-            <OnboardingPage />
-          </div>
-        ),
-      },
       {
         path: 'app',
         element: <DashboardShell />,

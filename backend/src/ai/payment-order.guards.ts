@@ -3,7 +3,7 @@ import { isImageAttachmentMessage } from '../channels/inbound-content';
 import type { BusinessContext } from './types';
 
 const PREPAID_RE =
-  /instapay|insta\s*pay|vodafone|فودافون|bank|بنك|transfer|تحويل|wallet|محفظة|ipn/i;
+  /instapay|insta\s*pay|vodafone|فودافون|bank|بنك|transfer|تحويل|wallet|محفظة|ipn|انستا\s?باي|انستاباي|انستا/i;
 const COD_RE =
   /cod|cash\s*on\s*delivery|cash\s*at\s*delivery|كاش|الاستلام|upon\s*delivery|عند\s*الاستلام/i;
 
@@ -17,7 +17,9 @@ export function isPrepaidPaymentMethod(method: string): boolean {
 export function assertCreateOrderAllowed(
   ctx: BusinessContext,
   paymentMethod: string,
+  notes = '',
 ): void {
+  const paymentBlob = `${paymentMethod} ${notes}`.trim();
   if (ctx.paymentReviewPending) {
     throw new Error(
       'Payment review pending — wait for merchant to confirm transfer before createOrder',
@@ -28,7 +30,7 @@ export function assertCreateOrderAllowed(
       'Customer sent a transfer image — use transferToHuman PAYMENT_REVIEW only; do not createOrder',
     );
   }
-  if (isPrepaidPaymentMethod(paymentMethod) && !ctx.paymentConfirmedForAi) {
+  if (isPrepaidPaymentMethod(paymentBlob) && !ctx.paymentConfirmedForAi) {
     throw new Error(
       'Prepaid transfer: merchant must confirm payment in inbox before createOrder',
     );

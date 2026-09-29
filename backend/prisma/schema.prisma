@@ -166,11 +166,17 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+enum ShippingPricingMode {
+  GOVERNORATE
+  LOCAL_AREA
+}
+
 model Business {
   id                    String         @id @default(uuid())
   name                  String
   type                  BusinessType   @default(OTHER)
   plan                  PlanTier       @default(FREE)
+  shippingPricingMode   ShippingPricingMode @default(GOVERNORATE)
   description           String?
   averagePriceEgp       Int?
   operatingArea         String?

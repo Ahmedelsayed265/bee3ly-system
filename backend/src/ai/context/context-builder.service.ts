@@ -15,6 +15,7 @@ import {
   hasVariantMatrix,
 } from '../../products/product-variants';
 import { presentKnowledge } from '../../businesses/knowledge-text';
+import { effectiveShippingPricingMode } from '../../businesses/uses-local-shipping';
 import { businessUsesPhysicalHours } from '../../businesses/uses-physical-hours';
 import {
   formatShippingZonesForKnowledge,
@@ -82,10 +83,22 @@ export class ContextBuilderService {
           ? presentKnowledge(business.workingHours)
           : null,
         deliveryInfo: presentKnowledge(business.deliveryInfo),
-        shippingRates:
-          formatShippingZonesForKnowledge(
-            parseShippingZones(business.shippingZones),
-          ) || null,
+        shippingRates: (() => {
+          const pricingMode = effectiveShippingPricingMode(
+            business.type,
+            business.shippingPricingMode,
+          );
+          return (
+            formatShippingZonesForKnowledge(
+              parseShippingZones(business.shippingZones, pricingMode),
+              pricingMode,
+            ) || null
+          );
+        })(),
+        shippingPricingMode: effectiveShippingPricingMode(
+          business.type,
+          business.shippingPricingMode,
+        ),
         paymentInfo: presentKnowledge(business.paymentInfo),
         faqs: presentKnowledge(business.faqs),
         primaryGoal: business.primaryGoal,
@@ -311,7 +324,7 @@ export class ContextBuilderService {
             ctx.openOrder.verifiedPrepaidEgp > 0
               ? `Verified prepaid ${ctx.openOrder.verifiedPrepaidEgp} EGP — balance due now ${ctx.openOrder.balanceDueEgp} EGP (charge only balance for new prepaid transfers; do not ask for full grand total again).`
               : '',
-            'To add another product to this order → call addOrderItem (same variant args as createOrder). After addOrderItem, use balanceDueEgp from the tool result for any new transfer amount.',
+            'To add another product to this order → call addOrderItem (same variant args as createOrder). For a new multi-item checkout use createOrder with additionalItems (one object per extra SKU). After addOrderItem, use balanceDueEgp from the tool result for any new transfer amount.',
           ]
             .filter(Boolean)
             .join(' ')

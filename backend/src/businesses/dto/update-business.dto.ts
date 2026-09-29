@@ -11,7 +11,12 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { BusinessGoal, BusinessType, PlanTier } from '@prisma/client';
+import {
+  BusinessGoal,
+  BusinessType,
+  PlanTier,
+  ShippingPricingMode,
+} from '@prisma/client';
 import { GOVERNORATE_IDS } from '../shipping-zones';
 
 export class ShippingZoneDto {
@@ -23,9 +28,15 @@ export class ShippingZoneDto {
   @MinLength(1)
   name!: string;
 
+  @IsOptional()
   @IsArray()
   @IsIn(GOVERNORATE_IDS, { each: true })
-  governorates!: string[];
+  governorates?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  areas?: string[];
 
   @Type(() => Number)
   @IsInt()
@@ -111,6 +122,10 @@ export class UpdateBusinessDto {
   @ValidateNested({ each: true })
   @Type(() => ShippingZoneDto)
   shippingZones?: ShippingZoneDto[];
+
+  @IsOptional()
+  @IsEnum(ShippingPricingMode)
+  shippingPricingMode?: ShippingPricingMode;
 
   @IsOptional()
   @IsBoolean()

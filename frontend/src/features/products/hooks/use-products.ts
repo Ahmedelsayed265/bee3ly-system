@@ -97,10 +97,15 @@ function rebuildSkusFromDraft(
     enabled: boolean;
     axes: VariantAxisDraft[];
     priceEgp: string;
+    costEgp: string;
     stockQuantity: string;
   },
 ) {
   if (!input.enabled) return [];
+  const defaultCost =
+    input.costEgp === ''
+      ? null
+      : Math.max(0, Math.floor(Number(input.costEgp) || 0));
   return rebuildVariantSkus({
     axes: input.axes.map((axis) => ({
       name: axis.name,
@@ -108,6 +113,7 @@ function rebuildSkusFromDraft(
     })),
     previousSkus,
     defaultPriceEgp: Number(input.priceEgp) || 0,
+    defaultCostEgp: defaultCost,
     defaultStockQuantity: Number(input.stockQuantity) || 0,
   }).skus;
 }
@@ -182,6 +188,7 @@ export function useProducts() {
       enabled: boolean;
       axes: VariantAxisDraft[];
       priceEgp: string;
+      costEgp: string;
       stockQuantity: string;
     }> = {},
   ) =>
@@ -189,6 +196,7 @@ export function useProducts() {
       enabled: patch.enabled ?? variantsEnabled,
       axes: patch.axes ?? variantAxes,
       priceEgp: patch.priceEgp ?? priceEgp,
+      costEgp: patch.costEgp ?? costEgp,
       stockQuantity: patch.stockQuantity ?? stockQuantity,
     });
 
@@ -291,6 +299,12 @@ export function useProducts() {
     setVariantSkus((prev) => prev.map((sku) => ({ ...sku, priceEgp: price })));
   };
 
+  const applyBaseCostToSkus = () => {
+    const cost =
+      costEgp === '' ? null : Math.max(0, Math.floor(Number(costEgp) || 0));
+    setVariantSkus((prev) => prev.map((sku) => ({ ...sku, costEgp: cost })));
+  };
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !priceEgp) return;
@@ -306,14 +320,21 @@ export function useProducts() {
           })),
           previousSkus: variantSkus,
           defaultPriceEgp: Number(priceEgp) || 0,
+          defaultCostEgp:
+            costEgp === ''
+              ? null
+              : Math.max(0, Math.floor(Number(costEgp) || 0)),
           defaultStockQuantity: Number(stockQuantity) || 0,
         })
       : { axes: [], skus: [] };
     const payload = {
       name: name.trim(),
       priceEgp: Number(priceEgp),
-      costEgp:
-        costEgp === '' ? null : Math.max(0, Math.floor(Number(costEgp) || 0)),
+      costEgp: hasVariantMatrix(variants)
+        ? null
+        : costEgp === ''
+          ? null
+          : Math.max(0, Math.floor(Number(costEgp) || 0)),
       description: description.trim() || undefined,
       attributes,
       variants,
@@ -386,7 +407,10 @@ export function useProducts() {
       setVariantSkus((prev) => syncVariantSkus(prev, { priceEgp: next }));
     },
     costEgp,
-    setCostEgp,
+    setCostEgp: (next: string) => {
+      setCostEgp(next);
+      setVariantSkus((prev) => syncVariantSkus(prev, { costEgp: next }));
+    },
     description,
     setDescription,
     stockQuantity,
@@ -414,6 +438,7 @@ export function useProducts() {
     variantSkus,
     onSkuChange,
     applyBasePriceToSkus,
+    applyBaseCostToSkus,
     hasVariants,
     submit,
     isSaving: createMut.isPending || updateMut.isPending,

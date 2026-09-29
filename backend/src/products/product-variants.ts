@@ -8,6 +8,8 @@ export type ProductVariantSku = {
   key: string;
   options: Record<string, string>;
   priceEgp: number;
+  /** Unit cost (COGS) for this SKU; null = not set */
+  costEgp: number | null;
   stockQuantity: number;
 };
 
@@ -120,6 +122,11 @@ export function asVariants(raw: unknown): ProductVariants {
       }
       if (!Object.keys(options).length) return null;
       const priceEgp = Math.max(0, Math.floor(Number(row.priceEgp ?? 0)));
+      const costRaw = row.costEgp;
+      const costEgp =
+        costRaw === null || costRaw === undefined || costRaw === ''
+          ? null
+          : Math.max(0, Math.floor(Number(costRaw)));
       const stockQuantity = Math.max(
         0,
         Math.floor(Number(row.stockQuantity ?? 0)),
@@ -128,6 +135,7 @@ export function asVariants(raw: unknown): ProductVariants {
         key: asTrimmedString(row.key) || variantSkuKey(options),
         options,
         priceEgp,
+        costEgp,
         stockQuantity,
       };
     })
@@ -141,6 +149,7 @@ export function rebuildVariantSkus(input: {
   axes: ProductVariantAxis[];
   previousSkus?: ProductVariantSku[];
   defaultPriceEgp: number;
+  defaultCostEgp?: number | null;
   defaultStockQuantity?: number;
   maxCombinations?: number;
 }): ProductVariants {
@@ -170,6 +179,10 @@ export function rebuildVariantSkus(input: {
     0,
     Math.floor(Number(input.defaultStockQuantity ?? 0)),
   );
+  const defaultCost =
+    input.defaultCostEgp === null || input.defaultCostEgp === undefined
+      ? null
+      : Math.max(0, Math.floor(Number(input.defaultCostEgp)));
 
   const skus: ProductVariantSku[] = limited.map((options) => {
     const key = variantSkuKey(options);
@@ -178,6 +191,7 @@ export function rebuildVariantSkus(input: {
       key,
       options,
       priceEgp: prev?.priceEgp ?? defaultPrice,
+      costEgp: prev?.costEgp ?? defaultCost,
       stockQuantity: prev?.stockQuantity ?? defaultStock,
     };
   });

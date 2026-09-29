@@ -4,7 +4,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { paths } from '@/routes/paths';
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -13,10 +13,6 @@ export function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to={paths.login} replace state={{ from: location }} />;
-  }
-
-  if (needsOnboarding && !location.pathname.startsWith(paths.onboarding)) {
-    return <Navigate to={paths.onboarding} replace />;
   }
 
   return <Outlet />;

@@ -20,10 +20,12 @@ import {
 import { isAvailable } from '../../products/stock-mode';
 import { presentKnowledge } from '../../businesses/knowledge-text';
 import {
-  GOVERNORATE_IDS,
   parseShippingZones,
-  shippingPriceForGovernorate,
+  resolveShippingQuote,
+  type ShippingLookup,
+  type ShippingPricingMode,
 } from '../../businesses/shipping-zones';
+import { businessAllowsLocalShipping } from '../../businesses/uses-local-shipping';
 import { AiContextCacheService } from '../context/ai-context-cache.service';
 import { computeOrderTotals } from '../order-prepaid';
 import {
@@ -68,6 +70,31 @@ export class AiToolsService {
     private readonly notifications: NotificationsService,
     private readonly aiContextCache: AiContextCacheService,
   ) {}
+
+  private effectiveShippingMode(business: {
+    type: string;
+    shippingPricingMode: string;
+  }): ShippingPricingMode {
+    if (
+      businessAllowsLocalShipping(business.type) &&
+      business.shippingPricingMode === 'LOCAL_AREA'
+    ) {
+      return 'LOCAL_AREA';
+    }
+    return 'GOVERNORATE';
+  }
+
+  private shippingLookupFromArgs(
+    args: Record<string, unknown>,
+  ): ShippingLookup {
+    return {
+      governorate: args.governorate ? asString(args.governorate).trim() : null,
+      deliveryArea: args.deliveryArea
+        ? asString(args.deliveryArea).trim()
+        : null,
+      address: args.address ? asString(args.address).trim() : null,
+    };
+  }
 
   async execute(
     name: ToolName,
@@ -247,38 +274,30 @@ export class AiToolsService {
 
     const businessRow = await this.prisma.business.findUniqueOrThrow({
       where: { id: ctx.businessId },
-      select: { shippingZones: true, paymentInfo: true },
+      select: {
+        shippingZones: true,
+        shippingPricingMode: true,
+        type: true,
+        paymentInfo: true,
+      },
     });
-    const zones = parseShippingZones(businessRow.shippingZones);
-    const governorate = args.governorate
-      ? asString(args.governorate).trim()
-      : null;
-    if (
-      governorate &&
-      !GOVERNORATE_IDS.includes(governorate as (typeof GOVERNORATE_IDS)[number])
-    ) {
-      throw new BadRequestException('Invalid governorate id');
-    }
-    const shippingEgp = shippingPriceForGovernorate(zones, governorate);
-    if (zones.length > 0 && !governorate) {
-      throw new BadRequestException(
-        'Governorate required — ask customer which governorate (use id: cairo, giza, …)',
-      );
-    }
-    if (zones.length > 0 && governorate && shippingEgp == null) {
-      throw new BadRequestException('Governorate not in any shipping zone');
+    const pricingMode = this.effectiveShippingMode(businessRow);
+    const zones = parseShippingZones(businessRow.shippingZones, pricingMode);
+    const lookup = this.shippingLookupFromArgs(args);
+    let shippingEgp: number | null = 0;
+    let matchedZone: { name: string } | null = null;
+    if (zones.length > 0) {
+      const resolved = resolveShippingQuote(zones, pricingMode, lookup);
+      if (!resolved.ok) {
+        throw new BadRequestException(resolved.message);
+      }
+      shippingEgp = resolved.priceEgp;
+      matchedZone = resolved.zone;
     }
 
     const shipping = shippingEgp ?? 0;
     const grandTotalEgp = subtotalEgp + shipping;
     const unitPriceEgp = unitPrice;
-    const zone = zones.find((z) =>
-      governorate
-        ? z.governorates.includes(
-            governorate as (typeof GOVERNORATE_IDS)[number],
-          )
-        : false,
-    );
 
     return {
       productId: product.id,
@@ -288,43 +307,19 @@ export class AiToolsService {
       subtotalEgp,
       shippingEgp: shippingEgp,
       grandTotalEgp,
-      governorate,
-      shippingZoneName: zone?.name ?? null,
+      governorate: lookup.governorate ?? null,
+      deliveryArea: lookup.deliveryArea ?? null,
+      shippingZoneName: matchedZone?.name ?? null,
       paymentInfo: presentKnowledge(businessRow.paymentInfo),
       selectedVariant,
       summaryAr: `سعر المنتج: ${subtotalEgp} ج.م (${quantity} × ${unitPriceEgp}) + الشحن: ${shipping} ج.م = الإجمالي ${grandTotalEgp} ج.م`,
     };
   }
 
-  private async createOrder(
+  private async resolveOrderLine(
     ctx: BusinessContext,
     args: Record<string, unknown>,
   ) {
-    const paymentMethod = args.paymentMethod
-      ? asString(args.paymentMethod).trim()
-      : '';
-    try {
-      assertCreateOrderAllowed(ctx, paymentMethod);
-    } catch (e) {
-      throw new BadRequestException(
-        e instanceof Error ? e.message : 'createOrder not allowed',
-      );
-    }
-
-    const existingOpen = await this.prisma.order.findFirst({
-      where: {
-        conversationId: ctx.conversationId,
-        status: { in: OPEN_ORDER_STATUSES },
-      },
-      orderBy: { createdAt: 'desc' },
-      include: { items: true },
-    });
-    if (existingOpen) {
-      throw new BadRequestException(
-        `Order #${existingOpen.orderNumber} already exists for this chat — do not create another order`,
-      );
-    }
-
     const product = await this.getProduct(ctx, args);
     if (!product) {
       throw new BadRequestException('Product required for order');
@@ -336,25 +331,13 @@ export class AiToolsService {
     const attributes = asAttributes(product.attributes);
     const variants = asVariants(product.variants);
     const availableSizes = productSizeColorLists(product).sizes;
-
-    const customerName = asString(
-      args.customerName ?? ctx.customer.name,
-    ).trim();
-    const customerPhone = asString(
-      args.customerPhone ?? ctx.customer.phone,
-    ).trim();
-    if (!customerName || !/^01[0-9]{8,9}$/.test(customerPhone)) {
-      throw new BadRequestException(
-        'Valid customer name and Egyptian phone required',
-      );
-    }
-
     const quantity = Math.max(1, Number(args.quantity ?? 1));
     const size = args.size ? asString(args.size) : null;
     const color = args.color ? asString(args.color) : null;
     const chosen = variantChoiceFromArgs(args);
 
     let unitPrice = product.priceEgp;
+    let unitCost: number | null = product.costEgp;
     let matchedSkuKey: string | null = null;
 
     if (hasVariantMatrix(variants)) {
@@ -372,6 +355,7 @@ export class AiToolsService {
         );
       }
       unitPrice = matched.priceEgp;
+      unitCost = matched.costEgp ?? product.costEgp ?? null;
       matchedSkuKey = matched.key;
     } else {
       if (product.stockQuantity != null && quantity > product.stockQuantity) {
@@ -397,80 +381,29 @@ export class AiToolsService {
       }
     }
 
-    const last = await this.prisma.order.findFirst({
-      where: { businessId: ctx.businessId },
-      orderBy: { orderNumber: 'desc' },
-    });
-    const orderNumber = (last?.orderNumber ?? 1000) + 1;
+    return {
+      product,
+      variants,
+      size,
+      color,
+      quantity,
+      unitPrice,
+      unitCost,
+      matchedSkuKey,
+      lineSubtotal: unitPrice * quantity,
+    };
+  }
 
-    const businessRow = await this.prisma.business.findUniqueOrThrow({
-      where: { id: ctx.businessId },
-      select: { shippingZones: true },
-    });
-    const zones = parseShippingZones(businessRow.shippingZones);
-    const governorate = args.governorate
-      ? asString(args.governorate).trim()
-      : null;
-    if (
-      governorate &&
-      !GOVERNORATE_IDS.includes(governorate as (typeof GOVERNORATE_IDS)[number])
-    ) {
-      throw new BadRequestException('Invalid governorate id');
-    }
-    const shippingEgp = shippingPriceForGovernorate(zones, governorate);
-    if (zones.length > 0 && !governorate) {
-      throw new BadRequestException('Governorate required for delivery');
-    }
-    if (zones.length > 0 && governorate && shippingEgp == null) {
-      throw new BadRequestException('Governorate not in any shipping zone');
-    }
-
-    // Keep Messenger/profile display name; order stores its own customerName
-    await this.prisma.customer.update({
-      where: { id: ctx.customerId },
-      data: {
-        ...(ctx.customer.name ? {} : { name: customerName }),
-        phone: customerPhone,
-      },
-    });
-
-    const noteParts: string[] = [];
-    const address = args.address ? asString(args.address).trim() : '';
-    if (address) noteParts.push(`العنوان: ${address}`);
-    if (paymentMethod) noteParts.push(`الدفع: ${paymentMethod}`);
-    if (args.notes) noteParts.push(asString(args.notes).trim());
-
-    const order = await this.prisma.order.create({
-      data: {
-        businessId: ctx.businessId,
-        customerId: ctx.customerId,
-        conversationId: ctx.conversationId,
-        campaignId: ctx.campaignId,
-        orderNumber,
-        totalEgp: unitPrice * quantity,
-        customerName,
-        customerPhone,
-        governorate,
-        shippingEgp,
-        notes: noteParts.length ? noteParts.join(' | ') : null,
-        createdBy: ActorType.AI,
-        items: {
-          create: [
-            {
-              productId: product.id,
-              name: product.name,
-              size,
-              color,
-              quantity,
-              priceEgp: unitPrice,
-              costEgp: product.costEgp,
-            },
-          ],
-        },
-      },
-      include: { items: true },
-    });
-
+  private async applyStockAfterSale(
+    ctx: BusinessContext,
+    line: {
+      product: { id: string; priceEgp: number; stockQuantity: number | null };
+      variants: ReturnType<typeof asVariants>;
+      matchedSkuKey: string | null;
+      quantity: number;
+    },
+  ) {
+    const { product, variants, matchedSkuKey, quantity } = line;
     if (matchedSkuKey) {
       const nextVariants = {
         ...variants,
@@ -503,12 +436,152 @@ export class AiToolsService {
         },
       });
     } else if (ctx.business.type === 'REAL_ESTATE') {
-      // Listing sold/reserved → mark unavailable
       await this.prisma.product.update({
         where: { id: product.id },
         data: { inStock: false, stockQuantity: null },
       });
     }
+  }
+
+  private async createOrder(
+    ctx: BusinessContext,
+    args: Record<string, unknown>,
+  ) {
+    const paymentMethod = args.paymentMethod
+      ? asString(args.paymentMethod).trim()
+      : '';
+    const orderNotes = args.notes ? asString(args.notes).trim() : '';
+    try {
+      assertCreateOrderAllowed(ctx, paymentMethod, orderNotes);
+    } catch (e) {
+      throw new BadRequestException(
+        e instanceof Error ? e.message : 'createOrder not allowed',
+      );
+    }
+
+    const existingOpen = await this.prisma.order.findFirst({
+      where: {
+        conversationId: ctx.conversationId,
+        status: { in: OPEN_ORDER_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { items: true },
+    });
+    if (existingOpen) {
+      throw new BadRequestException(
+        `Order #${existingOpen.orderNumber} already exists for this chat — do not create another order`,
+      );
+    }
+
+    const customerName = asString(
+      args.customerName ?? ctx.customer.name,
+    ).trim();
+    const customerPhone = asString(
+      args.customerPhone ?? ctx.customer.phone,
+    ).trim();
+    if (!customerName || !/^01[0-9]{8,9}$/.test(customerPhone)) {
+      throw new BadRequestException(
+        'Valid customer name and Egyptian phone required',
+      );
+    }
+
+    const lineArgsList: Record<string, unknown>[] = [args];
+    if (Array.isArray(args.additionalItems)) {
+      for (const raw of args.additionalItems) {
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          lineArgsList.push(raw as Record<string, unknown>);
+        }
+      }
+    }
+
+    const resolvedLines = await Promise.all(
+      lineArgsList.map((lineArgs) => this.resolveOrderLine(ctx, lineArgs)),
+    );
+    const productsSubtotal = resolvedLines.reduce(
+      (sum, line) => sum + line.lineSubtotal,
+      0,
+    );
+
+    const last = await this.prisma.order.findFirst({
+      where: { businessId: ctx.businessId },
+      orderBy: { orderNumber: 'desc' },
+    });
+    const orderNumber = (last?.orderNumber ?? 1000) + 1;
+
+    const businessRow = await this.prisma.business.findUniqueOrThrow({
+      where: { id: ctx.businessId },
+      select: { shippingZones: true, shippingPricingMode: true, type: true },
+    });
+    const pricingMode = this.effectiveShippingMode(businessRow);
+    const zones = parseShippingZones(businessRow.shippingZones, pricingMode);
+    const shippingLookup = this.shippingLookupFromArgs(args);
+    let shippingEgp: number | null = 0;
+    if (zones.length > 0) {
+      const resolved = resolveShippingQuote(
+        zones,
+        pricingMode,
+        shippingLookup,
+      );
+      if (!resolved.ok) {
+        throw new BadRequestException(resolved.message);
+      }
+      shippingEgp = resolved.priceEgp;
+    }
+    const governorate = shippingLookup.governorate ?? null;
+
+    // Keep Messenger/profile display name; order stores its own customerName
+    await this.prisma.customer.update({
+      where: { id: ctx.customerId },
+      data: {
+        ...(ctx.customer.name ? {} : { name: customerName }),
+        phone: customerPhone,
+      },
+    });
+
+    const noteParts: string[] = [];
+    const address = args.address ? asString(args.address).trim() : '';
+    const deliveryArea = shippingLookup.deliveryArea?.trim() ?? '';
+    if (deliveryArea) noteParts.push(`المنطقة: ${deliveryArea}`);
+    if (address) noteParts.push(`العنوان: ${address}`);
+    if (paymentMethod) noteParts.push(`الدفع: ${paymentMethod}`);
+    if (orderNotes) noteParts.push(orderNotes);
+
+    const order = await this.prisma.order.create({
+      data: {
+        businessId: ctx.businessId,
+        customerId: ctx.customerId,
+        conversationId: ctx.conversationId,
+        campaignId: ctx.campaignId,
+        orderNumber,
+        totalEgp: productsSubtotal,
+        customerName,
+        customerPhone,
+        governorate,
+        shippingEgp,
+        notes: noteParts.length ? noteParts.join(' | ') : null,
+        createdBy: ActorType.AI,
+        items: {
+          create: resolvedLines.map((line) => ({
+            productId: line.product.id,
+            name: line.product.name,
+            size: line.size,
+            color: line.color,
+            quantity: line.quantity,
+            priceEgp: line.unitPrice,
+            costEgp: line.unitCost,
+          })),
+        },
+      },
+      include: { items: true },
+    });
+
+    for (const line of resolvedLines) {
+      await this.applyStockAfterSale(ctx, line);
+    }
+
+    const productSummary = resolvedLines
+      .map((line) => line.product.name)
+      .join('، ');
 
     const openLeads = await this.prisma.lead.updateMany({
       where: {
@@ -552,7 +625,7 @@ export class AiToolsService {
     await this.notifications.create(ctx.businessId, {
       type: NotificationType.ORDER,
       title: `طلب جديد #${orderNumber}`,
-      body: `${customerName} · ${product.name} · ${order.totalEgp} ج.م · عبر AI`,
+      body: `${customerName} · ${productSummary} · ${order.totalEgp} ج.م · عبر AI`,
       data: {
         orderId: order.id,
         orderNumber,
@@ -564,10 +637,17 @@ export class AiToolsService {
     this.aiContextCache.invalidate(ctx.businessId);
 
     const ship = order.shippingEgp ?? 0;
+    const orderLinesAr = order.items
+      .map(
+        (i) =>
+          `${i.name}${i.size ? ` (${i.size})` : ''} ×${i.quantity} = ${i.priceEgp * i.quantity} ج.م`,
+      )
+      .join('؛ ');
     return {
       ...order,
       grandTotalEgp: order.totalEgp + ship,
-      summaryAr: `المنتج ${order.totalEgp} ج.م + الشحن ${ship} ج.م = ${order.totalEgp + ship} ج.م`,
+      orderLinesAr,
+      summaryAr: `${orderLinesAr} | المنتجات ${order.totalEgp} ج.م + الشحن ${ship} ج.م = ${order.totalEgp + ship} ج.م`,
     };
   }
 
@@ -612,6 +692,7 @@ export class AiToolsService {
     const chosen = variantChoiceFromArgs(args);
 
     let unitPrice = product.priceEgp;
+    let unitCost: number | null = product.costEgp;
     let matchedSkuKey: string | null = null;
 
     if (hasVariantMatrix(variants)) {
@@ -629,6 +710,7 @@ export class AiToolsService {
         );
       }
       unitPrice = matched.priceEgp;
+      unitCost = matched.costEgp ?? product.costEgp ?? null;
       matchedSkuKey = matched.key;
     } else {
       if (product.stockQuantity != null && quantity > product.stockQuantity) {
@@ -665,7 +747,7 @@ export class AiToolsService {
         color,
         quantity,
         priceEgp: unitPrice,
-        costEgp: product.costEgp,
+        costEgp: unitCost,
       },
     });
 

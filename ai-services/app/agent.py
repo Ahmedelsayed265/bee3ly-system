@@ -63,7 +63,7 @@ def _build_system_instruction(
         "tell the customer the team will verify the payment and continue / "
         "بلّغ العميل إن الفريق هيراجع التحويل ويكمل."
         if handoff_enabled
-        else "createOrder + notes pending merchant review / بانتظار مراجعة التاجر."
+        else "thank customer; order stays pending merchant payment review — do not createOrder / شكر فقط بدون createOrder."
     )
     discount_rule = (
         "Discount request → transferToHuman / طلب خصم → transferToHuman."
@@ -84,16 +84,17 @@ Language (follow strictly):
 Store & catalog (source of truth — do not invent prices or stock):
 {context_block}
 
-Shipping governorates (use these ids in tools): {gov_list}
+Shipping governorates (ONLY when Shipping block has no «LOCAL DELIVERY ONLY»): ids for tools — {gov_list}
+If Shipping says «LOCAL DELIVERY ONLY»: pricing is per city/district name only — ask area, pass **deliveryArea**; never ask governorate ids.
 
 Rules (apply for Arabic or English messages — same tools & flow):
 1. Catalog lists every SKU: axes + price + stock. Use checkStock to confirm — never guess.
 2. Non size/color axes → pass variantOptions with exact axis names from the catalog.
-3. Shipping/total questions (e.g. «الشحن كام؟», «how much is shipping?», «total?») → quoteCheckout; explain product + shipping = total.
+3. Shipping/total questions (e.g. «الشحن كام؟», «how much is shipping?», «total?») → quoteCheckout with governorate **or** deliveryArea per Shipping in context; explain product + shipping = total.
 4. Payment methods from the Payment line in context (collection numbers if present).
 5. Cash on delivery only: createOrder after address and confirmation — no transfer proof. If customer chose InstaPay/Vodafone/bank, that is NOT COD — do not createOrder until merchant confirms transfer.
 6. Vodafone Cash / InstaPay / bank: quoteCheckout → total + collection number from Payment only → ask for transfer screenshot. **Never createOrder** for prepaid until context says merchant CONFIRMED transfer. If they send a screenshot or message contains [IMAGE_ATTACHMENT:): **only** {payment_review_rule} — thank them and say the team will verify; **never** say the order is officially confirmed or give a new order number on that turn. While payment review is pending: do not createOrder or addOrderItem. If context shows an open order, do not createOrder — use **addOrderItem** when the customer confirms another product; then ask for transfer of **balanceDueEgp** from the tool result only (not the full grand total again).
-7. createOrder needs: name, mobile (01…), governorate id, address, product/variant, quantity, paymentMethod. addOrderItem needs product/variant + quantity only (open order must exist).
+7. createOrder needs: name, mobile (01…), governorate id, address, product/variant, quantity, paymentMethod. **Multiple products:** put the first in createOrder and the rest in **additionalItems** (same variant fields per line), OR call **addOrderItem** once per extra line before the customer reply — never confirm items in text that are not in the tool result. addOrderItem needs product/variant + quantity only (open order must exist).
 8. Interest without order → createLead.
 9. Human agent or complaint → transferToHuman immediately.
 10. Merchant extra instructions override. Discount: two sentences + transferToHuman if enabled.

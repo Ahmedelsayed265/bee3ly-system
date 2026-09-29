@@ -39,10 +39,12 @@ export type Business = {
   workingHours: string | null;
   paymentInfo: string | null;
   faqs: string | null;
+  shippingPricingMode?: 'GOVERNORATE' | 'LOCAL_AREA';
   shippingZones?: Array<{
     id: string;
     name: string;
     governorates: string[];
+    areas?: string[];
     priceEgp: number;
   }>;
   variantDictionary?: VariantDictionaryOption[];
@@ -62,6 +64,7 @@ export type Product = {
       key: string;
       options: Record<string, string>;
       priceEgp: number;
+      costEgp?: number | null;
       stockQuantity: number;
     }>;
   };

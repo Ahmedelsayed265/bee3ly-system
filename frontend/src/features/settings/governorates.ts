@@ -30,10 +30,13 @@ export const GOVERNORATES = [
 
 export type GovernorateId = (typeof GOVERNORATES)[number]['id'];
 
+export type ShippingPricingMode = 'GOVERNORATE' | 'LOCAL_AREA';
+
 export type ShippingZone = {
   id: string;
   name: string;
   governorates: GovernorateId[];
+  areas: string[];
   priceEgp: number;
 };
 
@@ -45,7 +48,10 @@ export function governorateLabel(id: string, locale: string) {
   return locale === 'ar' ? row.ar : row.en;
 }
 
-export function parseShippingZones(raw: unknown): ShippingZone[] {
+export function parseShippingZones(
+  raw: unknown,
+  mode: ShippingPricingMode = 'GOVERNORATE',
+): ShippingZone[] {
   if (!Array.isArray(raw)) return [];
   const zones: ShippingZone[] = [];
   for (const row of raw) {
@@ -54,14 +60,27 @@ export function parseShippingZones(raw: unknown): ShippingZone[] {
     const id = typeof item.id === 'string' ? item.id.trim() : '';
     const name = typeof item.name === 'string' ? item.name.trim() : '';
     const priceEgp = Math.max(0, Math.floor(Number(item.priceEgp ?? 0)));
+    if (!id || !name) continue;
+
+    if (mode === 'LOCAL_AREA') {
+      const areas = Array.isArray(item.areas)
+        ? item.areas
+            .filter((value): value is string => typeof value === 'string')
+            .map((value) => value.trim())
+            .filter(Boolean)
+        : [];
+      zones.push({ id, name, governorates: [], areas, priceEgp });
+      continue;
+    }
+
     const governorates = Array.isArray(item.governorates)
       ? item.governorates.filter(
           (value): value is GovernorateId =>
             typeof value === 'string' && IDS.has(value),
         )
       : [];
-    if (!id || !name || governorates.length === 0) continue;
-    zones.push({ id, name, governorates, priceEgp });
+    if (governorates.length === 0) continue;
+    zones.push({ id, name, governorates, areas: [], priceEgp });
   }
   return zones;
 }
@@ -71,6 +90,7 @@ export function newShippingZone(): ShippingZone {
     id: crypto.randomUUID(),
     name: '',
     governorates: [],
+    areas: [],
     priceEgp: 0,
   };
 }

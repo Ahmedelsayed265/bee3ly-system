@@ -94,6 +94,9 @@ export function SettingsPageView() {
       ) : tab === 'delivery' ? (
         <div className="space-y-4">
           <ShippingZonesForm
+            allowsLocalShipping={delivery.allowsLocal}
+            mode={delivery.mode}
+            onModeChange={delivery.setMode}
             zones={delivery.zones}
             onChange={delivery.setZones}
           />

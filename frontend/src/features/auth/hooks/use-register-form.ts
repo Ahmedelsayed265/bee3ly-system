@@ -70,7 +70,7 @@ export function useRegisterForm() {
     try {
       await registerUser(values);
       toast.success(t('registerSuccess'));
-      navigate(paths.onboarding, { replace: true });
+      navigate(paths.app, { replace: true });
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;

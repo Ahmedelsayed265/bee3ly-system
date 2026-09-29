@@ -38,6 +38,7 @@ export class ProductsService {
     raw: unknown,
     defaultPriceEgp: number,
     defaultStockQuantity?: number,
+    defaultCostEgp?: number | null,
   ): ProductVariants {
     const parsed = asVariants(raw);
     if (!parsed.axes.length) return { axes: [], skus: [] };
@@ -45,6 +46,7 @@ export class ProductsService {
       axes: parsed.axes,
       previousSkus: parsed.skus,
       defaultPriceEgp,
+      defaultCostEgp,
       defaultStockQuantity: defaultStockQuantity ?? 0,
     });
   }
@@ -165,6 +167,7 @@ export class ProductsService {
       dto.variants,
       dto.priceEgp,
       dto.stockQuantity,
+      dto.costEgp ?? null,
     );
     const derived = this.applyVariantDerived({
       type,
@@ -181,7 +184,9 @@ export class ProductsService {
         name: dto.name.trim(),
         description: dto.description?.trim(),
         priceEgp: derived.priceEgp,
-        costEgp: dto.costEgp ?? null,
+        costEgp: hasVariantMatrix(derived.variants)
+          ? null
+          : (dto.costEgp ?? null),
         attributes: derived.attributes,
         variants: derived.variants,
         stockQuantity: derived.stockQuantity,
@@ -214,6 +219,9 @@ export class ProductsService {
             dto.variants,
             dto.priceEgp ?? existing.priceEgp,
             dto.stockQuantity ?? existing.stockQuantity ?? 0,
+            dto.costEgp !== undefined
+              ? dto.costEgp
+              : existing.costEgp,
           )
         : existingVariants;
 
@@ -243,7 +251,15 @@ export class ProductsService {
           ? { description: dto.description.trim() }
           : {}),
         priceEgp: derived.priceEgp,
-        ...(dto.costEgp !== undefined ? { costEgp: dto.costEgp } : {}),
+        ...(dto.costEgp !== undefined || dto.variants !== undefined
+          ? {
+              costEgp: hasVariantMatrix(derived.variants)
+                ? null
+                : dto.costEgp !== undefined
+                  ? dto.costEgp
+                  : existing.costEgp,
+            }
+          : {}),
         ...(shouldTouchAttributes || dto.variants !== undefined
           ? { attributes: derived.attributes }
           : {}),

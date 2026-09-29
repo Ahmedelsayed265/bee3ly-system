@@ -67,6 +67,7 @@ export function ProductsPageView() {
         variantSkus={products.variantSkus}
         onSkuChange={products.onSkuChange}
         onApplyDefaults={products.applyBasePriceToSkus}
+        onApplyCostDefaults={products.applyBaseCostToSkus}
         isPending={products.isSaving}
         onSubmit={products.submit}
       />

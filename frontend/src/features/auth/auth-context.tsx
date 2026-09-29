@@ -22,7 +22,6 @@ type AuthContextValue = {
   business: Business | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  needsOnboarding: boolean;
   login: (input: { email: string; password: string }) => Promise<void>;
   register: (input: {
     name: string;
@@ -101,9 +100,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       business: meQuery.data?.business ?? null,
       isLoading: hasToken && meQuery.isPending,
       isAuthenticated: Boolean(meQuery.data?.user),
-      needsOnboarding: Boolean(
-        meQuery.data?.user && !meQuery.data.business?.onboardingCompletedAt,
-      ),
       login,
       register,
       logout,

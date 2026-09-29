@@ -58,6 +58,7 @@ export class AuthService {
         data: {
           name: dto.businessName.trim(),
           type: dto.businessType,
+          onboardingCompletedAt: new Date(),
         },
       });
 

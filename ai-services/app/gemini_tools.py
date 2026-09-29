@@ -28,7 +28,8 @@ SALES_TOOL_DECLARATIONS = [
     types.FunctionDeclaration(
         name="quoteCheckout",
         description=(
-            "احسب سعر SKU + الشحن + الإجمالي. governorate id: cairo, giza, …"
+            "احسب سعر SKU + الشحن + الإجمالي. "
+            "أونلاين: governorate id. توصيل محلي: deliveryArea (مدينة نصر، فيصل…)."
         ),
         parameters=types.Schema(
             type=T.OBJECT,
@@ -37,6 +38,14 @@ SALES_TOOL_DECLARATIONS = [
                 "governorate": types.Schema(
                     type=T.STRING,
                     description="Governorate id e.g. cairo, giza, alexandria",
+                ),
+                "deliveryArea": types.Schema(
+                    type=T.STRING,
+                    description="Local area / district when zones list مناطق not محافظات",
+                ),
+                "address": types.Schema(
+                    type=T.STRING,
+                    description="Street address (helps match local zones)",
                 ),
             },
         ),
@@ -60,16 +69,33 @@ SALES_TOOL_DECLARATIONS = [
     types.FunctionDeclaration(
         name="createOrder",
         description=(
-            "إنشاء طلب بعد تأكيد المتغير والعنوان. "
-            "دفع مسبق: بعد quoteCheckout + إثبات تحويل (صورة) من العميل."
+            "إنشاء طلب (سطر أو أكثر) بعد اكتمال العنوان والتأكيد. "
+            "كاش عند الاستلام: مباشرة. دفع مسبق (InstaPay/فودافون/تحويل): "
+            "فقط بعد ما السياق يقول merchant CONFIRMED transfer — "
+            "مش بعد صورة العميل ولا قبل تأكيد التاجر."
         ),
         parameters=types.Schema(
             type=T.OBJECT,
             properties={
                 **_VARIANT_PROPS,
+                "additionalItems": types.Schema(
+                    type=T.ARRAY,
+                    description=(
+                        "منتجات إضافية في نفس الطلب (نفس حقول المنتج: "
+                        "productId/name, quantity, size, variantOptions…)"
+                    ),
+                    items=types.Schema(
+                        type=T.OBJECT,
+                        properties={**_VARIANT_PROPS},
+                    ),
+                ),
                 "customerName": types.Schema(type=T.STRING),
                 "customerPhone": types.Schema(type=T.STRING),
                 "governorate": types.Schema(type=T.STRING),
+                "deliveryArea": types.Schema(
+                    type=T.STRING,
+                    description="City/district for local delivery zones",
+                ),
                 "address": types.Schema(type=T.STRING),
                 "paymentMethod": types.Schema(type=T.STRING),
                 "notes": types.Schema(

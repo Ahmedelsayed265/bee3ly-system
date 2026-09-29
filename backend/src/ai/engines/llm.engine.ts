@@ -260,6 +260,15 @@ export class LlmEngine {
               type: 'string',
               description: 'Governorate id: cairo, giza, alexandria, …',
             },
+            deliveryArea: {
+              type: 'string',
+              description:
+                'Local delivery area (مدينة نصر، فيصل، …) when business uses area-based zones',
+            },
+            address: {
+              type: 'string',
+              description: 'Street / building address for delivery',
+            },
           }),
         },
       },
@@ -267,7 +276,8 @@ export class LlmEngine {
         type: 'function',
         function: {
           name: 'createOrder',
-          description: 'Create validated order when name+phone known',
+          description:
+            'Create order (one or more lines). Prepaid only after merchant confirmed transfer in context.',
           parameters: prop(
             {
               productId: { type: 'string' },
@@ -277,10 +287,31 @@ export class LlmEngine {
               size: { type: 'string' },
               color: { type: 'string' },
               quantity: { type: 'number' },
+              additionalItems: {
+                type: 'array',
+                description:
+                  'Extra catalog lines in the same order (productId/name, qty, variants each)',
+                items: {
+                  type: 'object',
+                  properties: {
+                    productId: { type: 'string' },
+                    name: { type: 'string' },
+                    size: { type: 'string' },
+                    color: { type: 'string' },
+                    quantity: { type: 'number' },
+                    variantOptions: { type: 'object' },
+                  },
+                },
+              },
               governorate: {
                 type: 'string',
                 description:
                   'Egypt governorate id (cairo, giza, alexandria, …) for shipping',
+              },
+              deliveryArea: {
+                type: 'string',
+                description:
+                  'Local area name when shipping zones use cities/districts not governorates',
               },
               address: {
                 type: 'string',
