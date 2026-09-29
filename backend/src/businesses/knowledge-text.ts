@@ -85,12 +85,19 @@ function formatKnowledge(data: Record<string, unknown>) {
   }
 
   if (data.kind === 'payment' && Array.isArray(data.methods)) {
+    const receivers = isRecord(data.receivers) ? data.receivers : {};
     return data.methods
-      .map((method) =>
-        typeof method === 'string' ? PAYMENT_LABEL[method] : '',
-      )
+      .map((method) => {
+        if (typeof method !== 'string') return '';
+        const label = PAYMENT_LABEL[method];
+        if (!label) return '';
+        const recv = isRecord(receivers)
+          ? asString(receivers[method])
+          : '';
+        return recv ? `${label}: ${recv}` : label;
+      })
       .filter(Boolean)
-      .join('، ');
+      .join(' · ');
   }
 
   if (data.kind === 'faqs' && Array.isArray(data.items)) {

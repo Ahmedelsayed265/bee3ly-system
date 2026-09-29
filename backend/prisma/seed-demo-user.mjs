@@ -301,6 +301,7 @@ async function main() {
     },
   ]
 
+  const convByCustomer = new Map()
   for (const script of chatScripts) {
     const lastAt = new Date(Date.now() - script.messages[0].hoursAgo * 3600_000)
     const conv = await prisma.conversation.create({
@@ -313,6 +314,7 @@ async function main() {
         createdAt: daysAgo(2),
       },
     })
+    convByCustomer.set(script.customer.id, conv.id)
     for (const m of script.messages) {
       await prisma.message.create({
         data: {
@@ -340,6 +342,7 @@ async function main() {
       data: {
         businessId,
         customerId: l.customer.id,
+        conversationId: convByCustomer.get(l.customer.id) ?? null,
         status: l.status,
         intent: l.intent,
         createdAt: daysAgo(Math.floor(Math.random() * 6)),
@@ -348,16 +351,104 @@ async function main() {
   }
 
   const orderPlan = [
-    { day: 0, customer: customers[0], product: products[0], status: 'PENDING', size: '2كجم', governorate: 'cairo' },
-    { day: 0, customer: customers[5], product: products[1], status: 'CONFIRMED', size: '300جم', governorate: 'giza' },
-    { day: 1, customer: customers[2], product: products[2], status: 'COMPLETED', size: '60 سيرف', color: 'مانجو', qty: 2, governorate: 'alexandria' },
-    { day: 2, customer: customers[1], product: products[3], status: 'COMPLETED', size: '90 قرص', governorate: 'sharqia' },
-    { day: 3, customer: customers[6], product: products[5], status: 'CONFIRMED', size: '60 كبسولة', governorate: 'cairo' },
-    { day: 4, customer: customers[7], product: products[0], status: 'COMPLETED', size: '2كجم', governorate: 'qalyubia' },
-    { day: 5, customer: customers[3], product: products[2], status: 'CANCELLED', size: '60 سيرف', color: 'توت', governorate: 'cairo' },
-    { day: 6, customer: customers[4], product: products[1], status: 'COMPLETED', size: '300جم', governorate: 'ismailia' },
-    { day: 1, customer: customers[1], product: products[5], status: 'COMPLETED', size: '60 كبسولة', governorate: 'cairo' },
-    { day: 2, customer: customers[0], product: products[3], status: 'CONFIRMED', size: '90 قرص', qty: 2, governorate: 'giza' },
+    {
+      day: 0,
+      customer: customers[0],
+      product: products[0],
+      status: 'PENDING',
+      size: '2كجم',
+      governorate: 'cairo',
+      address: 'شارع 9، المعادي، برج 12، الدور 3',
+      payment: 'تحويل',
+    },
+    {
+      day: 0,
+      customer: customers[5],
+      product: products[1],
+      status: 'CONFIRMED',
+      size: '300جم',
+      governorate: 'giza',
+      address: '6 أكتوبر، الحي السابع، فيلا 8',
+      payment: 'كاش عند الاستلام',
+    },
+    {
+      day: 1,
+      customer: customers[2],
+      product: products[2],
+      status: 'COMPLETED',
+      size: '60 سيرف',
+      color: 'مانجو',
+      qty: 2,
+      governorate: 'alexandria',
+      address: 'سموحة، شارع فوزي معاذ، عمارة 15',
+    },
+    {
+      day: 2,
+      customer: customers[1],
+      product: products[3],
+      status: 'COMPLETED',
+      size: '90 قرص',
+      governorate: 'sharqia',
+      address: 'الزقازيق، شارع الجلاء، بجوار البنك الأهلي',
+    },
+    {
+      day: 3,
+      customer: customers[6],
+      product: products[5],
+      status: 'CONFIRMED',
+      size: '60 كبسولة',
+      governorate: 'cairo',
+      address: 'مدينة نصر، عباس العقاد، مول City Stars — استلام من الريسيبشن',
+      payment: 'Instapay',
+    },
+    {
+      day: 4,
+      customer: customers[7],
+      product: products[0],
+      status: 'COMPLETED',
+      size: '2كجم',
+      governorate: 'qalyubia',
+      address: 'شبرا الخيمة، شارع مسجد الفتح',
+    },
+    {
+      day: 5,
+      customer: customers[3],
+      product: products[2],
+      status: 'CANCELLED',
+      size: '60 سيرف',
+      color: 'توت',
+      governorate: 'cairo',
+      address: 'التجمع الخامس، بوابة 3',
+    },
+    {
+      day: 6,
+      customer: customers[4],
+      product: products[1],
+      status: 'COMPLETED',
+      size: '300جم',
+      governorate: 'ismailia',
+      address: 'الإسماعيلية، شارع صلاح سالم',
+    },
+    {
+      day: 1,
+      customer: customers[1],
+      product: products[5],
+      status: 'COMPLETED',
+      size: '60 كبسولة',
+      governorate: 'cairo',
+      address: 'مصر الجديدة، شارع الخمسين، عمارة 22',
+    },
+    {
+      day: 2,
+      customer: customers[0],
+      product: products[3],
+      status: 'CONFIRMED',
+      size: '90 قرص',
+      qty: 2,
+      governorate: 'giza',
+      address: 'الدقي، شارع التحرير، الدور 5',
+      payment: 'فودافون كاش',
+    },
   ]
 
   let orderNumber = 1040
@@ -369,6 +460,13 @@ async function main() {
       o.status === 'CANCELLED' ? null : shippingFor(governorate)
     const costEgp = o.product.costEgp ?? defaultCost(o.product.priceEgp)
     const createdAt = daysAgo(o.day, 10 + (orderNumber % 8))
+    const noteParts = []
+    if (o.address && o.status !== 'CANCELLED') {
+      noteParts.push(`العنوان: ${o.address}`)
+    }
+    if (o.payment && o.status !== 'CANCELLED') {
+      noteParts.push(`الدفع: ${o.payment}`)
+    }
     const order = await prisma.order.create({
       data: {
         businessId,
@@ -380,6 +478,7 @@ async function main() {
         customerPhone: o.customer.phone,
         governorate: o.status === 'CANCELLED' ? null : governorate,
         shippingEgp,
+        notes: noteParts.length ? noteParts.join(' | ') : null,
         createdAt,
         updatedAt: createdAt,
         items: {

@@ -190,8 +190,8 @@ export function OrdersTable({
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Button
                           size="sm"
-                          variant="outline"
-                          className="h-8 px-2.5 text-xs"
+                          variant="secondary"
+                          className="h-8 px-3 text-xs font-semibold"
                           onClick={() => onView(o)}
                         >
                           {t('viewOrder')}

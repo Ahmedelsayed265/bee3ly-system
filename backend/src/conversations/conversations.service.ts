@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   NotFoundException,
@@ -15,6 +16,10 @@ import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
+import {
+  PAYMENT_CONFIRMED_AI_SUMMARY,
+  PAYMENT_REVIEW_HANDOFF,
+} from '../ai/payment-review.constants';
 
 @Injectable()
 export class ConversationsService {
@@ -111,6 +116,7 @@ export class ConversationsService {
         include: {
           customer: { select: { name: true, phone: true } },
           campaign: { select: { id: true, name: true } },
+          conversation: { select: { channel: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip: window.skip,
@@ -201,6 +207,31 @@ export class ConversationsService {
       data: { status: status as never },
     });
     return { lead: updated };
+  }
+
+  async confirmPaymentTransfer(userId: string, conversationId: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const conversation = await this.prisma.conversation.findFirst({
+      where: { id: conversationId, businessId },
+    });
+    if (!conversation) throw new NotFoundException('Conversation not found');
+    if (conversation.handoffReason !== PAYMENT_REVIEW_HANDOFF) {
+      throw new BadRequestException(
+        'No payment review pending on this conversation',
+      );
+    }
+    const updated = await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        needsHuman: false,
+        mode: 'AI',
+        status: 'OPEN',
+        handoffReason: null,
+        aiSummary: PAYMENT_CONFIRMED_AI_SUMMARY,
+      },
+    });
+    this.realtime.notifyConversationUpdated(businessId, conversationId);
+    return { conversation: updated };
   }
 
   async sendHumanMessage(

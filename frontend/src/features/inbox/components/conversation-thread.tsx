@@ -28,7 +28,10 @@ type ConversationThreadProps = {
   isLoading?: boolean;
   selectedId: string | null;
   isHumanMode: boolean;
+  paymentReviewPending?: boolean;
   isModePending: boolean;
+  isConfirmPaymentPending?: boolean;
+  onConfirmPayment?: () => void;
   draft: string;
   isSending: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
@@ -51,7 +54,10 @@ export function ConversationThread({
   isLoading = false,
   selectedId,
   isHumanMode,
+  paymentReviewPending = false,
   isModePending,
+  isConfirmPaymentPending = false,
+  onConfirmPayment,
   draft,
   isSending,
   messagesEndRef,
@@ -84,7 +90,16 @@ export function ConversationThread({
                 : ''}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {paymentReviewPending && onConfirmPayment ? (
+              <Button
+                size="sm"
+                onClick={onConfirmPayment}
+                disabled={isConfirmPaymentPending}
+              >
+                {t('confirmPaymentTransfer')}
+              </Button>
+            ) : null}
             {isHumanMode ? (
               <Button
                 size="sm"

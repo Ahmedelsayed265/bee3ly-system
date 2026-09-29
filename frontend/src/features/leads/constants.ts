@@ -20,6 +20,7 @@ export type Lead = {
   createdAt: string;
   customer: { name: string | null; phone: string | null };
   campaign?: { id: string; name: string } | null;
+  conversation?: { channel: string } | null;
 };
 
 export type PendingLeadStatus = {

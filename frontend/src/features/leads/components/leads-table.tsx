@@ -1,4 +1,5 @@
 import { Search, Trash2 } from 'lucide-react';
+import { ChannelMark } from '@/components/brand/channel-icons';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InputField } from '@/components/ui/input-field';
@@ -218,13 +219,16 @@ export function LeadsTable({
                   <th className="px-4 py-3 text-start">{t('leadColPhone')}</th>
                   <th className="px-4 py-3 text-start">{t('leadColIntent')}</th>
                   <th className="px-4 py-3 text-start">
+                    {t('leadColChannel')}
+                  </th>
+                  <th className="px-4 py-3 text-start">
                     {t('leadColActions')}
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <TableRowsSkeleton rows={8} cols={5} />
+                  <TableRowsSkeleton rows={8} cols={6} />
                 ) : (
                   leads.map((lead) => {
                     const name = lead.customer.name ?? t('unknownCustomer');
@@ -271,6 +275,19 @@ export function LeadsTable({
                         </td>
                         <td className="text-ink px-4 py-3 text-start">
                           {intentText(t, lead.intent)}
+                        </td>
+                        <td className="px-4 py-3 text-start">
+                          {lead.conversation?.channel ? (
+                            <span className="text-ink inline-flex items-center gap-1.5 text-xs font-medium">
+                              <ChannelMark
+                                channel={lead.conversation.channel}
+                                className="size-4"
+                              />
+                              {channelLabel(t, lead.conversation.channel)}
+                            </span>
+                          ) : (
+                            <span className="text-muted text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-start">
                           <Select
@@ -361,6 +378,12 @@ function statusTone(status: string) {
     return 'border-transparent bg-lavender text-trust';
   if (status === 'CONVERTED') return 'border-trust/20 bg-trust/10 text-trust';
   return 'border-border bg-page text-muted';
+}
+
+function channelLabel(t: (key: MessageKey) => string, channel: string) {
+  const key = `channel_${channel}` as MessageKey;
+  const translated = t(key);
+  return translated === key ? channel : translated;
 }
 
 function intentText(

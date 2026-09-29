@@ -19,6 +19,7 @@ export function InboxPageView() {
     latestOrder,
     messages,
     isHumanMode,
+    paymentReviewPending,
     draft,
     setDraft,
     messagesEndRef,
@@ -26,6 +27,8 @@ export function InboxPageView() {
     isDetailLoading,
     isSending,
     isModePending,
+    isConfirmPaymentPending,
+    confirmPayment,
     sendMessage,
     setMode,
     pendingDelete,
@@ -61,7 +64,10 @@ export function InboxPageView() {
           messages={messages}
           selectedId={selectedId}
           isHumanMode={Boolean(isHumanMode)}
+          paymentReviewPending={Boolean(paymentReviewPending)}
           isModePending={isModePending}
+          isConfirmPaymentPending={isConfirmPaymentPending}
+          onConfirmPayment={confirmPayment}
           draft={draft}
           isSending={isSending}
           messagesEndRef={messagesEndRef}

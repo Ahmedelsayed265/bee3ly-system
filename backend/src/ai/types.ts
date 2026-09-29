@@ -112,4 +112,6 @@ export type BusinessContext = {
   } | null;
   history: Array<{ role: string; content: string }>;
   latestCustomerMessage: string;
+  paymentReviewPending: boolean;
+  paymentConfirmedForAi: boolean;
 };

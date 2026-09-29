@@ -341,13 +341,16 @@ export class AiEngineAdapter {
       );
 
       if (needsHuman) {
+        const paymentReview = handoffReason === 'PAYMENT_REVIEW';
         await this.prisma.conversation.update({
           where: { id: payload.conversationId },
           data: {
             needsHuman: true,
             status: 'NEEDS_HUMAN',
-            mode: 'HUMAN',
-            conversionStage: 'HUMAN_HANDOFF',
+            mode: paymentReview ? 'AI' : 'HUMAN',
+            conversionStage: paymentReview
+              ? 'DATA_COLLECTION'
+              : 'HUMAN_HANDOFF',
             handoffReason: handoffReason ?? 'AI handoff',
           },
         });

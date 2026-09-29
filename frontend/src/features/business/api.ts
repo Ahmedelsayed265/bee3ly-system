@@ -191,6 +191,9 @@ export type OrderRow = {
   totalEgp: number;
   customerName: string | null;
   customerPhone: string | null;
+  governorate?: string | null;
+  shippingEgp?: number | null;
+  notes?: string | null;
   createdAt: string;
   items: Array<{
     name: string;
@@ -560,6 +563,13 @@ export async function setConversationMode(
   const { data } = await api.patch(`/ai/conversations/${conversationId}/mode`, {
     mode,
   });
+  return data;
+}
+
+export async function confirmPaymentTransfer(conversationId: string) {
+  const { data } = await api.post<{ conversation: unknown }>(
+    `/conversations/${conversationId}/confirm-payment`,
+  );
   return data;
 }
 

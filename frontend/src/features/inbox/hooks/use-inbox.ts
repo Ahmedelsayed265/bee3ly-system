@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  confirmPaymentTransfer,
   deleteConversation,
   fetchConversation,
   fetchConversations,
@@ -39,8 +40,10 @@ export function useInbox() {
 
   const conversation = detailQuery.data?.conversation;
   const latestOrder = detailQuery.data?.orders?.[0] ?? null;
+  const paymentReviewPending = conversation?.handoffReason === 'PAYMENT_REVIEW';
   const isHumanMode =
-    conversation?.mode === 'HUMAN' || conversation?.needsHuman;
+    conversation?.mode === 'HUMAN' ||
+    (Boolean(conversation?.needsHuman) && !paymentReviewPending);
   const messages = conversation?.messages ?? [];
 
   useEffect(() => {
@@ -84,6 +87,13 @@ export function useInbox() {
     },
   });
 
+  const confirmPaymentMut = useMutation({
+    mutationFn: () => confirmPaymentTransfer(activeId!),
+    onSuccess: async () => {
+      await invalidateAll(activeId ?? undefined);
+    },
+  });
+
   const deleteMut = useMutation({
     mutationFn: () => deleteConversation(activeId!),
     onSuccess: async () => {
@@ -106,6 +116,7 @@ export function useInbox() {
     latestOrder,
     messages,
     isHumanMode,
+    paymentReviewPending,
     draft,
     setDraft,
     messagesEndRef,
@@ -116,6 +127,8 @@ export function useInbox() {
       detailQuery.data === undefined,
     isSending: sendMut.isPending,
     isModePending: modeMut.isPending,
+    isConfirmPaymentPending: confirmPaymentMut.isPending,
+    confirmPayment: () => confirmPaymentMut.mutate(),
     sendMessage: (
       content: string,
       quickReplies?: Array<{ title: string; payload: string }>,

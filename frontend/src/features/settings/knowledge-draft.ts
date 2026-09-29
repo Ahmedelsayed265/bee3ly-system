@@ -12,15 +12,17 @@ export const WEEK_DAYS = [
 
 export type WeekDay = (typeof WEEK_DAYS)[number];
 
-export const PAYMENT_METHODS = [
-  'cod',
-  'vodafone',
-  'instapay',
-  'card',
-  'bank',
-] as const;
+export const PAYMENT_METHODS = ['cod', 'vodafone', 'instapay', 'bank'] as const;
 
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+/** Wallet / account the customer pays to (vodafone, instapay, bank, …). */
+export type PaymentReceivers = Partial<Record<PaymentMethod, string>>;
+
+export type PaymentDraft = {
+  methods: PaymentMethod[];
+  receivers: PaymentReceivers;
+};
 
 export type HoursDraft = {
   days: WeekDay[];
@@ -204,24 +206,41 @@ export function serializeDelivery(draft: DeliveryDraft) {
   });
 }
 
-export function parsePayment(raw: string): PaymentMethod[] {
+function parseReceivers(data: Record<string, unknown>): PaymentReceivers {
+  if (!isRecord(data.receivers)) return {};
+  const out: PaymentReceivers = {};
+  for (const method of PAYMENT_METHODS) {
+    const value = asString(data.receivers[method]);
+    if (value) out[method] = value;
+  }
+  return out;
+}
+
+export function parsePayment(raw: string): PaymentDraft {
   const data = readJson(raw);
   if (data?.kind === 'payment' && Array.isArray(data.methods)) {
-    return data.methods.filter(isPaymentMethod);
+    return {
+      methods: data.methods.filter(isPaymentMethod),
+      receivers: parseReceivers(data),
+    };
   }
-  if (!raw.trim()) return [];
+  if (!raw.trim()) return { methods: [], receivers: {} };
   const found: PaymentMethod[] = [];
   if (/كاش|استلام|cash/i.test(raw)) found.push('cod');
   if (/فودافون|vodafone/i.test(raw)) found.push('vodafone');
   if (/انستا|إنستا|instapay/i.test(raw)) found.push('instapay');
-  if (/فيزا|بطاقة|كارد|card|visa/i.test(raw)) found.push('card');
   if (/تحويل|بنك|bank/i.test(raw)) found.push('bank');
-  return found;
+  return { methods: found, receivers: {} };
 }
 
-export function serializePayment(methods: PaymentMethod[]) {
-  if (!methods.length) return '';
-  return JSON.stringify({ v: 1, kind: 'payment', methods });
+export function serializePayment(draft: PaymentDraft) {
+  if (!draft.methods.length) return '';
+  return JSON.stringify({
+    v: 1,
+    kind: 'payment',
+    methods: draft.methods,
+    receivers: draft.receivers,
+  });
 }
 
 export function emptyFaq(): FaqDraft {
@@ -299,7 +318,6 @@ const PAYMENT_LABEL_AR: Record<PaymentMethod, string> = {
   cod: 'كاش عند الاستلام',
   vodafone: 'فودافون كاش',
   instapay: 'إنستاباي',
-  card: 'بطاقة',
   bank: 'تحويل بنكي',
 };
 
@@ -307,7 +325,6 @@ const PAYMENT_LABEL_EN: Record<PaymentMethod, string> = {
   cod: 'Cash on delivery',
   vodafone: 'Vodafone Cash',
   instapay: 'InstaPay',
-  card: 'Card',
   bank: 'Bank transfer',
 };
 
@@ -370,10 +387,45 @@ export function describeHours(draft: HoursDraft, locale: Locale) {
   return [days, clock].filter(Boolean).join(sep);
 }
 
-export function describePayment(methods: PaymentMethod[], locale: Locale) {
+export function describePayment(draft: PaymentDraft, locale: Locale) {
   const labels = locale === 'ar' ? PAYMENT_LABEL_AR : PAYMENT_LABEL_EN;
-  const sep = locale === 'ar' ? '، ' : ', ';
-  return methods.map((method) => labels[method]).join(sep);
+  const sep = locale === 'ar' ? ' · ' : ' · ';
+  return draft.methods
+    .map((method) => {
+      const recv = draft.receivers[method]?.trim();
+      return recv ? `${labels[method]}: ${recv}` : labels[method];
+    })
+    .join(sep);
+}
+
+export const PAYMENT_RECEIVER_METHODS: PaymentMethod[] = [
+  'vodafone',
+  'instapay',
+  'bank',
+];
+
+/** Example reply the sales agent may send after quoteCheckout (preview only). */
+export function paymentCustomerExample(draft: PaymentDraft, locale: Locale) {
+  const labels = locale === 'ar' ? PAYMENT_LABEL_AR : PAYMENT_LABEL_EN;
+  const prepaid = PAYMENT_RECEIVER_METHODS.find(
+    (m) =>
+      draft.methods.includes(m) &&
+      (draft.receivers[m]?.trim()?.length ?? 0) > 0,
+  );
+  if (!prepaid) return '';
+  const recv = draft.receivers[prepaid]!.trim();
+  const label = labels[prepaid];
+  if (locale === 'ar') {
+    return `تمام يا فندم، حوّل {المبلغ} ج.م على ${label} (${recv})، وبعدها ابعت صورة التحويل ونراجع ونأكد الأوردر.`;
+  }
+  return `Transfer {amount} EGP to ${label} (${recv}), then send a payment screenshot so we can confirm your order.`;
+}
+
+export function prepaidReceiversMissing(draft: PaymentDraft) {
+  return PAYMENT_RECEIVER_METHODS.filter(
+    (m) =>
+      draft.methods.includes(m) && !(draft.receivers[m]?.trim()?.length ?? 0),
+  );
 }
 
 export function hoursCrossesMidnight(draft: HoursDraft) {

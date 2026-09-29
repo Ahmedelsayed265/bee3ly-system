@@ -609,21 +609,24 @@ export class AiToolsService {
     args: Record<string, unknown>,
   ) {
     const reason = asString(args.reason, 'طلب العميل أو حاجة لتدخل بشري');
+    const paymentReview = reason === 'PAYMENT_REVIEW';
     await this.prisma.conversation.update({
       where: { id: ctx.conversationId },
       data: {
         needsHuman: true,
         status: 'NEEDS_HUMAN',
-        mode: 'HUMAN',
-        conversionStage: 'HUMAN_HANDOFF',
+        mode: paymentReview ? 'AI' : 'HUMAN',
+        conversionStage: paymentReview ? 'DATA_COLLECTION' : 'HUMAN_HANDOFF',
         handoffReason: reason,
         aiSummary: args.summary ? asString(args.summary) : null,
       },
     });
     await this.notifications.create(ctx.businessId, {
       type: NotificationType.HANDOFF,
-      title: 'تحويل لممثل',
-      body: reason,
+      title: paymentReview ? 'مراجعة تحويل' : 'تحويل لممثل',
+      body: paymentReview
+        ? asString(args.summary, 'عميل أرسل / بانتظار صورة تحويل')
+        : reason,
       data: { conversationId: ctx.conversationId },
     });
     return { ok: true, reason };

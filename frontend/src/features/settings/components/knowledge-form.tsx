@@ -1,4 +1,13 @@
-import { Clock, MessageSquareText, Plus, Trash2, Truck } from 'lucide-react';
+import {
+  Clock,
+  Landmark,
+  MessageSquareText,
+  Plus,
+  Smartphone,
+  Trash2,
+  Truck,
+  Wallet,
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +16,13 @@ import type { MessageKey } from '@/features/i18n/messages';
 import {
   HOURS_PRESET_WEEKDAYS,
   PAYMENT_METHODS,
+  PAYMENT_RECEIVER_METHODS,
   WEEK_DAYS,
   describeHours,
   describePayment,
   hoursCrossesMidnight,
+  paymentCustomerExample,
+  prepaidReceiversMissing,
   parseFaqs,
   parseHours,
   parsePayment,
@@ -19,6 +31,7 @@ import {
   serializePayment,
   type FaqDraft,
   type HoursDraft,
+  type PaymentDraft,
   type PaymentMethod,
   type WeekDay,
 } from '@/features/settings/knowledge-draft';
@@ -38,7 +51,6 @@ const PAYMENT_LABEL: Record<PaymentMethod, MessageKey> = {
   cod: 'payCod',
   vodafone: 'payVodafone',
   instapay: 'payInstapay',
-  card: 'payCard',
   bank: 'payBank',
 };
 
@@ -125,7 +137,7 @@ export function KnowledgeForm({
 }: KnowledgeFormProps) {
   const { locale, t } = useLocale();
   const hours = parseHours(workingHours);
-  const methods = parsePayment(paymentInfo);
+  const payment = parsePayment(paymentInfo);
   const [faqItems, setFaqItems] = useState<FaqDraft[]>(() => parseFaqs(faqs));
 
   const updateHours = (next: HoursDraft) => {
@@ -143,13 +155,26 @@ export function KnowledgeForm({
     updateHours({ ...hours, days: [...days] });
   };
 
-  const toggleMethod = (method: PaymentMethod) => {
-    const next = methods.includes(method)
-      ? methods.filter((item) => item !== method)
-      : PAYMENT_METHODS.filter(
-          (item) => item === method || methods.includes(item),
-        );
+  const updatePayment = (next: PaymentDraft) => {
     onPaymentInfoChange(serializePayment(next));
+  };
+
+  const toggleMethod = (method: PaymentMethod) => {
+    const methods = payment.methods.includes(method)
+      ? payment.methods.filter((item) => item !== method)
+      : PAYMENT_METHODS.filter(
+          (item) => item === method || payment.methods.includes(item),
+        );
+    const receivers = { ...payment.receivers };
+    if (!methods.includes(method)) delete receivers[method];
+    updatePayment({ methods, receivers });
+  };
+
+  const setReceiver = (method: PaymentMethod, value: string) => {
+    updatePayment({
+      ...payment,
+      receivers: { ...payment.receivers, [method]: value },
+    });
   };
 
   const updateFaq = (id: string, patch: Partial<FaqDraft>) => {
@@ -161,43 +186,121 @@ export function KnowledgeForm({
   };
 
   const hoursPreview = describeHours(hours, locale);
-  const paymentPreview = describePayment(methods, locale);
+  const paymentPreview = describePayment(payment, locale);
+  const paymentExample = paymentCustomerExample(payment, locale);
+  const missingReceivers = prepaidReceiversMissing(payment);
+  const prepaidActive = PAYMENT_RECEIVER_METHODS.some((m) =>
+    payment.methods.includes(m),
+  );
   const crossMidnight = hoursCrossesMidnight(hours);
+
+  const codOn = payment.methods.includes('cod');
+  const previewText = [paymentPreview, paymentExample]
+    .filter(Boolean)
+    .join('\n\n');
 
   const paymentSection = (
     <Section title={t('paymentInfo')} hint={t('paymentInfoHint')}>
-      <div className="flex flex-wrap gap-2">
-        {PAYMENT_METHODS.map((method) => {
-          const selected = methods.includes(method);
-          return (
-            <button
-              key={method}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => toggleMethod(method)}
-              className={cn(
-                'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
-                selected
-                  ? 'border-brand bg-brand/10 text-brand'
-                  : 'border-border text-muted hover:text-ink',
-              )}
-            >
-              {t(PAYMENT_LABEL[method])}
-            </button>
-          );
-        })}
+      <div className="border-border flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="bg-brand/10 text-brand flex size-9 shrink-0 items-center justify-center rounded-lg">
+            <Truck className="size-4" aria-hidden />
+          </span>
+          <div>
+            <p className="text-ink text-sm font-semibold">{t('payCod')}</p>
+            <p className="text-muted text-xs">{t('paymentMethodCodHint')}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={codOn}
+          onClick={() => toggleMethod('cod')}
+          className={cn(
+            'relative h-7 w-12 shrink-0 rounded-full transition',
+            codOn ? 'bg-brand' : 'bg-border',
+          )}
+        >
+          <span
+            className={cn(
+              'bg-surface absolute top-0.5 left-0.5 size-6 rounded-full transition',
+              codOn && 'translate-x-5',
+            )}
+          />
+        </button>
       </div>
-      {!methods.length ? (
+
+      <div className="space-y-2">
+        <p className="text-ink text-xs font-semibold">
+          {t('paymentPrepaidSection')}
+        </p>
+        <div className="border-border divide-border w-full divide-y rounded-xl border">
+          {PAYMENT_RECEIVER_METHODS.map((method) => {
+            const selected = payment.methods.includes(method);
+            const Icon =
+              method === 'vodafone'
+                ? Smartphone
+                : method === 'instapay'
+                  ? Wallet
+                  : Landmark;
+            return (
+              <div
+                key={method}
+                className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3"
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleMethod(method)}
+                  className={cn(
+                    'inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition sm:w-36',
+                    selected
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-border text-muted hover:border-brand/50',
+                  )}
+                >
+                  <Icon className="size-3.5" aria-hidden />
+                  {t(PAYMENT_LABEL[method])}
+                </button>
+                <Input
+                  id={`payment-recv-${method}`}
+                  disabled={!selected}
+                  value={payment.receivers[method] ?? ''}
+                  onChange={(e) => setReceiver(method, e.target.value)}
+                  placeholder={t(
+                    `paymentReceiver_${method}` as
+                      | 'paymentReceiver_vodafone'
+                      | 'paymentReceiver_instapay'
+                      | 'paymentReceiver_bank',
+                  )}
+                  className="h-10 min-w-0 flex-1"
+                  aria-label={t(PAYMENT_LABEL[method])}
+                />
+              </div>
+            );
+          })}
+        </div>
+        {prepaidActive && missingReceivers.length ? (
+          <p className="text-xs leading-5 text-amber-700 dark:text-amber-400">
+            {t('paymentReceiverMissing')}
+          </p>
+        ) : null}
+      </div>
+
+      {!payment.methods.length ? (
         <p className="text-danger text-xs leading-5">
           {t('paymentNoneWarning')}
         </p>
       ) : null}
-      <div>
-        <p className="text-muted mb-1.5 text-xs font-semibold">
-          {t('knowledgePreviewTitle')}
-        </p>
-        <PreviewLine text={paymentPreview} />
-      </div>
+
+      {previewText ? (
+        <div>
+          <p className="text-muted mb-1.5 text-xs font-semibold">
+            {t('knowledgePreviewTitle')}
+          </p>
+          <PreviewLine text={previewText} />
+        </div>
+      ) : null}
     </Section>
   );
 

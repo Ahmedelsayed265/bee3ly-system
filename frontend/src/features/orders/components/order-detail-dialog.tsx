@@ -18,6 +18,7 @@ import {
   canConfirm,
   canReturn,
 } from '@/features/orders/hooks/use-orders';
+import { formatOrderShippingAddress } from '@/features/orders/order-shipping';
 
 type OrderDetailDialogProps = {
   order: OrderRow | null;
@@ -37,6 +38,9 @@ export function OrderDetailDialog({
   onAsk,
 }: OrderDetailDialogProps) {
   const { t } = useLocale();
+  const shippingAddress = order
+    ? formatOrderShippingAddress(order, locale)
+    : null;
 
   return (
     <Dialog
@@ -84,6 +88,21 @@ export function OrderDetailDialog({
                       {t(`orderStatus_${order.status}` as MessageKey)}
                     </span>
                   </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-muted text-xs">
+                    {t('orderColShippingAddress')}
+                  </p>
+                  <p className="text-ink mt-1 text-sm leading-relaxed font-semibold">
+                    {shippingAddress ?? '—'}
+                  </p>
+                  {order.shippingEgp != null ? (
+                    <p className="text-muted mt-1 text-xs">
+                      {t('orderShippingFee', {
+                        amount: money(order.shippingEgp),
+                      })}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 

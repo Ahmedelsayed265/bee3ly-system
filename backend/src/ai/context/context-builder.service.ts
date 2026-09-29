@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  PAYMENT_CONFIRMED_AI_SUMMARY,
+  PAYMENT_REVIEW_HANDOFF,
+} from '../payment-review.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   asAttributes,
@@ -164,6 +168,12 @@ export class ContextBuilderService {
         content: m.content,
       })),
       latestCustomerMessage: params.latestCustomerMessage,
+      paymentReviewPending:
+        conversation.needsHuman &&
+        conversation.handoffReason === PAYMENT_REVIEW_HANDOFF,
+      paymentConfirmedForAi: (conversation.aiSummary ?? '').startsWith(
+        'PAYMENT_CONFIRMED:',
+      ),
     };
   }
 
@@ -215,6 +225,12 @@ export class ContextBuilderService {
         : '',
       `Customer known: name=${ctx.customer.name ?? '-'} phone=${ctx.customer.phone ?? '-'}`,
       `Stage: ${ctx.conversionStage}`,
+      ctx.paymentReviewPending
+        ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet.'
+        : '',
+      ctx.paymentConfirmedForAi
+        ? 'Payment: merchant CONFIRMED transfer — collect address if needed and createOrder.'
+        : '',
       ctx.campaign
         ? `Campaign: ${ctx.campaign.name} / ${ctx.campaign.objective} / offer: ${ctx.campaign.offer}`
         : '',

@@ -115,6 +115,14 @@ export class ConversationsController {
     return this.conversations.remove(user.id, id);
   }
 
+  @Post('conversations/:id/confirm-payment')
+  confirmPayment(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ) {
+    return this.conversations.confirmPaymentTransfer(user.id, id);
+  }
+
   @Post('conversations/:id/human-message')
   humanMessage(
     @CurrentUser() user: AuthUser,

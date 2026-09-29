@@ -71,6 +71,7 @@ export class AiService {
     return {
       contextBlock: this.contextBuilder.toPromptBlock(ctx),
       governorateIds: [...GOVERNORATE_IDS],
+      handoffEnabled: ctx.agent.handoffEnabled,
     };
   }
 

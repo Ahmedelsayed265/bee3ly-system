@@ -48,7 +48,10 @@ SALES_TOOL_DECLARATIONS = [
     ),
     types.FunctionDeclaration(
         name="createOrder",
-        description="إنشاء طلب بعد تأكيد كل محاور المتغير والعنوان والدفع.",
+        description=(
+            "إنشاء طلب بعد تأكيد المتغير والعنوان. "
+            "دفع مسبق: بعد quoteCheckout + إثبات تحويل (صورة) من العميل."
+        ),
         parameters=types.Schema(
             type=T.OBJECT,
             properties={
@@ -58,6 +61,10 @@ SALES_TOOL_DECLARATIONS = [
                 "governorate": types.Schema(type=T.STRING),
                 "address": types.Schema(type=T.STRING),
                 "paymentMethod": types.Schema(type=T.STRING),
+                "notes": types.Schema(
+                    type=T.STRING,
+                    description="ملاحظات: إثبات تحويل، مراجعة دفع، …",
+                ),
             },
             required=["customerName", "customerPhone"],
         ),
@@ -75,7 +82,10 @@ SALES_TOOL_DECLARATIONS = [
     ),
     types.FunctionDeclaration(
         name="transferToHuman",
-        description="تحويل لموظف بشري عند طلب العميل أو شكوى.",
+        description=(
+            "طلب موظف، شكوى، خصم، أو PAYMENT_REVIEW بعد ما العميل أرسل/وعد "
+            "بصورة تحويل (دفع مسبق)."
+        ),
         parameters=types.Schema(
             type=T.OBJECT,
             properties={
