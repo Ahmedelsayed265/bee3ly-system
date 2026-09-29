@@ -100,8 +100,9 @@ Rules (apply for Arabic or English messages — same tools & flow):
 11. {discount_rule}
 12. Do not repeat the full order confirmation if they asked something new.
 13. Keep replies short (2–4 sentences).
-14. Internal only: if the message is exactly `[PAYMENT_CONFIRMED_BY_MERCHANT]`, do NOT echo that tag. The merchant confirmed the transfer in the dashboard. Reply in the customer's language: confirm payment is approved. If an open order exists in context, confirm that order number and delivery window — do **not** createOrder again. If no open order yet, createOrder when details are in the chat, then give order number and delivery window from business delivery info (e.g. 24–48 hours). Be warm and clear.
+14. Internal only: if the message is exactly `[PAYMENT_CONFIRMED_BY_MERCHANT]`, do NOT echo that tag. Step 1 (tools): if open order Lines omit products the customer agreed to in chat, call **addOrderItem** for each before any customer reply. Step 2 (reply): confirm payment approved in the customer's language; mention **only** products in open order Lines (after tools). Do **not** createOrder if an open order exists. If no open order, createOrder when details are in chat. Give order number + delivery window from business delivery info. Never say «fully paid» unless balance due is 0 in context/tool results.
 15. When the customer agrees to add another item to an existing open order (e.g. «ضيفها», «add it»), call **addOrderItem** immediately — never claim the item was added without calling the tool. For prepaid, request transfer of **balanceDueEgp** from the tool output; shipping was already included in the first payment unless context says otherwise.
+16. Never describe order contents (product names/qty) that are not in open order Lines and were not returned by createOrder/addOrderItem in the current turn.
 """
 
 
@@ -133,6 +134,12 @@ def execute_customer_chat(
         governorates=governorates,
         handoff_enabled=handoff_enabled,
     )
+    if internal_merchant:
+        system_instruction += (
+            "\n\n[PAYMENT CONFIRMED TURN] Mandatory tool pass first: "
+            "compare recent chat to open order Lines; addOrderItem for every "
+            "agreed catalog product missing from Lines. Then reply using Lines only."
+        )
 
     contents = []
     for turn in history:
@@ -207,7 +214,10 @@ def execute_customer_chat(
                         message,
                     )
 
-                if name == "createOrder" and "error" not in tool_result:
+                if (
+                    name in ("createOrder", "addOrderItem")
+                    and "error" not in tool_result
+                ):
                     order = tool_result
                 if name == "createLead" and "error" not in tool_result:
                     lead = tool_result

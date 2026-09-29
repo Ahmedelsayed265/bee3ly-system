@@ -20,6 +20,7 @@ import {
   formatShippingZonesForKnowledge,
   parseShippingZones,
 } from '../../businesses/shipping-zones';
+import { MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT } from '../../channels/channel.types';
 import { computeOrderTotals } from '../order-prepaid';
 import { OPEN_ORDER_STATUSES } from '../payment-order.guards';
 import type { BusinessContext } from '../types';
@@ -265,6 +266,9 @@ export class ContextBuilderService {
     const snapshot = this.catalogCache.get(ctx.businessId);
     const productLines =
       snapshot?.catalogPromptBlock ?? this.renderCatalogBlock(ctx.products);
+    const merchantPaymentConfirmTurn =
+      ctx.latestCustomerMessage.trim() ===
+      MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT;
 
     return [
       `Business: ${ctx.business.name} (${ctx.business.type})`,
@@ -285,6 +289,9 @@ export class ContextBuilderService {
         : '',
       `Customer known: name=${ctx.customer.name ?? '-'} phone=${ctx.customer.phone ?? '-'}`,
       `Stage: ${ctx.conversionStage}`,
+      merchantPaymentConfirmTurn
+        ? 'MERCHANT PAYMENT CONFIRMED (internal): Merchant verified the transfer in dashboard. Before your customer-visible reply: if chat shows the customer agreed to extra catalog products not listed in open order Lines, call addOrderItem for each (correct qty/variant). Only describe products that appear in Lines after tools. Never claim an item was added without a successful addOrderItem in this turn. Confirm payment approved + delivery window; say fully paid only when balance due is 0.'
+        : '',
       ctx.paymentReviewPending
         ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet; never tell customer the order is officially confirmed.'
         : '',

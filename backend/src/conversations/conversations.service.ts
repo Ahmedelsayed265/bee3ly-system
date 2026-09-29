@@ -244,6 +244,14 @@ export class ConversationsService {
         aiSummary: PAYMENT_CONFIRMED_AI_SUMMARY,
       },
     });
+    await this.runAiAfterPaymentConfirmed(businessId, conversationId);
+    await this.snapshotVerifiedPrepaidForConversation(conversationId);
+    this.realtime.notifyConversationUpdated(businessId, conversationId);
+    return { conversation: updated };
+  }
+
+  /** After merchant confirms transfer, record prepaid = current order grand total. */
+  private async snapshotVerifiedPrepaidForConversation(conversationId: string) {
     const openOrder = await this.prisma.order.findFirst({
       where: {
         conversationId,
@@ -251,19 +259,14 @@ export class ConversationsService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    if (openOrder) {
-      const verifiedEgp =
-        openOrder.totalEgp + (openOrder.shippingEgp ?? 0);
-      await this.prisma.order.update({
-        where: { id: openOrder.id },
-        data: {
-          notes: upsertPrepaidVerifiedNote(openOrder.notes, verifiedEgp),
-        },
-      });
-    }
-    await this.runAiAfterPaymentConfirmed(businessId, conversationId);
-    this.realtime.notifyConversationUpdated(businessId, conversationId);
-    return { conversation: updated };
+    if (!openOrder) return;
+    const verifiedEgp = openOrder.totalEgp + (openOrder.shippingEgp ?? 0);
+    await this.prisma.order.update({
+      where: { id: openOrder.id },
+      data: {
+        notes: upsertPrepaidVerifiedNote(openOrder.notes, verifiedEgp),
+      },
+    });
   }
 
   private async runAiAfterPaymentConfirmed(
