@@ -41,19 +41,24 @@ export function OrderRowActions({
 }: OrderRowActionsProps) {
   const { t } = useLocale();
 
-  const statusActions: Array<{
+  type StatusActionCandidate = {
     action: OrderStatusAction;
+    enabled: boolean;
     destructive?: boolean;
-  }> = [
-    { action: 'CONFIRMED', enabled: canConfirm(order.status) },
-    { action: 'COMPLETED', enabled: canComplete(order.status) },
-    { action: 'RETURNED', enabled: canReturn(order.status) },
-    {
-      action: 'CANCELLED',
-      enabled: canCancel(order.status),
-      destructive: true,
-    },
-  ]
+  };
+
+  const statusActions = (
+    [
+      { action: 'CONFIRMED', enabled: canConfirm(order.status) },
+      { action: 'COMPLETED', enabled: canComplete(order.status) },
+      { action: 'RETURNED', enabled: canReturn(order.status) },
+      {
+        action: 'CANCELLED',
+        enabled: canCancel(order.status),
+        destructive: true,
+      },
+    ] satisfies StatusActionCandidate[]
+  )
     .filter((row) => row.enabled)
     .map(({ action, destructive }) => ({ action, destructive }));
 
