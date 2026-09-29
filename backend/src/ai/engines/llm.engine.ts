@@ -144,7 +144,9 @@ export class LlmEngine {
           }
 
           toolsUsed.push(name);
-          if (name === 'createOrder') intent = 'PURCHASE_INTENT';
+          if (name === 'createOrder' || name === 'addOrderItem') {
+            intent = 'PURCHASE_INTENT';
+          }
           if (name === 'createLead') intent = 'LEAD_INTENT';
           if (name === 'transferToHuman') {
             intent = 'HUMAN_REQUEST';
@@ -157,9 +159,9 @@ export class LlmEngine {
           let result: unknown;
           try {
             result = await this.tools.execute(name, ctx, args);
-            if (name === 'createOrder') {
+            if (name === 'createOrder' || name === 'addOrderItem') {
               order = result;
-              conversionStage = 'CONVERTED';
+              if (name === 'createOrder') conversionStage = 'CONVERTED';
             }
             if (name === 'createLead') lead = result;
           } catch (e) {
@@ -292,6 +294,23 @@ export class LlmEngine {
             },
             ['customerName', 'customerPhone'],
           ),
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'addOrderItem',
+          description:
+            'Add a product line to the existing open order for this chat (after first createOrder)',
+          parameters: prop({
+            productId: { type: 'string' },
+            name: { type: 'string' },
+            quantity: { type: 'number' },
+            size: { type: 'string' },
+            color: { type: 'string' },
+            flavor: { type: 'string' },
+            variantOptions: { type: 'object' },
+          }),
         },
       },
       {

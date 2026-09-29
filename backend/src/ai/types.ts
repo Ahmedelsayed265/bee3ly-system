@@ -19,6 +19,7 @@ export type ToolName =
   | 'getFAQ'
   | 'quoteCheckout'
   | 'createOrder'
+  | 'addOrderItem'
   | 'getOrderStatus'
   | 'createLead'
   | 'notifyOwner'
@@ -118,5 +119,17 @@ export type BusinessContext = {
     id: string;
     orderNumber: number;
     status: string;
+    items: Array<{
+      name: string;
+      quantity: number;
+      priceEgp: number;
+      size: string | null;
+      color: string | null;
+    }>;
+    productsSubtotalEgp: number;
+    shippingEgp: number;
+    grandTotalEgp: number;
+    verifiedPrepaidEgp: number;
+    balanceDueEgp: number;
   } | null;
 };

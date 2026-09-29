@@ -17,10 +17,12 @@ import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { MetaOutboundService } from '../social/meta/meta-outbound.service';
+import { upsertPrepaidVerifiedNote } from '../ai/order-prepaid';
 import {
   PAYMENT_CONFIRMED_AI_SUMMARY,
   PAYMENT_REVIEW_HANDOFF,
 } from '../ai/payment-review.constants';
+import { OPEN_ORDER_STATUSES } from '../ai/payment-order.guards';
 import { AiEngineAdapter } from '../channels/ai-engine.adapter';
 import {
   MERCHANT_PAYMENT_CONFIRMED_INBOUND_TEXT,
@@ -242,6 +244,23 @@ export class ConversationsService {
         aiSummary: PAYMENT_CONFIRMED_AI_SUMMARY,
       },
     });
+    const openOrder = await this.prisma.order.findFirst({
+      where: {
+        conversationId,
+        status: { in: OPEN_ORDER_STATUSES },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (openOrder) {
+      const verifiedEgp =
+        openOrder.totalEgp + (openOrder.shippingEgp ?? 0);
+      await this.prisma.order.update({
+        where: { id: openOrder.id },
+        data: {
+          notes: upsertPrepaidVerifiedNote(openOrder.notes, verifiedEgp),
+        },
+      });
+    }
     await this.runAiAfterPaymentConfirmed(businessId, conversationId);
     this.realtime.notifyConversationUpdated(businessId, conversationId);
     return { conversation: updated };

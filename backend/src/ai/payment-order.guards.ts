@@ -39,3 +39,21 @@ export const OPEN_ORDER_STATUSES: OrderStatus[] = [
   OrderStatus.PENDING,
   OrderStatus.CONFIRMED,
 ];
+
+export function assertAddOrderItemAllowed(ctx: BusinessContext): void {
+  if (!ctx.openOrder) {
+    throw new Error(
+      'No open order for this chat — use createOrder for the first purchase',
+    );
+  }
+  if (ctx.paymentReviewPending) {
+    throw new Error(
+      'Payment review pending — wait for merchant to confirm transfer before addOrderItem',
+    );
+  }
+  if (isImageAttachmentMessage(ctx.latestCustomerMessage)) {
+    throw new Error(
+      'Customer sent a transfer image — use transferToHuman PAYMENT_REVIEW only; do not addOrderItem',
+    );
+  }
+}

@@ -20,6 +20,7 @@ import {
   formatShippingZonesForKnowledge,
   parseShippingZones,
 } from '../../businesses/shipping-zones';
+import { computeOrderTotals } from '../order-prepaid';
 import { OPEN_ORDER_STATUSES } from '../payment-order.guards';
 import type { BusinessContext } from '../types';
 import { AiContextCacheService } from './ai-context-cache.service';
@@ -139,7 +140,23 @@ export class ContextBuilderService {
           status: { in: OPEN_ORDER_STATUSES },
         },
         orderBy: { createdAt: 'desc' },
-        select: { id: true, orderNumber: true, status: true },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true,
+          totalEgp: true,
+          shippingEgp: true,
+          notes: true,
+          items: {
+            select: {
+              name: true,
+              quantity: true,
+              priceEgp: true,
+              size: true,
+              color: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -184,11 +201,38 @@ export class ContextBuilderService {
         'PAYMENT_CONFIRMED:',
       ),
       openOrder: openOrder
-        ? {
-            id: openOrder.id,
-            orderNumber: openOrder.orderNumber,
-            status: openOrder.status,
-          }
+        ? (() => {
+            const totals = computeOrderTotals(openOrder);
+            let verifiedPrepaidEgp = totals.verifiedPrepaidEgp;
+            const paymentConfirmed = (conversation.aiSummary ?? '').startsWith(
+              'PAYMENT_CONFIRMED:',
+            );
+            const paymentReviewPending =
+              conversation.needsHuman &&
+              conversation.handoffReason === PAYMENT_REVIEW_HANDOFF;
+            if (
+              verifiedPrepaidEgp === 0 &&
+              paymentConfirmed &&
+              !paymentReviewPending
+            ) {
+              verifiedPrepaidEgp = totals.grandTotalEgp;
+            }
+            const balanceDueEgp = Math.max(
+              0,
+              totals.grandTotalEgp - verifiedPrepaidEgp,
+            );
+            return {
+              id: openOrder.id,
+              orderNumber: openOrder.orderNumber,
+              status: openOrder.status,
+              items: openOrder.items,
+              productsSubtotalEgp: totals.productsSubtotalEgp,
+              shippingEgp: totals.shippingEgp,
+              grandTotalEgp: totals.grandTotalEgp,
+              verifiedPrepaidEgp,
+              balanceDueEgp,
+            };
+          })()
         : null,
     };
   }
@@ -244,11 +288,26 @@ export class ContextBuilderService {
       ctx.paymentReviewPending
         ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet; never tell customer the order is officially confirmed.'
         : '',
-      ctx.paymentConfirmedForAi
+      ctx.paymentConfirmedForAi && !ctx.openOrder
         ? 'Payment: merchant CONFIRMED transfer — you may createOrder if details are complete.'
         : '',
       ctx.openOrder
-        ? `Open order for this chat: #${ctx.openOrder.orderNumber} (${ctx.openOrder.status}) — do NOT createOrder again; update payment notes or wait for merchant.`
+        ? [
+            `Open order #${ctx.openOrder.orderNumber} (${ctx.openOrder.status}) — do NOT createOrder again.`,
+            `Lines: ${ctx.openOrder.items
+              .map(
+                (i) =>
+                  `${i.name}${i.size ? ` ${i.size}` : ''} ×${i.quantity} @ ${i.priceEgp} EGP`,
+              )
+              .join('; ')}`,
+            `Products subtotal ${ctx.openOrder.productsSubtotalEgp} EGP + shipping ${ctx.openOrder.shippingEgp} EGP = grand total ${ctx.openOrder.grandTotalEgp} EGP.`,
+            ctx.openOrder.verifiedPrepaidEgp > 0
+              ? `Verified prepaid ${ctx.openOrder.verifiedPrepaidEgp} EGP — balance due now ${ctx.openOrder.balanceDueEgp} EGP (charge only balance for new prepaid transfers; do not ask for full grand total again).`
+              : '',
+            'To add another product to this order → call addOrderItem (same variant args as createOrder). After addOrderItem, use balanceDueEgp from the tool result for any new transfer amount.',
+          ]
+            .filter(Boolean)
+            .join(' ')
         : '',
       ctx.campaign
         ? `Campaign: ${ctx.campaign.name} / ${ctx.campaign.objective} / offer: ${ctx.campaign.offer}`

@@ -47,6 +47,17 @@ SALES_TOOL_DECLARATIONS = [
         parameters=types.Schema(type=T.OBJECT, properties={}),
     ),
     types.FunctionDeclaration(
+        name="addOrderItem",
+        description=(
+            "إضافة منتج لطلب مفتوح (#…) على نفس المحادثة — لا تستخدم createOrder مرة ثانية. "
+            "يرجع balanceDueEgp: المبلغ المطلوب تحويله فقط بعد خصم المدفوع المُؤكَّد."
+        ),
+        parameters=types.Schema(
+            type=T.OBJECT,
+            properties={**_VARIANT_PROPS},
+        ),
+    ),
+    types.FunctionDeclaration(
         name="createOrder",
         description=(
             "إنشاء طلب بعد تأكيد المتغير والعنوان. "

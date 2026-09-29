@@ -25,7 +25,9 @@ import {
   shippingPriceForGovernorate,
 } from '../../businesses/shipping-zones';
 import { AiContextCacheService } from '../context/ai-context-cache.service';
+import { computeOrderTotals } from '../order-prepaid';
 import {
+  assertAddOrderItemAllowed,
   assertCreateOrderAllowed,
   OPEN_ORDER_STATUSES,
 } from '../payment-order.guards';
@@ -87,6 +89,8 @@ export class AiToolsService {
         return this.quoteCheckout(ctx, args);
       case 'createOrder':
         return this.createOrder(ctx, args);
+      case 'addOrderItem':
+        return this.addOrderItem(ctx, args);
       case 'getOrderStatus':
         return this.getOrderStatus(ctx, args);
       case 'createLead':
@@ -564,6 +568,182 @@ export class AiToolsService {
       ...order,
       grandTotalEgp: order.totalEgp + ship,
       summaryAr: `المنتج ${order.totalEgp} ج.م + الشحن ${ship} ج.م = ${order.totalEgp + ship} ج.م`,
+    };
+  }
+
+  private async addOrderItem(
+    ctx: BusinessContext,
+    args: Record<string, unknown>,
+  ) {
+    try {
+      assertAddOrderItemAllowed(ctx);
+    } catch (e) {
+      throw new BadRequestException(
+        e instanceof Error ? e.message : 'addOrderItem not allowed',
+      );
+    }
+
+    const openOrder = await this.prisma.order.findFirst({
+      where: {
+        id: ctx.openOrder!.id,
+        conversationId: ctx.conversationId,
+        status: { in: OPEN_ORDER_STATUSES },
+      },
+      include: { items: true },
+    });
+    if (!openOrder) {
+      throw new BadRequestException('Open order not found');
+    }
+
+    const product = await this.getProduct(ctx, args);
+    if (!product) {
+      throw new BadRequestException('Product required');
+    }
+    if (!isAvailable(product)) {
+      throw new BadRequestException('Product out of stock');
+    }
+
+    const attributes = asAttributes(product.attributes);
+    const variants = asVariants(product.variants);
+    const availableSizes = productSizeColorLists(product).sizes;
+    const quantity = Math.max(1, Number(args.quantity ?? 1));
+    const size = args.size ? asString(args.size) : null;
+    const color = args.color ? asString(args.color) : null;
+    const chosen = variantChoiceFromArgs(args);
+
+    let unitPrice = product.priceEgp;
+    let matchedSkuKey: string | null = null;
+
+    if (hasVariantMatrix(variants)) {
+      const matched = findMatchingSku(variants, chosen);
+      if (!matched) {
+        throw new BadRequestException(
+          `Choose a valid variant (${variants.axes
+            .map((a) => a.name)
+            .join(' + ')})`,
+        );
+      }
+      if (quantity > matched.stockQuantity) {
+        throw new BadRequestException(
+          `Only ${matched.stockQuantity} units available for ${formatVariantLabel(matched.options)}`,
+        );
+      }
+      unitPrice = matched.priceEgp;
+      matchedSkuKey = matched.key;
+    } else {
+      if (product.stockQuantity != null && quantity > product.stockQuantity) {
+        throw new BadRequestException(
+          `Only ${product.stockQuantity} units available`,
+        );
+      }
+      if (size && availableSizes.length > 0 && !availableSizes.includes(size)) {
+        throw new BadRequestException(`Size ${size} not available`);
+      }
+      for (const key of ['color', 'flavor', 'option', 'variant'] as const) {
+        const chosenValue = args[key] ? asString(args[key]) : null;
+        if (!chosenValue) continue;
+        const options = listAttributeOptions(
+          attributes,
+          key === 'color' ? 'colors' : key === 'flavor' ? 'flavors' : `${key}s`,
+        );
+        const alt = listAttributeOptions(attributes, key);
+        const pool = options.length ? options : alt;
+        if (pool.length > 0 && !pool.includes(chosenValue)) {
+          throw new BadRequestException(`${key} ${chosenValue} not available`);
+        }
+      }
+    }
+
+    const lineSubtotal = unitPrice * quantity;
+
+    await this.prisma.orderItem.create({
+      data: {
+        orderId: openOrder.id,
+        productId: product.id,
+        name: product.name,
+        size,
+        color,
+        quantity,
+        priceEgp: unitPrice,
+        costEgp: product.costEgp,
+      },
+    });
+
+    const updatedOrder = await this.prisma.order.update({
+      where: { id: openOrder.id },
+      data: { totalEgp: openOrder.totalEgp + lineSubtotal },
+      include: { items: true },
+    });
+
+    if (matchedSkuKey) {
+      const nextVariants = {
+        ...variants,
+        skus: variants.skus.map((sku) =>
+          sku.key === matchedSkuKey
+            ? {
+                ...sku,
+                stockQuantity: Math.max(0, sku.stockQuantity - quantity),
+              }
+            : sku,
+        ),
+      };
+      const nextTotal = variantsTotalStock(nextVariants);
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          variants: nextVariants,
+          stockQuantity: nextTotal,
+          inStock: nextTotal > 0,
+          priceEgp: product.priceEgp,
+        },
+      });
+    } else if (product.stockQuantity != null) {
+      const nextQty = Math.max(0, product.stockQuantity - quantity);
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          stockQuantity: nextQty,
+          inStock: nextQty > 0,
+        },
+      });
+    }
+
+    this.aiContextCache.invalidate(ctx.businessId);
+
+    const totals = computeOrderTotals(updatedOrder);
+    const verifiedPrepaidEgp =
+      totals.verifiedPrepaidEgp > 0
+        ? totals.verifiedPrepaidEgp
+        : (ctx.openOrder?.verifiedPrepaidEgp ?? 0);
+    const balanceDueEgp = Math.max(
+      0,
+      totals.grandTotalEgp - verifiedPrepaidEgp,
+    );
+
+    const businessRow = await this.prisma.business.findUniqueOrThrow({
+      where: { id: ctx.businessId },
+      select: { paymentInfo: true },
+    });
+
+    return {
+      orderId: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      added: {
+        productName: product.name,
+        quantity,
+        unitPriceEgp: unitPrice,
+        lineSubtotalEgp: lineSubtotal,
+      },
+      productsSubtotalEgp: totals.productsSubtotalEgp,
+      shippingEgp: totals.shippingEgp,
+      grandTotalEgp: totals.grandTotalEgp,
+      verifiedPrepaidEgp,
+      balanceDueEgp,
+      paymentInfo: presentKnowledge(businessRow.paymentInfo),
+      summaryAr:
+        balanceDueEgp > 0
+          ? `تمت إضافة ${product.name} (${lineSubtotal} ج.م). إجمالي الطلب ${totals.grandTotalEgp} ج.م (شامل الشحن). مدفوع ومُؤكَّد ${verifiedPrepaidEgp} ج.م — المطلوب تحويل ${balanceDueEgp} ج.م فقط للبند الجديد.`
+          : `تمت إضافة ${product.name}. إجمالي الطلب ${totals.grandTotalEgp} ج.م.`,
     };
   }
 

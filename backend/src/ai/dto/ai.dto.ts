@@ -75,6 +75,7 @@ const TOOL_NAMES = [
   'getFAQ',
   'quoteCheckout',
   'createOrder',
+  'addOrderItem',
   'getOrderStatus',
   'createLead',
   'notifyOwner',
