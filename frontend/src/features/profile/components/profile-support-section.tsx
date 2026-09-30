@@ -1,9 +1,8 @@
-import { FileText, HelpCircle, MessageCircle, Shield } from 'lucide-react';
+import { FileText, MessageCircle, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { MessageKey } from '@/features/i18n/messages';
+import { SUPPORT_EMAIL } from '@/features/support/constants';
 import { paths } from '@/routes/paths';
-
-export const SUPPORT_EMAIL = 'support@bee3ly.com';
 
 type ProfileSupportSectionProps = {
   t: (key: MessageKey) => string;
@@ -16,45 +15,25 @@ export function ProfileSupportSection({ t }: ProfileSupportSectionProps) {
         <h2 className="text-ink font-semibold">{t('supportSection')}</h2>
         <p className="text-muted mt-1 text-sm">{t('supportIntro')}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <a
-          href="https://bee3ly.com/help"
-          target="_blank"
-          rel="noreferrer"
-          className="border-border bg-page hover:border-brand/30 hover:bg-lavender flex items-start gap-3 rounded-xl border p-4 transition-colors"
-        >
-          <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-            <HelpCircle className="h-5 w-5" />
+      <Link
+        to={paths.contact}
+        className="border-border bg-lavender/50 hover:border-brand/30 hover:bg-lavender flex items-start gap-3 rounded-xl border p-4 transition-colors"
+      >
+        <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <MessageCircle className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="text-ink block text-sm font-semibold">
+            {t('contactUs')}
           </span>
-          <span className="min-w-0">
-            <span className="text-ink block text-sm font-semibold">
-              {t('helpCenter')}
-            </span>
-            <span className="text-muted mt-0.5 block text-xs leading-5">
-              {t('helpCenterHint')}
-            </span>
+          <span className="text-muted mt-0.5 block text-xs leading-5">
+            {t('contactUsHint')}
           </span>
-        </a>
-        <a
-          href={`mailto:${SUPPORT_EMAIL}`}
-          className="border-border bg-page hover:border-brand/30 hover:bg-lavender flex items-start gap-3 rounded-xl border p-4 transition-colors"
-        >
-          <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-            <MessageCircle className="h-5 w-5" />
+          <span className="text-brand mt-1 block text-xs font-medium">
+            {SUPPORT_EMAIL}
           </span>
-          <span className="min-w-0">
-            <span className="text-ink block text-sm font-semibold">
-              {t('contactUs')}
-            </span>
-            <span className="text-muted mt-0.5 block text-xs leading-5">
-              {t('contactUsHint')}
-            </span>
-            <span className="text-brand mt-1 block text-xs font-medium">
-              {SUPPORT_EMAIL}
-            </span>
-          </span>
-        </a>
-      </div>
+        </span>
+      </Link>
       <div className="grid gap-3 sm:grid-cols-2">
         <Link
           to={paths.privacyPolicy}
@@ -63,9 +42,12 @@ export function ProfileSupportSection({ t }: ProfileSupportSectionProps) {
           <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <Shield className="h-5 w-5" />
           </span>
-          <span className="min-w-0">
+          <span className="min-w-0 flex-1">
             <span className="text-ink block text-sm font-semibold">
               {t('navPrivacyPolicy')}
+            </span>
+            <span className="text-muted mt-0.5 block text-xs leading-5">
+              {t('navPrivacyPolicyHint')}
             </span>
           </span>
         </Link>
@@ -76,9 +58,12 @@ export function ProfileSupportSection({ t }: ProfileSupportSectionProps) {
           <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <FileText className="h-5 w-5" />
           </span>
-          <span className="min-w-0">
+          <span className="min-w-0 flex-1">
             <span className="text-ink block text-sm font-semibold">
               {t('navTermsConditions')}
+            </span>
+            <span className="text-muted mt-0.5 block text-xs leading-5">
+              {t('navTermsConditionsHint')}
             </span>
           </span>
         </Link>

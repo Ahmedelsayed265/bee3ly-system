@@ -19,7 +19,7 @@ export function LegalLayout({
   return (
     <main className="bg-page min-h-dvh">
       <header className="border-border bg-surface/80 sticky top-0 z-10 border-b backdrop-blur-sm">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4">
           <Link to={paths.home} className="inline-flex items-center gap-2">
             <Bee3lyLogo markClassName="h-9 w-9" />
           </Link>
@@ -27,7 +27,7 @@ export function LegalLayout({
         </div>
       </header>
 
-      <article className="mx-auto max-w-3xl px-5 py-10 pb-16">
+      <article className="mx-auto max-w-7xl px-5 py-10 pb-16">
         <h1 className="font-display text-ink text-3xl font-bold tracking-tight">
           {title}
         </h1>
@@ -55,6 +55,13 @@ export function LegalLayout({
             className="text-brand font-semibold hover:underline"
           >
             {t('navTermsConditions')}
+          </Link>
+          <span className="mx-2">·</span>
+          <Link
+            to={paths.contact}
+            className="text-brand font-semibold hover:underline"
+          >
+            {t('contactUs')}
           </Link>
         </footer>
       </article>

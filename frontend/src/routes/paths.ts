@@ -3,6 +3,7 @@ export const paths = {
   home: '/',
   privacyPolicy: '/privacy',
   terms: '/terms',
+  contact: '/contact',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',

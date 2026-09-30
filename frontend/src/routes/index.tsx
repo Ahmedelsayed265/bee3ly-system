@@ -5,6 +5,7 @@ import { ForgotPasswordPage } from '@/pages/forgot-password-page';
 import { LoginPage } from '@/pages/login-page';
 import { RegisterPage } from '@/pages/register-page';
 import { ResetPasswordPage } from '@/pages/reset-password-page';
+import { ContactPage } from '@/pages/contact-page';
 import { PrivacyPolicyPage } from '@/pages/privacy-policy-page';
 import { TermsPage } from '@/pages/terms-page';
 import { WelcomePage } from '@/pages/welcome-page';
@@ -18,6 +19,7 @@ export const router = createBrowserRouter([
   },
   { path: paths.privacyPolicy, element: <PrivacyPolicyPage /> },
   { path: paths.terms, element: <TermsPage /> },
+  { path: paths.contact, element: <ContactPage /> },
   {
     element: <GuestRoute />,
     children: [
