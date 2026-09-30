@@ -14,6 +14,7 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { analyzeCampaignMetrics } from './campaign-analysis';
 import { CreateCampaignDto, DraftAdCopyDto } from './dto/campaign.dto';
 
 @Injectable()
@@ -60,6 +61,33 @@ export class CampaignsService {
     return {
       campaign: this.withMetrics(campaign, chains.forCampaign(campaign.id)),
     };
+  }
+
+  async getAnalysis(userId: string, id: string, locale?: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const campaign = await this.prisma.campaign.findFirst({
+      where: { id, businessId },
+    });
+    if (!campaign) throw new NotFoundException('Campaign not found');
+    const chains = await this.attribution.chains(businessId);
+    const chain = chains.forCampaign(campaign.id);
+    const loc = locale === 'en' ? 'en' : 'ar';
+    const analysis = analyzeCampaignMetrics({
+      locale: loc,
+      name: campaign.name,
+      objective: campaign.objective,
+      status: campaign.status,
+      budget: campaign.budget,
+      conversations: chain.conversations,
+      leads: chain.leads,
+      orders: chain.orders,
+      revenueEgp: chain.revenueEgp,
+      costOfGoodsEgp: chain.costOfGoodsEgp,
+      shippingEgp: chain.shippingEgp,
+      returnShippingEgp: chain.returnShippingEgp,
+      spendEgp: null,
+    });
+    return { analysis, mode: 'rules' as const };
   }
 
   async create(userId: string, dto: CreateCampaignDto) {

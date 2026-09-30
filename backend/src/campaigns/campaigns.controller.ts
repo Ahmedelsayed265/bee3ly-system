@@ -31,6 +31,15 @@ export class CampaignsController {
     return this.campaigns.list(user.id, query.page ?? 1, query.limit ?? 10);
   }
 
+  @Get(':id/analysis')
+  getAnalysis(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query('locale') locale?: string,
+  ) {
+    return this.campaigns.getAnalysis(user.id, id, locale);
+  }
+
   @Get(':id')
   getOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.campaigns.getOne(user.id, id);

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { Campaign } from '@/features/business/api';
+import { CampaignAiAnalysis } from '@/features/campaigns/components/campaign-ai-analysis';
 import { CampaignScorecard } from '@/features/campaigns/components/campaign-scorecard';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
@@ -59,6 +60,12 @@ export function CampaignDetail({
         </div>
 
         <CampaignScorecard campaign={campaign} />
+
+        <CampaignAiAnalysis
+          campaignId={campaign.id}
+          isBusy={isBusy}
+          onSuggestedStatus={(status) => onStatus(status)}
+        />
 
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm" className="h-9">

@@ -497,7 +497,7 @@ export function HomeDashboard() {
   const chatsLoading = convQuery.isLoading && !convQuery.data;
 
   return (
-    <div className="home-dashboard w-full max-w-full min-w-0 space-y-6 overflow-x-hidden">
+    <div className="home-dashboard w-full max-w-full min-w-0 space-y-6">
       {/* Hero */}
       <section className="home-fade border-border/50 from-surface via-surface to-lavender/80 relative overflow-hidden rounded-[2rem] border bg-gradient-to-br px-5 py-6 shadow-[0_16px_50px_-28px_rgba(99,102,241,0.45)] sm:px-8">
         <div className="bg-brand/10 pointer-events-none absolute -end-16 -top-20 h-56 w-56 rounded-full blur-3xl" />

@@ -704,6 +704,40 @@ export async function fetchCampaign(id: string) {
   return data.campaign;
 }
 
+export type CampaignAnalysisVerdict =
+  'SCALE' | 'HOLD' | 'REDUCE_SPEND' | 'PAUSE' | 'STOP' | 'NEEDS_DATA';
+
+export type CampaignAnalysis = {
+  verdict: CampaignAnalysisVerdict;
+  confidence: 'low' | 'medium' | 'high';
+  summary: string;
+  bullets: string[];
+  actions: Array<{
+    id: string;
+    suggestedStatus?: 'PAUSED' | 'ARCHIVED';
+  }>;
+  risks: string[];
+  figures: {
+    adCostEgp: number;
+    revenueEgp: number;
+    roas: number | null;
+    profitEgp: number | null;
+    conversations: number;
+    leads: number;
+    orders: number;
+    hasRealSpend: boolean;
+    costsComplete: boolean;
+  };
+};
+
+export async function fetchCampaignAnalysis(id: string, locale: string) {
+  const { data } = await api.get<{
+    analysis: CampaignAnalysis;
+    mode: 'rules';
+  }>(`/campaigns/${id}/analysis`, { params: { locale } });
+  return data;
+}
+
 export async function launchCampaign(
   id: string,
   status: 'ASSISTED_LAUNCH' | 'SIMULATED' | 'PAUSED' | 'ARCHIVED',
