@@ -1,37 +1,46 @@
-<<<<<<< HEAD
+# Dependencies
 node_modules/
+docs/node_modules/
+
+# Build output
 dist/
-.env
-.vercel
-.local-pg/
-*.log
-.DS_Store
-coverage/
 frontend/dist/
 backend/dist/
-backend/.local-pg/
-.cursor/
-docs/
-.env*
-=======
-# Python / Virtual Environment
+
+# Environment (keep *.example committed)
+.env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+
+# Python (ai-services)
 venv/
 .venv/
 env/
 ENV/
 __pycache__/
 *.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Environment variables & sensitive keys
-.env
-.env.local
+# Local Postgres / tooling
+.local-pg/
+backend/.local-pg/
 
-# IDE & Editor settings
+# Deploy & logs
+.vercel
+*.log
+coverage/
+
+# IDE & editor
+.cursor/
 .vscode/
 .idea/
 *.swp
 
-# OS generated files
+# OS
 .DS_Store
 Thumbs.db
->>>>>>> cd286e7 (Initial commit: Add AI Sales & Merchant Consultant Agent)
