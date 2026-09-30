@@ -15,10 +15,7 @@ export function PrefsControls({
 }: PrefsControlsProps) {
   return (
     <div className={cn('flex h-9 items-center gap-2.5', className)}>
-      <LanguageDropdown
-        compact={compactOnMobile}
-        iconButtonClass={iconButtonClass}
-      />
+      <LanguageDropdown compact={compactOnMobile} />
       <ThemeToggle className={iconButtonClass} />
     </div>
   );

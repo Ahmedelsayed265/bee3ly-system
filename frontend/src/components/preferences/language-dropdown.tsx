@@ -17,11 +17,9 @@ const localeOptions: { value: Locale; labelKey: 'langAr' | 'langEn' }[] = [
 export function LanguageDropdown({
   className,
   compact = false,
-  iconButtonClass,
 }: {
   className?: string;
   compact?: boolean;
-  iconButtonClass?: string;
 }) {
   const { locale, setLocale, t } = useLocale();
   const current =
@@ -35,22 +33,24 @@ export function LanguageDropdown({
           className={cn(
             'group border-border bg-page text-ink hover:bg-lavender focus-visible:ring-brand/40 data-[state=open]:border-brand/50 data-[state=open]:bg-lavender inline-flex h-9 shrink-0 touch-manipulation items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
             compact &&
-              'max-sm:h-9 max-sm:w-9 max-sm:justify-center max-sm:px-0',
-            compact && iconButtonClass,
+              'max-md:h-9 max-md:w-9 max-md:justify-center max-md:gap-0 max-md:px-0',
             className,
           )}
           aria-label={compact ? t(current.labelKey) : undefined}
         >
           {compact ? (
-            <Globe className="text-muted h-4 w-4 sm:hidden" aria-hidden />
+            <Globe
+              className="text-muted h-4 w-4 shrink-0 max-md:block md:hidden"
+              aria-hidden
+            />
           ) : null}
-          <span className={cn(compact && 'max-sm:sr-only')}>
+          <span className={cn(compact && 'max-md:sr-only')}>
             {t(current.labelKey)}
           </span>
           <ChevronDown
             className={cn(
               'text-muted h-3.5 w-3.5 transition group-data-[state=open]:rotate-180',
-              compact && 'max-sm:hidden',
+              compact && 'max-md:hidden',
             )}
           />
         </button>
