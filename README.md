@@ -92,7 +92,7 @@ cd backend && npm run db:local
 
 **جاهز:** Auth، Onboarding، Products (variants)، Inbox + realtime + simulate، Orders، Notifications، AI agent settings، Settings (channels/shipping/knowledge)، Campaigns (create + assisted/simulated launch)، Dashboard metrics من API، Privacy/Terms.
 
-**جزئي:** Meta/WhatsApp production، Analytics **صفحة** `/app/analytics` (preview data)، Billing (بدون دفع)، Leads (عرض)، AI merchant chat (API فقط).
+**جزئي:** Meta/WhatsApp production، Billing (بدون دفع)، Leads (عرض)، AI merchant chat (API فقط). تحليلات الحملات داخل **الحملات** + `/analytics/overview` للوحة الرئيسية.
 
 **مخطط:** TikTok، Stripe/limits، Team invites — [roadmap.md](./docs/roadmap.md).
 

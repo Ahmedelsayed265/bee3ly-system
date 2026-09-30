@@ -3,7 +3,6 @@ import { useAuth } from '@/features/auth/auth-context';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';
 import {
-  BarChart3,
   Brain,
   CreditCard,
   Home,
@@ -26,11 +25,6 @@ const navItems = [
     to: paths.campaigns,
     labelKey: 'navCampaigns' as const,
     icon: Rocket,
-  },
-  {
-    to: paths.analytics,
-    labelKey: 'navAnalytics' as const,
-    icon: BarChart3,
   },
   { to: paths.leads, labelKey: 'navLeads' as const, icon: Users },
   { to: paths.orders, labelKey: 'navOrders' as const, icon: ShoppingBag },

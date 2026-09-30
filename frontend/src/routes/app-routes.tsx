@@ -1,6 +1,5 @@
 import type { RouteObject } from 'react-router-dom';
 import { AiAgentPage } from '@/pages/ai-agent-page';
-import { AnalyticsPage } from '@/pages/analytics-page';
 import { BillingPage } from '@/pages/billing-page';
 import { CampaignsPage } from '@/pages/campaigns-page';
 import { DashboardPage } from '@/pages/dashboard-page';
@@ -23,5 +22,4 @@ export const appRoutes: RouteObject[] = [
   { path: 'billing', element: <BillingPage /> },
   { path: 'settings', element: <SettingsPage /> },
   { path: 'campaigns', element: <CampaignsPage /> },
-  { path: 'analytics', element: <AnalyticsPage /> },
 ];
