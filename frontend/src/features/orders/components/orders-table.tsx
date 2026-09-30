@@ -124,7 +124,7 @@ export function OrdersTable({
           </div>
         </div>
 
-        <div className="border-border border-t">
+        <div className="border-border overflow-x-auto border-t">
           <table className="w-full min-w-180 border-collapse text-sm">
             <thead>
               <tr className="border-border bg-canvas/60 text-muted border-b text-xs font-semibold tracking-wide uppercase">

@@ -22,6 +22,7 @@ type ConversationListProps = {
   onSelect: (id: string) => void;
   isLoading?: boolean;
   emptyLabel?: MessageKey;
+  className?: string;
 };
 
 function labelOrRaw(
@@ -42,6 +43,7 @@ export function ConversationList({
   onSelect,
   isLoading = false,
   emptyLabel,
+  className,
 }: ConversationListProps) {
   const { t } = useLocale();
 
@@ -50,8 +52,13 @@ export function ConversationList({
   }
 
   return (
-    <div className="border-border bg-surface flex min-h-0 flex-col overflow-hidden rounded-2xl border">
-      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+    <div
+      className={cn(
+        'border-border bg-surface flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border',
+        className,
+      )}
+    >
+      <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
         {conversations.map((c) => (
           <button
             key={c.id}

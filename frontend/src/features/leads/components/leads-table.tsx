@@ -196,7 +196,7 @@ export function LeadsTable({
             {t('leadNoMatches')}
           </p>
         ) : (
-          <div className="border-border overflow-x-auto border-t">
+          <div className="border-border table-x-scroll overflow-x-auto border-t">
             <table className="w-full min-w-[720px] border-collapse text-sm">
               <thead>
                 <tr className="text-muted text-xs font-semibold">

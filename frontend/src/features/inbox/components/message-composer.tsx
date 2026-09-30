@@ -1,4 +1,4 @@
-import { LayoutTemplate, Smile, X } from 'lucide-react';
+import { LayoutTemplate, Send, Smile, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
@@ -112,7 +112,10 @@ export function MessageComposer({
   };
 
   return (
-    <div ref={rootRef} className="border-border relative shrink-0 border-t p-3">
+    <div
+      ref={rootRef}
+      className="border-border bg-surface relative shrink-0 border-t px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4"
+    >
       {panel && panelStyle
         ? createPortal(
             <div
@@ -203,7 +206,7 @@ export function MessageComposer({
           send(draft, attached);
         }}
       >
-        <div className="border-border bg-page focus-within:border-brand/40 flex min-h-11 flex-1 items-end gap-1 rounded-xl border px-2 py-1.5">
+        <div className="border-border bg-page focus-within:border-brand/40 flex min-h-11 w-full flex-1 items-end gap-1 rounded-xl border px-2 py-1.5">
           <button
             ref={emojiBtnRef}
             type="button"
@@ -255,11 +258,19 @@ export function MessageComposer({
             }}
             className="text-ink placeholder:text-muted max-h-32 min-h-8 flex-1 resize-none bg-transparent py-1 text-sm outline-none disabled:opacity-70"
           />
+          <Button
+            type="submit"
+            disabled={isPending || !draft.trim() || !isHumanMode}
+            className="mb-0.5 h-9 w-9 shrink-0 p-0 lg:hidden"
+            aria-label={t('send')}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
         <Button
           type="submit"
           disabled={isPending || !draft.trim() || !isHumanMode}
-          className="h-11"
+          className="hidden h-11 shrink-0 lg:inline-flex lg:min-w-24"
         >
           {t('send')}
         </Button>

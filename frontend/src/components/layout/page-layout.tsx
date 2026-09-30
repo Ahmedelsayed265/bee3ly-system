@@ -18,7 +18,9 @@ export function PageLayout({
   className,
 }: PageLayoutProps) {
   return (
-    <div className={cn('flex w-full flex-col gap-5', className)}>
+    <div
+      className={cn('flex w-full max-w-full min-w-0 flex-col gap-5', className)}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-ink text-2xl font-bold">{title}</h1>

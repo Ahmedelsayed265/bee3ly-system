@@ -1,3 +1,4 @@
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -28,10 +29,14 @@ export function useInbox() {
   const conversations = (listQuery.data ?? []).filter((item) =>
     campaignId ? item.campaign?.id === campaignId : true,
   );
-  const activeId =
+  const isWideInbox = useMediaQuery('(min-width: 1024px)');
+  const resolvedSelectedId =
     selectedId && conversations.some((item) => item.id === selectedId)
       ? selectedId
-      : (conversations[0]?.id ?? null);
+      : null;
+  const activeId = isWideInbox
+    ? (resolvedSelectedId ?? conversations[0]?.id ?? null)
+    : resolvedSelectedId;
 
   const detailQuery = useQuery({
     queryKey: ['conversation', activeId],

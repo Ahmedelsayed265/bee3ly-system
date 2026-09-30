@@ -161,7 +161,10 @@ function SalesChart({
         </div>
       </div>
 
-      <div ref={plotRef} className="relative -mx-5 mt-1 h-[13.5rem] sm:h-56">
+      <div
+        ref={plotRef}
+        className="relative mt-1 h-[13.5rem] w-full max-w-full sm:h-56"
+      >
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="absolute inset-0 h-full w-full select-none"
@@ -494,7 +497,7 @@ export function HomeDashboard() {
   const chatsLoading = convQuery.isLoading && !convQuery.data;
 
   return (
-    <div className="home-dashboard w-full space-y-6">
+    <div className="home-dashboard w-full max-w-full min-w-0 space-y-6 overflow-x-hidden">
       {/* Hero */}
       <section className="home-fade border-border/50 from-surface via-surface to-lavender/80 relative overflow-hidden rounded-[2rem] border bg-gradient-to-br px-5 py-6 shadow-[0_16px_50px_-28px_rgba(99,102,241,0.45)] sm:px-8">
         <div className="bg-brand/10 pointer-events-none absolute -end-16 -top-20 h-56 w-56 rounded-full blur-3xl" />
@@ -525,13 +528,13 @@ export function HomeDashboard() {
       </section>
 
       {/* KPIs — keep real cards; values show — while overview loads (like orders table chrome) */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
         {cards.map((card, i) => {
           const Icon = card.icon;
           return (
             <div
               key={card.label}
-              className="home-fade group border-border/60 bg-surface rounded-[1.5rem] border p-4 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.35)] transition-transform duration-300 hover:-translate-y-0.5"
+              className="home-fade group border-border/60 bg-surface min-w-0 rounded-[1.5rem] border p-3 shadow-[0_10px_30px_-22px_rgba(15,23,42,0.35)] transition-transform duration-300 hover:-translate-y-0.5 sm:p-4"
               style={{ animationDelay: `${i * 60}ms` }}
             >
               <div className="flex items-start justify-between gap-3">
@@ -636,8 +639,8 @@ export function HomeDashboard() {
       </div>
 
       {/* Lists */}
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-        <section className="border-border/60 bg-surface rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <section className="border-border/60 bg-surface min-w-0 rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
           <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-ink text-sm font-semibold">
               {t('adPerformance')}
@@ -684,7 +687,7 @@ export function HomeDashboard() {
           </div>
         </section>
 
-        <section className="border-border/60 bg-surface rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
+        <section className="border-border/60 bg-surface min-w-0 rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
           <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-ink text-sm font-semibold">
               {t('latestOrders')}
@@ -733,7 +736,7 @@ export function HomeDashboard() {
           </div>
         </section>
 
-        <section className="border-border/60 bg-surface rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
+        <section className="border-border/60 bg-surface min-w-0 rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
           <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-ink text-sm font-semibold">
               {t('recentChats')}
@@ -750,7 +753,7 @@ export function HomeDashboard() {
                 <Link
                   key={c.id}
                   to={paths.inbox}
-                  className="bg-page/80 hover:bg-lavender/80 flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors"
+                  className="bg-page/80 hover:bg-lavender/80 flex w-full max-w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl px-3 py-2.5 transition-colors"
                 >
                   <span className="from-brand to-alert inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white">
                     {(c.customer.name ?? '?').slice(0, 2)}
@@ -795,16 +798,16 @@ export function HomeDashboard() {
       </div>
 
       {/* Quick actions */}
-      <section className="border-border/60 bg-surface rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
+      <section className="border-border/60 bg-surface min-w-0 rounded-[1.75rem] border p-5 shadow-[0_10px_30px_-22px_rgba(44,44,42,0.35)]">
         <h3 className="text-ink mb-4 text-sm font-semibold">
           {t('quickActions')}
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid min-w-0 grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
           {quickActions.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
-              className="border-border bg-page/50 hover:border-brand/40 hover:bg-lavender/60 flex flex-col items-center gap-2 rounded-2xl border border-dashed px-3 py-5 text-center transition-all hover:-translate-y-0.5"
+              className="border-border bg-page/50 hover:border-brand/40 hover:bg-lavender/60 flex w-full min-w-0 flex-col items-center gap-2 rounded-2xl border border-dashed px-3 py-5 text-center transition-all hover:-translate-y-0.5"
             >
               <span className="bg-brand/10 text-brand inline-flex h-11 w-11 items-center justify-center rounded-2xl">
                 <Icon className="h-5 w-5" />

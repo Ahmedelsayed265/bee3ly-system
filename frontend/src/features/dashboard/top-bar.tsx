@@ -6,12 +6,18 @@ import {
 } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Search } from 'lucide-react';
+import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
+import { Bell, Menu, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { paths } from '@/routes/paths';
 
-export function DashboardTopBar() {
+type DashboardTopBarProps = {
+  onMenuOpen?: () => void;
+};
+
+export function DashboardTopBar({ onMenuOpen }: DashboardTopBarProps) {
   const { t } = useLocale();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -65,8 +71,25 @@ export function DashboardTopBar() {
   const unread = notifQuery.data?.unreadCount ?? 0;
 
   return (
-    <header className="border-border bg-surface relative flex h-16 shrink-0 items-center gap-4 border-b px-5">
-      <label className="relative me-auto hidden w-full max-w-xl sm:block">
+    <header className="border-border bg-surface relative flex h-16 min-w-0 shrink-0 items-center gap-1.5 overflow-hidden border-b px-3 sm:gap-4 sm:px-5">
+      <div className="flex min-w-0 items-center gap-1.5 md:gap-0">
+        <button
+          type="button"
+          className="border-border bg-page text-ink hover:bg-lavender inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border md:hidden"
+          aria-label={t('openMenu')}
+          onClick={onMenuOpen}
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <Link
+          to={paths.app}
+          className="shrink-0 md:hidden"
+          aria-label={t('navHome')}
+        >
+          <Bee3lyLogo markClassName="h-8 w-8" withWordmark={false} />
+        </Link>
+      </div>
+      <label className="relative hidden min-w-0 flex-1 sm:block sm:max-w-xl">
         <Search className="text-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           type="search"
@@ -75,8 +98,8 @@ export function DashboardTopBar() {
         />
       </label>
 
-      <div className="ms-auto flex items-center gap-2 sm:ms-0">
-        <PrefsControls className="hidden lg:flex" />
+      <div className="ms-auto flex min-w-0 shrink-0 items-center gap-1 sm:gap-2">
+        <PrefsControls className="max-sm:gap-1" compactOnMobile />
 
         <div className="relative" ref={panelRef}>
           <button
@@ -95,7 +118,7 @@ export function DashboardTopBar() {
           </button>
 
           {open ? (
-            <div className="border-border bg-surface absolute end-0 z-50 mt-2 w-80 rounded-2xl border p-2 shadow-lg">
+            <div className="border-border bg-surface absolute end-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border p-2 shadow-lg">
               <div className="mb-2 flex items-center justify-between px-2">
                 <p className="text-sm font-semibold">{t('notifications')}</p>
                 <button

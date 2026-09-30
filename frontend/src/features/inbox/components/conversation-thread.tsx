@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { Bot, ChevronLeft, Trash2, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ChannelMark } from '@/components/brand/channel-icons';
 import { MessageBubble } from '@/features/inbox/components/message-bubble';
@@ -12,6 +13,7 @@ import {
 import { latestPaymentReceiptMessageId } from '@/features/inbox/payment-receipt';
 import { InboxThreadSkeleton } from '@/components/ui/skeleton-blocks';
 import type { QuickReply, ReplyContext } from '@/features/inbox/reply-kit';
+import { cn } from '@/lib/utils';
 
 type Message = {
   id: string;
@@ -48,6 +50,8 @@ type ConversationThreadProps = {
   onSend: (content: string, quickReplies?: QuickReply[]) => void;
   onSetMode: (mode: 'AI' | 'HUMAN') => void;
   onDeleteRequest: () => void;
+  onBack?: () => void;
+  className?: string;
 };
 
 function channelLabel(t: (key: MessageKey) => string, channel: string) {
@@ -74,6 +78,8 @@ export function ConversationThread({
   onSend,
   onSetMode,
   onDeleteRequest,
+  onBack,
+  className,
 }: ConversationThreadProps) {
   const { t } = useLocale();
   const receiptMessageId = paymentReviewPending
@@ -85,50 +91,125 @@ export function ConversationThread({
   }
 
   return (
-    <div className="border-border bg-surface flex min-h-0 flex-col overflow-hidden rounded-2xl border">
+    <div
+      className={cn(
+        'border-border bg-surface flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border',
+        className,
+      )}
+    >
       {conversation ? (
-        <div className="border-border flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <div>
-            <p className="text-ink flex items-center gap-1.5 text-sm font-semibold">
-              <ChannelMark channel={conversation.channel} />
-              {conversation.customer.name ?? t('unknownCustomer')}
-            </p>
-            <p className="text-muted text-[11px]">
-              {channelLabel(t, conversation.channel)}
-              {conversation.campaign ? ` · ${conversation.campaign.name}` : ''}
-              {conversation.handoffReason
-                ? ` · ${conversation.handoffReason}`
-                : ''}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {isHumanMode ? (
+        <>
+          <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2 lg:hidden">
+            {onBack ? (
               <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 shrink-0 p-0"
+                aria-label={t('back')}
+                onClick={onBack}
+              >
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+              </Button>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <p className="text-ink flex items-center gap-1.5 truncate text-sm font-semibold">
+                <ChannelMark
+                  channel={conversation.channel}
+                  className="shrink-0"
+                />
+                <span className="truncate">
+                  {conversation.customer.name ?? t('unknownCustomer')}
+                </span>
+              </p>
+              <p className="text-muted truncate text-[10px]">
+                {channelLabel(t, conversation.channel)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {isHumanMode ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 w-9 p-0"
+                  aria-label={t('returnToAi')}
+                  onClick={() => onSetMode('AI')}
+                  disabled={isModePending}
+                >
+                  <Bot className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 w-9 p-0"
+                  aria-label={t('takeOver')}
+                  onClick={() => onSetMode('HUMAN')}
+                  disabled={isModePending}
+                >
+                  <UserCheck className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => onSetMode('AI')}
-                disabled={isModePending}
+                className="text-muted hover:text-danger hover:border-danger/40 h-9 w-9 p-0"
+                aria-label={t('deleteConversation')}
+                onClick={onDeleteRequest}
               >
-                {t('returnToAi')}
+                <Trash2 className="h-4 w-4" />
               </Button>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onSetMode('HUMAN')}
-                disabled={isModePending}
-              >
-                {t('takeOver')}
-              </Button>
-            )}
-            <Button size="sm" variant="outline" onClick={onDeleteRequest}>
-              {t('deleteConversation')}
-            </Button>
+            </div>
           </div>
-        </div>
+
+          <div className="border-border hidden shrink-0 flex-wrap items-center justify-between gap-2 border-b px-4 py-3 lg:flex">
+            <div className="min-w-0">
+              <p className="text-ink flex items-center gap-1.5 text-sm font-semibold">
+                <ChannelMark channel={conversation.channel} />
+                {conversation.customer.name ?? t('unknownCustomer')}
+              </p>
+              <p className="text-muted text-[11px]">
+                {channelLabel(t, conversation.channel)}
+                {conversation.campaign
+                  ? ` · ${conversation.campaign.name}`
+                  : ''}
+                {conversation.handoffReason
+                  ? ` · ${conversation.handoffReason}`
+                  : ''}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {isHumanMode ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onSetMode('AI')}
+                  disabled={isModePending}
+                >
+                  {t('returnToAi')}
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onSetMode('HUMAN')}
+                  disabled={isModePending}
+                >
+                  {t('takeOver')}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={onDeleteRequest}>
+                {t('deleteConversation')}
+              </Button>
+            </div>
+          </div>
+        </>
       ) : null}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-4 pb-6 sm:px-4 sm:pb-8">
         {messages.map((m) => (
           <MessageBubble
             key={m.id}

@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Globe } from 'lucide-react';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';
 import {
@@ -14,7 +14,13 @@ const localeOptions: { value: Locale; labelKey: 'langAr' | 'langEn' }[] = [
   { value: 'en', labelKey: 'langEn' },
 ];
 
-export function LanguageDropdown({ className }: { className?: string }) {
+export function LanguageDropdown({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  compact?: boolean;
+}) {
   const { locale, setLocale, t } = useLocale();
   const current =
     localeOptions.find((item) => item.value === locale) ?? localeOptions[0];
@@ -26,11 +32,24 @@ export function LanguageDropdown({ className }: { className?: string }) {
           type="button"
           className={cn(
             'group border-border bg-surface text-ink hover:bg-lavender focus-visible:ring-brand/40 data-[state=open]:border-brand/50 data-[state=open]:bg-lavender inline-flex h-9 items-center gap-1.5 rounded-[14px] border px-3 text-[13px] font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
+            compact &&
+              'max-sm:h-9 max-sm:w-9 max-sm:justify-center max-sm:px-0',
             className,
           )}
+          aria-label={compact ? t(current.labelKey) : undefined}
         >
-          <span>{t(current.labelKey)}</span>
-          <ChevronDown className="text-muted h-3.5 w-3.5 transition group-data-[state=open]:rotate-180" />
+          {compact ? (
+            <Globe className="text-muted h-4 w-4 sm:hidden" aria-hidden />
+          ) : null}
+          <span className={cn(compact && 'max-sm:sr-only')}>
+            {t(current.labelKey)}
+          </span>
+          <ChevronDown
+            className={cn(
+              'text-muted h-3.5 w-3.5 transition group-data-[state=open]:rotate-180',
+              compact && 'max-sm:hidden',
+            )}
+          />
         </button>
       </DropdownMenuTrigger>
 

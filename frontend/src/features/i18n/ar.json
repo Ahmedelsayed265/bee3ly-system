@@ -821,6 +821,8 @@
   "latestOrders": "أحدث الطلبات",
   "smartAssistant": "المساعد الذكي",
   "smartAssistantHint": "5 محادثات جديدة و3 استفسارات تحتاج ردًا.",
+  "openMenu": "فتح القائمة",
+  "closeMenu": "إغلاق القائمة",
   "openSmartAssistant": "فتح المساعد الذكي",
   "recentChats": "أحدث المحادثات",
   "aiSuggestion": "اقتراح الذكاء الاصطناعي",

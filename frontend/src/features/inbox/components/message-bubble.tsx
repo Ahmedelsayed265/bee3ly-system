@@ -38,7 +38,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        'flex max-w-[85%] flex-col gap-1.5',
+        'flex max-w-[min(100%,20rem)] flex-col gap-2 sm:max-w-[85%]',
         isCustomer ? 'ms-auto items-end' : 'items-start',
       )}
     >
@@ -70,7 +70,7 @@ export function MessageBubble({
       </div>
       <div
         className={cn(
-          'w-fit rounded-2xl px-3 py-2 text-sm',
+          'w-fit max-w-full rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed sm:px-4 sm:py-3',
           isCustomer
             ? 'bg-brand rounded-se-md text-white'
             : isHuman

@@ -821,6 +821,8 @@
   "latestOrders": "Latest orders",
   "smartAssistant": "Smart assistant",
   "smartAssistantHint": "5 new chats and 3 inquiries need a reply.",
+  "openMenu": "Open menu",
+  "closeMenu": "Close menu",
   "openSmartAssistant": "Open smart assistant",
   "recentChats": "Recent chats",
   "aiSuggestion": "AI suggestion",
