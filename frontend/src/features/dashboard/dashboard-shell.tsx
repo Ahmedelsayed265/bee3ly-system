@@ -8,7 +8,7 @@ export function DashboardShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   return (
-    <div className="bg-page text-ink flex h-svh overflow-hidden">
+    <div className="bg-page text-ink flex h-dvh overflow-hidden">
       <DashboardSidebar className="hidden md:flex" />
       <DashboardMobileNav
         open={mobileNavOpen}
