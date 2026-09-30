@@ -5,12 +5,12 @@ const LOCAL_SHIPPING_TYPES: ReadonlySet<BusinessType> = new Set([
   'CAFE',
 ]);
 
-export function businessAllowsLocalShipping(type: BusinessType | string): boolean {
+export function businessAllowsLocalShipping(type: string): boolean {
   return LOCAL_SHIPPING_TYPES.has(type as BusinessType);
 }
 
 export function effectiveShippingPricingMode(
-  type: BusinessType | string,
+  type: string,
   mode: string,
 ): 'GOVERNORATE' | 'LOCAL_AREA' {
   if (businessAllowsLocalShipping(type) && mode === 'LOCAL_AREA') {

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { SelectField } from '@/components/ui/select-field';
 import { draftCampaignCopy, fetchProducts } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
+import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
 
 type CampaignOfferStepProps = {
@@ -16,6 +17,10 @@ type CampaignOfferStepProps = {
   onProductChange: (value: string) => void;
   adCopy: string;
   onAdCopyChange: (value: string) => void;
+  onAiContent?: (content: {
+    valueProposition?: string;
+    audienceHint?: string;
+  }) => void;
   onNext: () => void;
 };
 
@@ -26,17 +31,29 @@ export function CampaignOfferStep({
   onProductChange,
   adCopy,
   onAdCopyChange,
+  onAiContent,
   onNext,
 }: CampaignOfferStepProps) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const productsQuery = useQuery({
     queryKey: ['products', 1, 50],
     queryFn: () => fetchProducts(1, 50),
   });
   const products = productsQuery.data?.products ?? [];
   const generateCopy = useMutation({
-    mutationFn: () => draftCampaignCopy({ name: offer.trim(), productId }),
-    onSuccess: (copy) => onAdCopyChange(copy),
+    mutationFn: () =>
+      draftCampaignCopy({
+        name: offer.trim(),
+        productId,
+        locale,
+      }),
+    onSuccess: (data) => {
+      onAdCopyChange(data.copy);
+      onAiContent?.({
+        valueProposition: data.content.valueProposition || undefined,
+        audienceHint: data.content.audienceHint || undefined,
+      });
+    },
   });
 
   return (
@@ -93,6 +110,12 @@ export function CampaignOfferStep({
             {t('campaignGenerateCopy')}
           </button>
         </div>
+        {generateCopy.isSuccess && generateCopy.data ? (
+          <p className="text-muted mb-2 text-[11px]">
+            {t('campaignAiBrainLabel')}{' '}
+            {t(`campaignAiMode_${generateCopy.data.mode}` as MessageKey)}
+          </p>
+        ) : null}
         <textarea
           id="campaign-ad-copy"
           value={adCopy}

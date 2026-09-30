@@ -28,6 +28,10 @@ type CampaignWizardProps = {
   onBudgetChange: (value: string) => void;
   valueProp: string;
   onValuePropChange: (value: string) => void;
+  onAiContentHints?: (hints: {
+    valueProposition?: string;
+    audienceHint?: string;
+  }) => void;
   created: Campaign | null;
   notice: string | null;
   isCreating: boolean;
@@ -54,6 +58,7 @@ export function CampaignWizard({
   onBudgetChange,
   valueProp,
   onValuePropChange,
+  onAiContentHints,
   created,
   notice,
   isCreating,
@@ -94,6 +99,12 @@ export function CampaignWizard({
           onProductChange={onProductChange}
           adCopy={adCopy}
           onAdCopyChange={onAdCopyChange}
+          onAiContent={(content) => {
+            if (content.valueProposition && !valueProp.trim()) {
+              onValuePropChange(content.valueProposition);
+            }
+            onAiContentHints?.(content);
+          }}
           onNext={() => onStepChange(1)}
         />
       ) : null}

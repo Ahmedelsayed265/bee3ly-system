@@ -45,6 +45,27 @@ export class DraftAdCopyDto {
 
   @IsUUID()
   productId!: string;
+
+  @IsOptional()
+  @IsEnum(CampaignObjective)
+  objective?: CampaignObjective;
+
+  @IsOptional()
+  @IsString()
+  audienceDescription?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(50)
+  budget?: number;
+
+  @IsOptional()
+  @IsString()
+  valueProposition?: string;
+
+  @IsOptional()
+  @IsString()
+  locale?: string;
 }
 
 export class LaunchCampaignDto {

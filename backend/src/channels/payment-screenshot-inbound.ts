@@ -19,7 +19,10 @@ export function inboundPrefersEnglish(
 ): boolean {
   if (textPrefersEnglish(message)) return true;
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].role === 'CUSTOMER' && textPrefersEnglish(history[i].content)) {
+    if (
+      history[i].role === 'CUSTOMER' &&
+      textPrefersEnglish(history[i].content)
+    ) {
       return true;
     }
   }

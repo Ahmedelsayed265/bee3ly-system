@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  PAYMENT_CONFIRMED_AI_SUMMARY,
-  PAYMENT_REVIEW_HANDOFF,
-} from '../payment-review.constants';
+import { PAYMENT_REVIEW_HANDOFF } from '../payment-review.constants';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   asAttributes,

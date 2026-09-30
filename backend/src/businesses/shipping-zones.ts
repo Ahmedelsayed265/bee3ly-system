@@ -239,9 +239,7 @@ export function formatShippingZonesForKnowledge(
       (zone) =>
         `${zone.name} (${zone.governorates.map((id) => GOVERNORATE_AR[id]).join('، ')}): ${zone.priceEgp} ج.م`,
     )
-    .join(
-      '\n',
-    );
+    .join('\n');
 }
 
 export function listDeliveryAreaHints(zones: ShippingZone[]): string[] {

@@ -77,7 +77,8 @@ export class WhatsappEmbeddedService implements OnModuleInit {
       accessToken = token.access_token;
     } catch (e) {
       const detail =
-        e instanceof Error && e.message !== 'META_EMBEDDED_TOKEN_EXCHANGE_FAILED'
+        e instanceof Error &&
+        e.message !== 'META_EMBEDDED_TOKEN_EXCHANGE_FAILED'
           ? e.message
           : 'Could not exchange WhatsApp signup code — complete Embedded Signup in the Meta popup, then retry';
       throw new BadRequestException(detail);
@@ -85,13 +86,11 @@ export class WhatsappEmbeddedService implements OnModuleInit {
 
     let phoneNumberId = input.phoneNumberId?.trim() || null;
     let wabaId = input.wabaId?.trim() || null;
-    let displayName =
-      input.displayPhoneNumber?.trim() || 'WhatsApp Business';
+    let displayName = input.displayPhoneNumber?.trim() || 'WhatsApp Business';
 
     if (!phoneNumberId || !wabaId) {
-      const discovered = await this.graph.discoverWhatsAppPhoneNumbers(
-        accessToken,
-      );
+      const discovered =
+        await this.graph.discoverWhatsAppPhoneNumbers(accessToken);
       const pick =
         (phoneNumberId
           ? discovered.find((p) => p.phoneNumberId === phoneNumberId)

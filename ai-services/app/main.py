@@ -7,12 +7,17 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.config import settings
 from app.schemas import (
+    CampaignAnalysisBrainRequest,
+    CampaignAnalysisBrainResponse,
+    CampaignContentBrainRequest,
+    CampaignContentBrainResponse,
     CustomerChatRequest,
     CustomerChatResponse,
     MerchantChatRequest,
     MerchantChatResponse,
 )
 from app.agent import execute_customer_chat
+from app.campaign_brains import execute_analysis_brain, execute_content_brain
 from app.merchant_agent import execute_merchant_chat
 
 app = FastAPI(title="AI Social Sales & Merchant Consultant API")
@@ -72,6 +77,48 @@ async def handle_customer_message(
             needsHuman=res.get("needsHuman"),
             handoffReason=res.get("handoffReason"),
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/campaigns/content", response_model=CampaignContentBrainResponse)
+async def handle_campaign_content(
+    payload: CampaignContentBrainRequest,
+    auth_data: dict = Depends(extract_auth_info),
+):
+    token = auth_data["token"]
+    try:
+        res = await asyncio.to_thread(
+            execute_content_brain,
+            payload.model_dump(),
+            token,
+        )
+        if not res.get("ok"):
+            raise HTTPException(status_code=502, detail=res.get("error") or "content_failed")
+        return CampaignContentBrainResponse(**res)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/campaigns/analysis", response_model=CampaignAnalysisBrainResponse)
+async def handle_campaign_analysis(
+    payload: CampaignAnalysisBrainRequest,
+    auth_data: dict = Depends(extract_auth_info),
+):
+    token = auth_data["token"]
+    try:
+        res = await asyncio.to_thread(
+            execute_analysis_brain,
+            payload.model_dump(),
+            token,
+        )
+        if not res.get("ok"):
+            raise HTTPException(status_code=502, detail=res.get("error") or "analysis_failed")
+        return CampaignAnalysisBrainResponse(**res)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -26,7 +26,9 @@ export function buildInboundText(
   const trimmed = text.trim();
   const hasImage = attachments.some((a) => a.type === 'image');
   if (hasImage) {
-    return trimmed ? `${trimmed}\n${IMAGE_ATTACHMENT_AI_HINT}` : IMAGE_ATTACHMENT_AI_HINT;
+    return trimmed
+      ? `${trimmed}\n${IMAGE_ATTACHMENT_AI_HINT}`
+      : IMAGE_ATTACHMENT_AI_HINT;
   }
   if (trimmed) return trimmed;
   if (attachments.length) return '[ATTACHMENT: file without text]';

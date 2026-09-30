@@ -219,9 +219,7 @@ export class ProductsService {
             dto.variants,
             dto.priceEgp ?? existing.priceEgp,
             dto.stockQuantity ?? existing.stockQuantity ?? 0,
-            dto.costEgp !== undefined
-              ? dto.costEgp
-              : existing.costEgp,
+            dto.costEgp !== undefined ? dto.costEgp : existing.costEgp,
           )
         : existingVariants;
 

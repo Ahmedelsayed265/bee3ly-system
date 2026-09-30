@@ -91,7 +91,11 @@ export class MetaGraphClient {
       );
       redirectOrdered.push(frontendUrl.replace(/\/$/, ''));
     }
-    redirectOrdered.push(undefined, '', 'https://www.facebook.com/connect/login_success.html');
+    redirectOrdered.push(
+      undefined,
+      '',
+      'https://www.facebook.com/connect/login_success.html',
+    );
 
     const apiVersions = ['v25.0', this.version];
     let lastBody = '';

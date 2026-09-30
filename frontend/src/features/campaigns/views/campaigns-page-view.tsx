@@ -85,6 +85,11 @@ export function CampaignsPageView() {
             onBudgetChange={campaigns.setBudget}
             valueProp={campaigns.valueProp}
             onValuePropChange={campaigns.setValueProp}
+            onAiContentHints={({ audienceHint }) => {
+              if (audienceHint && !campaigns.audience.trim()) {
+                campaigns.setAudience(audienceHint.slice(0, 120));
+              }
+            }}
             created={campaigns.created}
             notice={campaigns.notice}
             isCreating={campaigns.isCreating}

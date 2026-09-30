@@ -220,8 +220,7 @@ export class InboundMessageService {
       };
     }
 
-    const shouldRunAi =
-      conversation.mode !== 'HUMAN' && !paymentReviewPending;
+    const shouldRunAi = conversation.mode !== 'HUMAN' && !paymentReviewPending;
 
     if (shouldRunAi) {
       // Issue a short-lived signed JWT so the AI Service can securely
@@ -353,10 +352,7 @@ export class InboundMessageService {
       data: { lastMessageAt: new Date() },
     });
 
-    if (
-      input.account.status === SocialConnectionStatus.CONNECTED &&
-      reply
-    ) {
+    if (input.account.status === SocialConnectionStatus.CONNECTED && reply) {
       await this.outbound.sendText(
         input.account.id,
         input.externalSenderId,

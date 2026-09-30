@@ -57,9 +57,7 @@ export class BusinessesService {
     const effectiveType = data.type ?? current.type;
     const allowsLocal = businessAllowsLocalShipping(effectiveType);
     const requestedMode = shippingPricingMode ?? current.shippingPricingMode;
-    const effectivePricingMode = allowsLocal
-      ? requestedMode
-      : 'GOVERNORATE';
+    const effectivePricingMode = allowsLocal ? requestedMode : 'GOVERNORATE';
     const stripWorkingHours = !businessUsesPhysicalHours(effectiveType);
 
     const business = await this.prisma.business.update({

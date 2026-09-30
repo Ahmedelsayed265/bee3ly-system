@@ -672,15 +672,34 @@ export async function fetchCampaigns(page = 1, limit = 10) {
   return data;
 }
 
+export type CampaignContentPack = {
+  adCopy: string;
+  adCopyVariations: string[];
+  headline: string;
+  valueProposition: string;
+  cta: string;
+  creativeBrief: string;
+  audienceHint: string;
+};
+
+export type CampaignBrainMode = 'gemini' | 'openai' | 'rules';
+
 export async function draftCampaignCopy(input: {
   name: string;
   productId: string;
+  objective?: string;
+  audienceDescription?: string;
+  budget?: number;
+  valueProposition?: string;
+  locale?: string;
 }) {
-  const { data } = await api.post<{ copy: string }>(
-    '/campaigns/ad-copy',
-    input,
-  );
-  return data.copy;
+  const { data } = await api.post<{
+    copy: string;
+    brain: 'content_creator';
+    mode: CampaignBrainMode;
+    content: CampaignContentPack;
+  }>('/campaigns/ad-copy', input);
+  return data;
 }
 
 export async function createCampaign(input: {
@@ -733,7 +752,8 @@ export type CampaignAnalysis = {
 export async function fetchCampaignAnalysis(id: string, locale: string) {
   const { data } = await api.get<{
     analysis: CampaignAnalysis;
-    mode: 'rules';
+    mode: CampaignBrainMode;
+    brain: 'analysis_decisions';
   }>(`/campaigns/${id}/analysis`, { params: { locale } });
   return data;
 }

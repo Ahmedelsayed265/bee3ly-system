@@ -3,13 +3,19 @@ set -e
 
 cd "$(dirname -- "$0")/.." || exit 1
 
-echo "Running lint before push..."
+echo "Running frontend lint before push..."
 npm run lint
 
-echo "Running build before push..."
+echo "Running frontend build before push..."
 npm run build
 
-echo "Running Prettier check before push..."
+echo "Running frontend Prettier check before push..."
 npm run format:check
+
+echo "Running backend lint before push..."
+npm run lint:check --prefix ../backend
+
+echo "Running backend Prettier check before push..."
+npm run format:check --prefix ../backend
 
 echo "All checks passed. Pushing..."

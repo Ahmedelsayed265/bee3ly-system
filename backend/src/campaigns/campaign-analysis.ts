@@ -1,12 +1,7 @@
 import type { CampaignObjective, CampaignStatus } from '@prisma/client';
 
 export type CampaignAnalysisVerdict =
-  | 'SCALE'
-  | 'HOLD'
-  | 'REDUCE_SPEND'
-  | 'PAUSE'
-  | 'STOP'
-  | 'NEEDS_DATA';
+  'SCALE' | 'HOLD' | 'REDUCE_SPEND' | 'PAUSE' | 'STOP' | 'NEEDS_DATA';
 
 export type CampaignAnalysisActionId =
   | 'increase_budget'
@@ -59,11 +54,7 @@ type AnalysisInput = {
   spendEgp: number | null;
 };
 
-const RUNNING: CampaignStatus[] = [
-  'ACTIVE',
-  'ASSISTED_LAUNCH',
-  'SIMULATED',
-];
+const RUNNING: CampaignStatus[] = ['ACTIVE', 'ASSISTED_LAUNCH', 'SIMULATED'];
 
 const DESIGN_CPM = 50;
 const DESIGN_CTR = 0.02;
@@ -188,7 +179,12 @@ export function analyzeCampaignMetrics(
             ? ''
             : `إجمالي إيراد مرتبط: ${input.revenueEgp} ج.م · طلبات: ${input.orders}`,
           `Attributed revenue: ${input.revenueEgp} EGP · orders: ${input.orders}`,
-        ).trim() || t(input.locale, 'راجع الأرقام قبل إعادة التشغيل.', 'Review metrics before resuming.'),
+        ).trim() ||
+          t(
+            input.locale,
+            'راجع الأرقام قبل إعادة التشغيل.',
+            'Review metrics before resuming.',
+          ),
       ].filter(Boolean),
       actions: [{ id: 'keep_running' }],
       risks,
@@ -215,7 +211,10 @@ export function analyzeCampaignMetrics(
           'If enough time passed with no results, trim budget or pause and test new copy or audience.',
         ),
       ],
-      actions: [{ id: 'wait_for_data' }, { id: 'pause_campaign', suggestedStatus: 'PAUSED' }],
+      actions: [
+        { id: 'wait_for_data' },
+        { id: 'pause_campaign', suggestedStatus: 'PAUSED' },
+      ],
       risks,
       figures,
     };
@@ -308,7 +307,13 @@ export function analyzeCampaignMetrics(
     });
   }
 
-  if (running && input.orders >= 1 && roasValue != null && roasValue >= 1 && roasValue < 2) {
+  if (
+    running &&
+    input.orders >= 1 &&
+    roasValue != null &&
+    roasValue >= 1 &&
+    roasValue < 2
+  ) {
     return buildVerdict(input, figures, risks, {
       verdict: 'HOLD',
       confidence: 'medium',

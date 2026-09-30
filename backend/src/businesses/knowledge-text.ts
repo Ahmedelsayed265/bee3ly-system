@@ -91,9 +91,7 @@ function formatKnowledge(data: Record<string, unknown>) {
         if (typeof method !== 'string') return '';
         const label = PAYMENT_LABEL[method];
         if (!label) return '';
-        const recv = isRecord(receivers)
-          ? asString(receivers[method])
-          : '';
+        const recv = isRecord(receivers) ? asString(receivers[method]) : '';
         return recv ? `${label}: ${recv}` : label;
       })
       .filter(Boolean)

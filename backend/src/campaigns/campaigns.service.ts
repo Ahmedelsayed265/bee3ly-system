@@ -15,6 +15,7 @@ import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { analyzeCampaignMetrics } from './campaign-analysis';
+import { CampaignAiBrainsService } from './campaign-ai-brains.service';
 import { CreateCampaignDto, DraftAdCopyDto } from './dto/campaign.dto';
 
 @Injectable()
@@ -27,6 +28,7 @@ export class CampaignsService {
     private readonly notifications: NotificationsService,
     private readonly attribution: AttributionService,
     private readonly config: ConfigService,
+    private readonly campaignBrains: CampaignAiBrainsService,
   ) {}
 
   async list(userId: string, page = 1, limit = 10) {
@@ -87,7 +89,38 @@ export class CampaignsService {
       returnShippingEgp: chain.returnShippingEgp,
       spendEgp: null,
     });
-    return { analysis, mode: 'rules' as const };
+
+    const enriched = await this.campaignBrains.enrichAnalysis(businessId, {
+      locale: loc,
+      campaign: {
+        id: campaign.id,
+        name: campaign.name,
+        objective: campaign.objective,
+        status: campaign.status,
+        budget: campaign.budget,
+        offer: campaign.offer,
+      },
+      rules: analysis,
+    });
+
+    if (enriched) {
+      return {
+        analysis: {
+          ...analysis,
+          summary: enriched.summary,
+          bullets:
+            enriched.bullets.length > 0 ? enriched.bullets : analysis.bullets,
+        },
+        mode: enriched.mode,
+        brain: 'analysis_decisions' as const,
+      };
+    }
+
+    return {
+      analysis,
+      mode: 'rules' as const,
+      brain: 'analysis_decisions' as const,
+    };
   }
 
   async create(userId: string, dto: CreateCampaignDto) {
@@ -225,57 +258,53 @@ export class CampaignsService {
       where: { id: dto.productId, businessId },
     });
     if (!product) throw new NotFoundException('Product not found');
-    const copy = await this.writeAdCopy(dto.name.trim(), product);
-    return { copy };
-  }
 
-  private async writeAdCopy(
-    campaignName: string,
-    product: { name: string; description: string | null; priceEgp: number },
-  ) {
-    const fallback = this.fallbackAdCopy(campaignName, product);
-    const apiKey = this.config.get<string>('OPENAI_API_KEY')?.trim();
-    if (!apiKey) return fallback;
-
-    const model =
-      this.config.get<string>('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
-    const description = product.description?.trim().slice(0, 400) ?? '';
-    try {
-      const response = await fetch(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            temperature: 0.6,
-            messages: [
-              {
-                role: 'system',
-                content:
-                  'اكتب نص إعلان قصير بالعامية المصرية. من 3 إلى 5 سطور. استخدم اسم الحملة والمنتج والسعر والوصف فقط. متخترعش خصم أو مواصفات مش مكتوبة. من غير هاشتاجات.',
-              },
-              {
-                role: 'user',
-                content: `اسم الحملة: ${campaignName}\nالمنتج: ${product.name}\nالسعر: ${product.priceEgp} جنيه\nالوصف: ${description || 'غير متاح'}`,
-              },
-            ],
-          }),
+    const locale = dto.locale === 'en' ? 'en' : 'ar';
+    const content = await this.campaignBrains.generateContent(
+      businessId,
+      {
+        name: dto.name.trim(),
+        productId: dto.productId,
+        objective: dto.objective,
+        audienceDescription: dto.audienceDescription,
+        budget: dto.budget,
+        valueProposition: dto.valueProposition,
+        locale,
+        product: {
+          name: product.name,
+          description: product.description,
+          priceEgp: product.priceEgp,
         },
-      );
-      if (!response.ok) return fallback;
-      const body = (await response.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-      const text = body.choices?.[0]?.message?.content?.trim();
-      return text || fallback;
-    } catch (error) {
-      this.logger.warn(`Ad copy generation failed: ${error}`);
-      return fallback;
-    }
+      },
+      () => {
+        const adCopy = this.fallbackAdCopy(dto.name.trim(), product);
+        return {
+          adCopy,
+          adCopyVariations: [],
+          headline: dto.name.trim(),
+          valueProposition: dto.valueProposition?.trim() ?? '',
+          cta: '',
+          creativeBrief: '',
+          audienceHint: '',
+          mode: 'rules',
+        };
+      },
+    );
+
+    return {
+      copy: content.adCopy,
+      brain: 'content_creator' as const,
+      mode: content.mode,
+      content: {
+        adCopy: content.adCopy,
+        adCopyVariations: content.adCopyVariations,
+        headline: content.headline,
+        valueProposition: content.valueProposition,
+        cta: content.cta,
+        creativeBrief: content.creativeBrief,
+        audienceHint: content.audienceHint,
+      },
+    };
   }
 
   private fallbackAdCopy(

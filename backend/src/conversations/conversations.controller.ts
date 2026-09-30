@@ -116,10 +116,7 @@ export class ConversationsController {
   }
 
   @Post('conversations/:id/confirm-payment')
-  confirmPayment(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  confirmPayment(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.conversations.confirmPaymentTransfer(user.id, id);
   }
 

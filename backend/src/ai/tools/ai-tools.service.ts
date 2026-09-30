@@ -517,11 +517,7 @@ export class AiToolsService {
     const shippingLookup = this.shippingLookupFromArgs(args);
     let shippingEgp: number | null = 0;
     if (zones.length > 0) {
-      const resolved = resolveShippingQuote(
-        zones,
-        pricingMode,
-        shippingLookup,
-      );
+      const resolved = resolveShippingQuote(zones, pricingMode, shippingLookup);
       if (!resolved.ok) {
         throw new BadRequestException(resolved.message);
       }

@@ -129,9 +129,7 @@ export class MetaWebhookService {
       return;
     }
 
-    const attachments = parseMetaMessageAttachments(
-      message as Record<string, unknown>,
-    );
+    const attachments = parseMetaMessageAttachments(message);
     const inboundText = buildInboundText(message.text ?? '', attachments);
     if (!inboundText) {
       return;
