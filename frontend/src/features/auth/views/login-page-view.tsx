@@ -90,14 +90,22 @@ export function LoginPageView() {
 
         <div className="relative py-3 text-center">
           <div className="bg-border absolute inset-x-0 top-1/2 h-px" />
-          <span className="text-muted dark:bg-surface relative bg-white px-3 text-[12px]">
+          <span className="text-muted dark:bg-surface relative bg-white px-3 text-[11px] sm:text-[12px]">
             {t('orContinueWith')}
           </span>
         </div>
 
-        <div className="flex gap-2 space-y-2.5">
-          <SocialButton provider="google" label={t('continueGoogle')} />
-          <SocialButton provider="apple" label={t('continueApple')} />
+        <div className="grid grid-cols-2 gap-2">
+          <SocialButton
+            provider="google"
+            label={t('continueGoogle')}
+            compactLabel={t('continueGoogleCompact')}
+          />
+          <SocialButton
+            provider="apple"
+            label={t('continueApple')}
+            compactLabel={t('continueAppleCompact')}
+          />
         </div>
       </form>
     </AuthShell>

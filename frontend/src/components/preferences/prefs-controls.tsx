@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export function PrefsControls({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex items-center gap-2.5', className)}>
       <LanguageDropdown />
       <ThemeToggle />
     </div>

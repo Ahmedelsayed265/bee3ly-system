@@ -24,9 +24,11 @@ export function AuthShell({
         aria-hidden
       />
 
-      <div className="relative z-10 mb-4 flex shrink-0 items-center justify-end md:absolute">
-        <PrefsControls />
-      </div>
+      <header className="bg-auth-bg/90 sticky top-0 z-30 -mx-5 mb-3 flex shrink-0 items-center justify-end px-5 py-3 backdrop-blur-sm sm:-mx-10 sm:px-10 md:pointer-events-none md:absolute md:inset-e-10 md:top-6 md:mx-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div className="pointer-events-auto">
+          <PrefsControls />
+        </div>
+      </header>
 
       <div className="relative z-10 mx-auto flex w-full max-w-128 flex-1 flex-col justify-center py-4">
         <div className="border-border/60 dark:border-border dark:bg-surface rounded-2xl border bg-white px-6 py-8 shadow-[0_18px_50px_-28px_rgba(15,23,42,0.18)] sm:px-8 sm:py-9">
