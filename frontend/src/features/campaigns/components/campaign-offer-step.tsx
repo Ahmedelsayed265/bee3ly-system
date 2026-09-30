@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { SelectField } from '@/components/ui/select-field';
 import { draftCampaignCopy, fetchProducts } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
-import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
 
 type CampaignOfferStepProps = {
@@ -110,12 +109,6 @@ export function CampaignOfferStep({
             {t('campaignGenerateCopy')}
           </button>
         </div>
-        {generateCopy.isSuccess && generateCopy.data ? (
-          <p className="text-muted mb-2 text-[11px]">
-            {t('campaignAiBrainLabel')}{' '}
-            {t(`campaignAiMode_${generateCopy.data.mode}` as MessageKey)}
-          </p>
-        ) : null}
         <textarea
           id="campaign-ad-copy"
           value={adCopy}

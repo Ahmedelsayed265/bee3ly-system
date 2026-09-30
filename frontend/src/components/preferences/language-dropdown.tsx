@@ -17,9 +17,11 @@ const localeOptions: { value: Locale; labelKey: 'langAr' | 'langEn' }[] = [
 export function LanguageDropdown({
   className,
   compact = false,
+  iconButtonClass,
 }: {
   className?: string;
   compact?: boolean;
+  iconButtonClass?: string;
 }) {
   const { locale, setLocale, t } = useLocale();
   const current =
@@ -31,9 +33,10 @@ export function LanguageDropdown({
         <button
           type="button"
           className={cn(
-            'group border-border bg-surface text-ink hover:bg-lavender focus-visible:ring-brand/40 data-[state=open]:border-brand/50 data-[state=open]:bg-lavender inline-flex h-9 items-center gap-1.5 rounded-[14px] border px-3 text-[13px] font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
+            'group border-border bg-page text-ink hover:bg-lavender focus-visible:ring-brand/40 data-[state=open]:border-brand/50 data-[state=open]:bg-lavender inline-flex h-9 shrink-0 touch-manipulation items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition focus-visible:ring-2 focus-visible:outline-none',
             compact &&
               'max-sm:h-9 max-sm:w-9 max-sm:justify-center max-sm:px-0',
+            compact && iconButtonClass,
             className,
           )}
           aria-label={compact ? t(current.labelKey) : undefined}

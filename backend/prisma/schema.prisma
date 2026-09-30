@@ -509,9 +509,11 @@ model Campaign {
   businessId          String
   name                String
   objective           CampaignObjective
+  objectives          CampaignObjective[] @default([])
   status              CampaignStatus    @default(DRAFT)
   offer               String
   audienceDescription String
+  audiences           String[]          @default([])
   budget              Int
   currency            String            @default("EGP")
   valueProposition    String?

@@ -640,9 +640,11 @@ export type Campaign = {
   id: string;
   name: string;
   objective: string;
+  objectives?: string[];
   status: string;
   offer: string;
   audienceDescription: string;
+  audiences?: string[];
   budget: number;
   currency: string;
   valueProposition: string | null;
@@ -704,7 +706,8 @@ export async function draftCampaignCopy(input: {
 
 export async function createCampaign(input: {
   offer: string;
-  objective: string;
+  objectives: string[];
+  audiences: string[];
   audienceDescription: string;
   budget: number;
   valueProposition?: string;

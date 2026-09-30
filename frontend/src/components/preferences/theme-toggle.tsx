@@ -12,7 +12,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       type="button"
       onClick={toggleTheme}
       className={cn(
-        'border-border bg-surface text-ink hover:bg-lavender inline-flex h-9 w-9 items-center justify-center rounded-[14px] border transition',
+        'border-border bg-page text-ink hover:bg-lavender inline-flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition',
         className,
       )}
       aria-label={t('toggleTheme')}

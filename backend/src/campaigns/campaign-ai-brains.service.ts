@@ -5,6 +5,11 @@ import type {
   CampaignAnalysisResult,
   CampaignAnalysisVerdict,
 } from './campaign-analysis';
+import {
+  CAMPAIGN_AD_COPY_SYSTEM_AR,
+  CAMPAIGN_AD_COPY_SYSTEM_EN,
+  sanitizeSocialAdCopy,
+} from './campaign-ad-copy-style';
 
 export type CampaignContentBrainResult = {
   adCopy: string;
@@ -149,8 +154,10 @@ export class CampaignAiBrainsService {
     if (!adCopy) return null;
 
     return {
-      adCopy,
-      adCopyVariations: asTextList(body.ad_copy_variations),
+      adCopy: sanitizeSocialAdCopy(adCopy),
+      adCopyVariations: asTextList(body.ad_copy_variations).map(
+        sanitizeSocialAdCopy,
+      ),
       headline: asOptionalText(body.headline).trim(),
       valueProposition: asOptionalText(body.value_proposition).trim(),
       cta: asOptionalText(body.cta).trim(),
@@ -275,8 +282,8 @@ export class CampaignAiBrainsService {
                 role: 'system',
                 content:
                   locale === 'ar'
-                    ? 'أنت Content Creator brain لحملات Bee3ly. JSON فقط: ad_copy, ad_copy_variations[], headline, value_proposition, cta, creative_brief, audience_hint. لا تخترع خصومات.'
-                    : 'Bee3ly Content Creator brain. JSON only: ad_copy, ad_copy_variations[], headline, value_proposition, cta, creative_brief, audience_hint. No invented discounts.',
+                    ? CAMPAIGN_AD_COPY_SYSTEM_AR
+                    : CAMPAIGN_AD_COPY_SYSTEM_EN,
               },
               {
                 role: 'user',
@@ -296,8 +303,10 @@ export class CampaignAiBrainsService {
       const adCopy = asRequiredText(parsed.ad_copy);
       if (!adCopy) return null;
       return {
-        adCopy,
-        adCopyVariations: asTextList(parsed.ad_copy_variations),
+        adCopy: sanitizeSocialAdCopy(adCopy),
+        adCopyVariations: asTextList(parsed.ad_copy_variations).map(
+          sanitizeSocialAdCopy,
+        ),
         headline: asOptionalText(parsed.headline).trim(),
         valueProposition: asOptionalText(parsed.value_proposition).trim(),
         cta: asOptionalText(parsed.cta).trim(),

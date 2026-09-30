@@ -33,7 +33,7 @@ export function DashboardMobileNav({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-[110] md:hidden">
       <button
         type="button"
         className="bg-ink/45 absolute inset-0 backdrop-blur-[1px]"

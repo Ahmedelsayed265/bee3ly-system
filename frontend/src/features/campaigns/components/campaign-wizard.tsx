@@ -4,7 +4,10 @@ import { CampaignGoalStep } from '@/features/campaigns/components/campaign-goal-
 import { CampaignOfferStep } from '@/features/campaigns/components/campaign-offer-step';
 import { CampaignReadyStep } from '@/features/campaigns/components/campaign-ready-step';
 import { CampaignValueStep } from '@/features/campaigns/components/campaign-value-step';
-import type { CampaignObjective } from '@/features/campaigns/constants';
+import type {
+  CampaignAudience,
+  CampaignObjective,
+} from '@/features/campaigns/constants';
 import type { Campaign } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';
@@ -20,10 +23,10 @@ type CampaignWizardProps = {
   onProductChange: (value: string) => void;
   adCopy: string;
   onAdCopyChange: (value: string) => void;
-  objective: CampaignObjective;
-  onObjectiveChange: (value: CampaignObjective) => void;
-  audience: string;
-  onAudienceChange: (value: string) => void;
+  objectives: CampaignObjective[];
+  onObjectivesChange: (value: CampaignObjective[]) => void;
+  audiences: CampaignAudience[];
+  onAudiencesChange: (value: CampaignAudience[]) => void;
   budget: string;
   onBudgetChange: (value: string) => void;
   valueProp: string;
@@ -50,10 +53,10 @@ export function CampaignWizard({
   onProductChange,
   adCopy,
   onAdCopyChange,
-  objective,
-  onObjectiveChange,
-  audience,
-  onAudienceChange,
+  objectives,
+  onObjectivesChange,
+  audiences,
+  onAudiencesChange,
   budget,
   onBudgetChange,
   valueProp,
@@ -111,8 +114,8 @@ export function CampaignWizard({
 
       {step === 1 ? (
         <CampaignGoalStep
-          objective={objective}
-          onObjectiveChange={onObjectiveChange}
+          objectives={objectives}
+          onObjectivesChange={onObjectivesChange}
           onBack={() => onStepChange(0)}
           onNext={() => onStepChange(2)}
         />
@@ -120,8 +123,8 @@ export function CampaignWizard({
 
       {step === 2 ? (
         <CampaignAudienceStep
-          audience={audience}
-          onAudienceChange={onAudienceChange}
+          audiences={audiences}
+          onAudiencesChange={onAudiencesChange}
           onBack={() => onStepChange(1)}
           onNext={() => onStepChange(3)}
         />

@@ -10,6 +10,24 @@ from google.genai import types
 from app.gemini_client import gemini_client, generate_content
 from app.tools import fetch_live_products, format_products_for_prompt
 
+_PRICE_LINE = re.compile(
+    r"\d[\d,.]*\s*(جنيه|ج\.?\s*م|EGP|egp|LE)\b|بسعر|سعر\s*\d|بـ\s*\d[\d,.]*\s*(جنيه|ج)",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def _sanitize_ad_copy(text: str) -> str:
+    lines: list[str] = []
+    for raw in text.split("\n"):
+        line = raw.strip()
+        if not line:
+            continue
+        if _PRICE_LINE.search(line):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
 VALID_VERDICTS = frozenset(
     {
         "SCALE",
@@ -52,16 +70,25 @@ def execute_content_brain(payload: dict[str, Any], bearer_token: str) -> dict[st
     lang = "Egyptian Arabic" if locale == "ar" else "English"
 
     system = f"""
-You are the Bee3ly Campaign Content Creator brain for Egyptian social commerce.
-Write in {lang}. Use ONLY facts from the product and campaign inputs — no invented discounts or specs.
+You are the Bee3ly Campaign Content Creator for Facebook/Instagram in Egypt.
+Write in {lang}. Use ONLY facts from the product and campaign — no invented specs or discounts.
 Return a single JSON object (no markdown) with keys:
-ad_copy (string, 3-5 short lines),
+ad_copy (string),
 ad_copy_variations (array of 2 strings),
 headline (string),
 value_proposition (string),
 cta (string),
-creative_brief (string, image/video idea),
+creative_brief (string),
 audience_hint (string).
+
+ad_copy rules:
+- 4-6 short lines back-to-back (NO empty blank lines between lines).
+- Egyptian marketing/sales tone (friendly "بياع").
+- Use 2-4 relevant emojis spread across the lines (e.g. 🔥 💪 ✨ 📩 — not spammy).
+- Last line: 3-6 relevant hashtags (#...).
+- End with a clear CTA like "كلمنا", "ابعت رسالة", "اطلب في DM" (match objective).
+- Do NOT mention price, EGP, جنيه, ج.م, or "بسعر" in ad_copy.
+
 Store catalog context:
 {catalog}
 """
@@ -90,13 +117,19 @@ Extra value prop: {payload.get("valueProposition") or ""}
     if not data or not str(data.get("ad_copy", "")).strip():
         return {"ok": False, "error": "empty_content"}
 
+    ad_copy = _sanitize_ad_copy(str(data.get("ad_copy", "")).strip())
+    if not ad_copy:
+        return {"ok": False, "error": "empty_content"}
+
     return {
         "ok": True,
         "brain": "content_creator",
         "mode": "gemini",
-        "ad_copy": str(data.get("ad_copy", "")).strip(),
+        "ad_copy": ad_copy,
         "ad_copy_variations": [
-            str(x).strip() for x in (data.get("ad_copy_variations") or [])[:2]
+            _sanitize_ad_copy(str(x).strip())
+            for x in (data.get("ad_copy_variations") or [])[:2]
+            if str(x).strip()
         ],
         "headline": str(data.get("headline", "")).strip(),
         "value_proposition": str(data.get("value_proposition", "")).strip(),

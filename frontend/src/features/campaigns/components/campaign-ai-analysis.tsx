@@ -40,7 +40,6 @@ export function CampaignAiAnalysis({
   });
 
   const analysis = analysisQuery.data?.analysis;
-  const brainMode = analysisQuery.data?.mode;
 
   return (
     <section className="border-border bg-page/80 rounded-xl border p-4">
@@ -51,16 +50,7 @@ export function CampaignAiAnalysis({
             <h3 className="text-ink text-sm font-semibold">
               {t('campaignAiTitle')}
             </h3>
-            <p className="text-muted text-xs">
-              {t('campaignAiSubtitle')}
-              {brainMode ? (
-                <>
-                  {' · '}
-                  {t('campaignAiBrainLabel')}{' '}
-                  {t(`campaignAiMode_${brainMode}` as MessageKey)}
-                </>
-              ) : null}
-            </p>
+            <p className="text-muted text-xs">{t('campaignAiSubtitle')}</p>
           </div>
         </div>
         <Button

@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsEnum,
   IsInt,
   IsOptional,
@@ -6,6 +8,7 @@ import {
   IsUUID,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { CampaignObjective, CampaignStatus } from '@prisma/client';
 
@@ -14,12 +17,25 @@ export class CreateCampaignDto {
   @MinLength(2)
   offer!: string;
 
+  @ValidateIf((dto: CreateCampaignDto) => !dto.objectives?.length)
   @IsEnum(CampaignObjective)
-  objective!: CampaignObjective;
+  objective?: CampaignObjective;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsEnum(CampaignObjective, { each: true })
+  objectives?: CampaignObjective[];
 
   @IsString()
   @MinLength(2)
   audienceDescription!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  audiences?: string[];
 
   @IsInt()
   @Min(50)

@@ -1,0 +1,1 @@
+ALTER TABLE "campaigns" ADD COLUMN "audiences" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

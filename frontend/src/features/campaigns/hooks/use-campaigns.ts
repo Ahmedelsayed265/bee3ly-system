@@ -12,7 +12,7 @@ import {
   type Campaign,
 } from '@/features/business/api';
 import {
-  AUDIENCES,
+  type CampaignAudience,
   type CampaignObjective,
 } from '@/features/campaigns/constants';
 import { useLocale } from '@/features/i18n/locale-context';
@@ -37,8 +37,10 @@ export function useCampaigns() {
   const [offer, setOffer] = useState('');
   const [productId, setProductId] = useState('');
   const [adCopy, setAdCopy] = useState('');
-  const [objective, setObjective] = useState<CampaignObjective>('MORE_ORDERS');
-  const [audience, setAudience] = useState('');
+  const [objectives, setObjectives] = useState<CampaignObjective[]>([
+    'MORE_ORDERS',
+  ]);
+  const [audiences, setAudiences] = useState<CampaignAudience[]>([]);
   const [budget, setBudget] = useState('500');
   const [valueProp, setValueProp] = useState('');
   const [created, setCreated] = useState<Campaign | null>(null);
@@ -85,9 +87,10 @@ export function useCampaigns() {
     setOffer('');
     setProductId('');
     setAdCopy('');
-    setAudience('');
+    setAudiences([]);
     setBudget('500');
     setValueProp('');
+    setObjectives(['MORE_ORDERS']);
     setCreated(null);
     setNotice(null);
   };
@@ -95,12 +98,11 @@ export function useCampaigns() {
   const generate = () =>
     createMut.mutate({
       offer: offer.trim(),
-      objective,
-      audienceDescription: AUDIENCES.includes(
-        audience as (typeof AUDIENCES)[number],
-      )
-        ? t(`campaignAud_${audience}` as MessageKey)
-        : audience.trim(),
+      objectives,
+      audiences,
+      audienceDescription: audiences
+        .map((a) => t(`campaignAud_${a}` as MessageKey))
+        .join(' · '),
       budget: Number(budget),
       valueProposition: valueProp.trim() || undefined,
       adCopy: adCopy.trim() || undefined,
@@ -122,10 +124,10 @@ export function useCampaigns() {
     setProductId,
     adCopy,
     setAdCopy,
-    objective,
-    setObjective,
-    audience,
-    setAudience,
+    objectives,
+    setObjectives,
+    audiences,
+    setAudiences,
     budget,
     setBudget,
     valueProp,

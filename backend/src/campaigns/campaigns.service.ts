@@ -14,7 +14,9 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { sanitizeSocialAdCopy } from './campaign-ad-copy-style';
 import { analyzeCampaignMetrics } from './campaign-analysis';
+import { normalizeCampaignObjectives } from './campaign-objectives';
 import { CampaignAiBrainsService } from './campaign-ai-brains.service';
 import { CreateCampaignDto, DraftAdCopyDto } from './dto/campaign.dto';
 
@@ -129,15 +131,21 @@ export class CampaignsService {
       where: { id: businessId },
     });
 
-    const recommendation = this.buildRecommendation(dto, business.name);
+    const goals = normalizeCampaignObjectives({
+      objectives: dto.objectives,
+      objective: dto.objective,
+    });
+    const recommendation = this.buildRecommendation(dto, business.name, goals);
     const campaign = await this.prisma.campaign.create({
       data: {
         businessId,
         name: recommendation.name,
-        objective: dto.objective,
+        objective: goals.primary,
+        objectives: goals.objectives,
         status: CampaignStatus.READY,
         offer: dto.offer,
         audienceDescription: dto.audienceDescription,
+        audiences: dto.audiences ?? [],
         budget: dto.budget,
         valueProposition:
           dto.valueProposition ?? recommendation.valueProposition,
@@ -292,7 +300,7 @@ export class CampaignsService {
     );
 
     return {
-      copy: content.adCopy,
+      copy: sanitizeSocialAdCopy(content.adCopy),
       brain: 'content_creator' as const,
       mode: content.mode,
       content: {
@@ -311,17 +319,19 @@ export class CampaignsService {
     campaignName: string,
     product: { name: string; description: string | null; priceEgp: number },
   ) {
-    const lines = [
-      campaignName,
-      '',
-      `${product.name} بـ ${product.priceEgp} جنيه.`,
-    ];
-    if (product.description?.trim()) lines.push(product.description.trim());
-    lines.push('', 'ابعتلنا رسالة واطلبه دلوقتي.');
-    return lines.join('\n');
+    const lines = [`${campaignName} 🔥`, `${product.name} — جودة تستاهل 💪`];
+    if (product.description?.trim()) {
+      lines.push(product.description.trim().slice(0, 200));
+    }
+    lines.push('كلمنا في رسالة واطلبه دلوقتي 📩', '#تسوق #مصر #عروض');
+    return sanitizeSocialAdCopy(lines.join('\n'));
   }
 
-  private buildRecommendation(dto: CreateCampaignDto, businessName: string) {
+  private buildRecommendation(
+    dto: CreateCampaignDto,
+    businessName: string,
+    goals: ReturnType<typeof normalizeCampaignObjectives>,
+  ) {
     const objectiveLabel: Record<CampaignObjective, string> = {
       MORE_ORDERS: 'طلبات',
       MORE_LEADS: 'عملاء مهتمين',
@@ -348,8 +358,8 @@ export class CampaignsService {
       valueProposition:
         dto.valueProposition ??
         `عرض ${dto.offer} لجمهور ${dto.audienceDescription}`,
-      suggestedMessaging: `لو بتدور على ${dto.offer} — كلّمنا ونساعدك توصل لـ${objectiveLabel[dto.objective]} بسهولة.`,
-      suggestedCta: ctaMap[dto.objective],
+      suggestedMessaging: `لو بتدور على ${dto.offer} — كلّمنا ونساعدك توصل لـ${goals.objectives.map((o) => objectiveLabel[o]).join(' و')} بسهولة.`,
+      suggestedCta: ctaMap[goals.primary],
       suggestedCreative: `صورة واضحة للعرض + نص قصير عن الفائدة + دعوة للتعليق أو الرسالة.`,
     };
   }

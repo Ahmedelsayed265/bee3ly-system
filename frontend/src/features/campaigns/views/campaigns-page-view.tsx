@@ -10,6 +10,7 @@ import { fetchCampaign } from '@/features/business/api';
 import { CampaignDetail } from '@/features/campaigns/components/campaign-detail';
 import { CampaignList } from '@/features/campaigns/components/campaign-list';
 import { CampaignWizard } from '@/features/campaigns/components/campaign-wizard';
+import { campaignGoalsList } from '@/features/campaigns/constants';
 import { useCampaigns } from '@/features/campaigns/hooks/use-campaigns';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
@@ -77,19 +78,14 @@ export function CampaignsPageView() {
             onProductChange={campaigns.setProductId}
             adCopy={campaigns.adCopy}
             onAdCopyChange={campaigns.setAdCopy}
-            objective={campaigns.objective}
-            onObjectiveChange={campaigns.setObjective}
-            audience={campaigns.audience}
-            onAudienceChange={campaigns.setAudience}
+            objectives={campaigns.objectives}
+            onObjectivesChange={campaigns.setObjectives}
+            audiences={campaigns.audiences}
+            onAudiencesChange={campaigns.setAudiences}
             budget={campaigns.budget}
             onBudgetChange={campaigns.setBudget}
             valueProp={campaigns.valueProp}
             onValuePropChange={campaigns.setValueProp}
-            onAiContentHints={({ audienceHint }) => {
-              if (audienceHint && !campaigns.audience.trim()) {
-                campaigns.setAudience(audienceHint.slice(0, 120));
-              }
-            }}
             created={campaigns.created}
             notice={campaigns.notice}
             isCreating={campaigns.isCreating}
@@ -110,7 +106,12 @@ export function CampaignsPageView() {
               {t('campaignObjectiveMetrics')}
             </p>
             <p className="text-muted mt-2 text-sm leading-6">
-              {t(`campaignMetrics_${campaigns.objective}` as MessageKey)}
+              {campaignGoalsList({
+                objective: campaigns.objectives[0] ?? 'MORE_ORDERS',
+                objectives: campaigns.objectives,
+              })
+                .map((g) => t(`campaignMetrics_${g}` as MessageKey))
+                .join(' · ')}
             </p>
             <p className="text-ink mt-4 text-sm font-semibold">
               {t('plannedBudget')}{' '}

@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { Campaign } from '@/features/business/api';
 import { CampaignAiAnalysis } from '@/features/campaigns/components/campaign-ai-analysis';
+import { CampaignAudienceBadges } from '@/features/campaigns/components/campaign-audience-badges';
+import { CampaignObjectiveBadges } from '@/features/campaigns/components/campaign-objective-badges';
+import { campaignGoalsList } from '@/features/campaigns/constants';
 import { CampaignScorecard } from '@/features/campaigns/components/campaign-scorecard';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
@@ -31,7 +34,6 @@ export function CampaignDetail({
 
   const facts = [
     { label: t('campaignOfferLabel'), value: campaign.offer },
-    { label: t('campaignAudienceLabel'), value: campaign.audienceDescription },
     { label: t('campaignValueLabel'), value: campaign.valueProposition },
     { label: t('campaignMessaging'), value: campaign.suggestedMessaging },
     { label: t('campaignCta'), value: campaign.suggestedCta },
@@ -48,13 +50,13 @@ export function CampaignDetail({
               <span className="bg-brand/10 text-brand inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold">
                 {t(`campaignStatus_${campaign.status}` as MessageKey)}
               </span>
-              <span className="bg-page text-ink/80 rounded-full px-2.5 py-1 text-[11px] font-medium">
-                {t(`campaignObj_${campaign.objective}` as MessageKey)}
-              </span>
+              <CampaignObjectiveBadges campaign={campaign} />
             </div>
             <h2 className="text-ink text-lg font-bold">{campaign.name}</h2>
             <p className="text-muted mt-1 text-sm">
-              {t(`campaignMetrics_${campaign.objective}` as MessageKey)}
+              {campaignGoalsList(campaign)
+                .map((g) => t(`campaignMetrics_${g}` as MessageKey))
+                .join(' · ')}
             </p>
           </div>
         </div>
@@ -90,6 +92,12 @@ export function CampaignDetail({
               </dd>
             </div>
           ))}
+          <div>
+            <dt className="text-muted text-xs">{t('campaignAudienceLabel')}</dt>
+            <dd className="mt-1">
+              <CampaignAudienceBadges campaign={campaign} />
+            </dd>
+          </div>
           <p className="text-muted text-xs">{t('campaignPublishNotice')}</p>
         </dl>
 

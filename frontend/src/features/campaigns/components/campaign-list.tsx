@@ -2,6 +2,7 @@ import { PaginationBar } from '@/components/ui/pagination-bar';
 import { formatMetricValue } from '@/features/analytics/format-metric';
 import type { Campaign } from '@/features/business/api';
 import { buyerLedger, sumLedgers } from '@/features/campaigns/campaign-buyer';
+import { CampaignObjectiveBadges } from '@/features/campaigns/components/campaign-objective-badges';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 import { cn } from '@/lib/utils';
@@ -175,9 +176,7 @@ function CampaignCard({
                 <span className={cn('h-1.5 w-1.5 rounded-full', tone.dot)} />
                 {t(`campaignStatus_${campaign.status}` as MessageKey)}
               </span>
-              <span className="bg-page text-ink/80 rounded-full px-2.5 py-1 text-[11px] font-medium">
-                {t(`campaignObj_${campaign.objective}` as MessageKey)}
-              </span>
+              <CampaignObjectiveBadges campaign={campaign} />
             </div>
             <h2 className="text-ink text-lg font-bold">{campaign.name}</h2>
           </div>
