@@ -18,6 +18,7 @@ export const paths = {
   billing: '/app/billing',
   settings: '/app/settings',
   campaigns: '/app/campaigns',
+  guide: '/app/guide',
 } as const;
 
 export type AppPath = (typeof paths)[keyof typeof paths];

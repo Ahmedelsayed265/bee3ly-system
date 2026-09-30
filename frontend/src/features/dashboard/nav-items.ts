@@ -2,6 +2,7 @@ import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
 import type { LucideIcon } from 'lucide-react';
 import {
+  BookOpen,
   Brain,
   CreditCard,
   Home,
@@ -32,4 +33,5 @@ export const dashboardNavItems: DashboardNavItem[] = [
   { to: paths.profile, labelKey: 'navProfile', icon: UserRound },
   { to: paths.billing, labelKey: 'navBilling', icon: CreditCard },
   { to: paths.settings, labelKey: 'navSettings', icon: Settings },
+  { to: paths.guide, labelKey: 'navGuide', icon: BookOpen },
 ];

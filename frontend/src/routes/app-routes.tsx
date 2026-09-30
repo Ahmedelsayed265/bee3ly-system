@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router-dom';
 import { AiAgentPage } from '@/pages/ai-agent-page';
 import { BillingPage } from '@/pages/billing-page';
 import { CampaignsPage } from '@/pages/campaigns-page';
+import { GuidePage } from '@/pages/guide-page';
 import { DashboardPage } from '@/pages/dashboard-page';
 import { InboxPage } from '@/pages/inbox-page';
 import { LeadsPage } from '@/pages/leads-page';
@@ -22,4 +23,5 @@ export const appRoutes: RouteObject[] = [
   { path: 'billing', element: <BillingPage /> },
   { path: 'settings', element: <SettingsPage /> },
   { path: 'campaigns', element: <CampaignsPage /> },
+  { path: 'guide', element: <GuidePage /> },
 ];

@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { paths } from '@/routes/paths';
 import {
   CampaignDetailSkeleton,
   CampaignListSkeleton,
@@ -49,7 +51,15 @@ export function CampaignsPageView() {
         <div>
           <h1 className="text-ink text-2xl font-bold">{t('navCampaigns')}</h1>
           {!creating && !openId ? (
-            <p className="text-muted mt-1 text-sm">{t('campaignsIntro')}</p>
+            <p className="text-muted mt-1 text-sm">
+              {t('campaignsIntro')}{' '}
+              <Link
+                to={paths.guide}
+                className="text-brand font-semibold hover:underline"
+              >
+                {t('guideLearnMore')}
+              </Link>
+            </p>
           ) : null}
         </div>
         {creating || openId ? (
