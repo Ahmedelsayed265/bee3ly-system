@@ -433,6 +433,8 @@
   "orderShippingFee": "Shipping: {amount}",
   "orderColItems": "Items",
   "orderColTotal": "Total",
+  "orderProductsSubtotal": "Products subtotal",
+  "orderShippingLine": "Shipping",
   "orderColStatus": "Status",
   "orderColActions": "Action",
   "orderStatus_PENDING": "Pending",

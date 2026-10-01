@@ -8,6 +8,7 @@ export type AiIntent =
   | 'ORDER_STATUS'
   | 'COMPLAINT'
   | 'HUMAN_REQUEST'
+  | 'ORDER_CANCEL'
   | 'LEAD_INTENT'
   | 'BOOKING_INTENT';
 

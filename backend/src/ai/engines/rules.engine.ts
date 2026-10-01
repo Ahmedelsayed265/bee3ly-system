@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { businessIsFoodVenue } from '../../businesses/uses-food-venue';
+import { ORDER_CANCEL_HANDOFF } from '../handoff.constants';
 import type {
   AiEngineResult,
   AiIntent,
@@ -35,14 +37,32 @@ export class RulesEngine {
     if (/توصيل|delivery|شحن/.test(text)) return 'DELIVERY_QUESTION';
     if (/فين طلبي|حالة الطلب|order status/.test(text)) return 'ORDER_STATUS';
     if (/شكوى|مشكلة|complaint|زعلان/.test(text)) return 'COMPLAINT';
+    if (this.detectOrderCancelIntent(text)) return 'ORDER_CANCEL';
     return 'GENERAL_QUESTION';
+  }
+
+  detectOrderCancelIntent(text: string): boolean {
+    const t = text.toLowerCase();
+    return (
+      /إلغاء|الغ[يى]\s*(ال)?(طلب|اوردر|أوردر)|cancel\s*(my\s*)?order|مش\s*ع(?:او|ا)ز\s*(ال)?(طلب|اوردر|أوردر)/i.test(
+        t,
+      ) || /الغ[يى]\s*الطلب/i.test(text)
+    );
+  }
+
+  detectReturnRefundIntent(text: string): boolean {
+    return /مرتج|استرجاع|إرجاع|return|refund|رجوع\s*ال?فلوس/i.test(text);
   }
 
   stageForIntent(
     intent: AiIntent,
     current: ConversionStageName,
   ): ConversionStageName {
-    if (intent === 'HUMAN_REQUEST' || intent === 'COMPLAINT')
+    if (
+      intent === 'HUMAN_REQUEST' ||
+      intent === 'COMPLAINT' ||
+      intent === 'ORDER_CANCEL'
+    )
       return 'HUMAN_HANDOFF';
     if (intent === 'PURCHASE_INTENT') return 'PURCHASE_INTENT';
     if (intent === 'LEAD_INTENT' || intent === 'BOOKING_INTENT')
@@ -81,6 +101,47 @@ export class RulesEngine {
     ) {
       intent = 'PURCHASE_INTENT';
       conversionStage = 'DATA_COLLECTION';
+    }
+
+    if (intent === 'ORDER_CANCEL') {
+      toolsUsed.push('transferToHuman');
+      handoffReason = ORDER_CANCEL_HANDOFF;
+      await this.tools.execute('transferToHuman', ctx, {
+        reason: ORDER_CANCEL_HANDOFF,
+        summary: `طلب إلغاء: ${ctx.latestCustomerMessage}`,
+      });
+      needsHuman = true;
+      return {
+        reply:
+          'تمام، هحوّلك لصاحب المحل عشان يراجع طلب الإلغاء ويتواصل معاك ❤️',
+        intent,
+        toolsUsed,
+        order,
+        lead,
+        needsHuman,
+        conversionStage: 'HUMAN_HANDOFF',
+        handoffReason,
+        mode: 'rules',
+        confidence: 0.95,
+      };
+    }
+
+    if (
+      businessIsFoodVenue(ctx.business.type) &&
+      this.detectReturnRefundIntent(ctx.latestCustomerMessage)
+    ) {
+      return {
+        reply:
+          'للأسف مطاعم/كافيهات مفيش فيها مرتجعات على الأوردرات الجاهزة. لو في مشكلة في الطلب قولنا التفاصيل وهحوّلك للفريق.',
+        intent,
+        toolsUsed,
+        order,
+        lead,
+        needsHuman: false,
+        conversionStage,
+        mode: 'rules',
+        confidence: 0.9,
+      };
     }
 
     if (intent === 'HUMAN_REQUEST' || intent === 'COMPLAINT') {
@@ -341,12 +402,35 @@ export class RulesEngine {
         };
       }
 
+      const paymentMethod = this.extractPaymentChoice(
+        ctx.latestCustomerMessage,
+        ctx.business.paymentInfo,
+      );
+      if (!paymentMethod) {
+        conversionStage = 'DATA_COLLECTION';
+        const options =
+          ctx.business.paymentInfo?.trim() ||
+          'كاش عند الاستلام أو التحويل حسب إعدادات المحل';
+        return {
+          reply: `تمام ❤️ إزاي حابب تدفع؟ (${options})`,
+          intent,
+          toolsUsed,
+          order,
+          lead,
+          needsHuman: false,
+          conversionStage,
+          mode: 'rules',
+          confidence: 0.88,
+        };
+      }
+
       toolsUsed.push('createOrder');
       try {
         order = await this.tools.execute('createOrder', ctx, {
           productId: product.id,
           customerName: name,
           customerPhone: phone,
+          paymentMethod,
           size: this.extractSize(
             [
               ...ctx.history.map((h) => h.content),
@@ -433,6 +517,17 @@ export class RulesEngine {
   extractSize(text: string): string | null {
     const match = text.toUpperCase().match(/\b(XXL|XL|L|M|S)\b/);
     return match?.[1] ?? null;
+  }
+
+  /** Explicit payment choice in message — never default to COD. */
+  extractPaymentChoice(message: string, paymentInfo: string | null): string {
+    const blob = `${message}\n${paymentInfo ?? ''}`.toLowerCase();
+    if (/instapay|انستاباي|insta\s*pay/.test(blob)) return 'InstaPay';
+    if (/vodafone|فودافون/.test(blob)) return 'Vodafone Cash';
+    if (/bank|بنك|تحويل بنك/.test(blob)) return 'Bank transfer';
+    if (/كاش|cod|cash\s*on\s*delivery|عند\s*الاستلام/.test(message.toLowerCase()))
+      return 'Cash on delivery';
+    return '';
   }
 
   extractCustomerInfo(

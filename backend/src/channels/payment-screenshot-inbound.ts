@@ -29,16 +29,3 @@ export function inboundPrefersEnglish(
   return false;
 }
 
-export function paymentScreenshotAckReply(english: boolean): string {
-  if (english) {
-    return (
-      'Receipt received ✅ It will be reviewed and your order will be created ' +
-      'after the store owner confirms the transfer. We will message you once it is approved.'
-    );
-  }
-  return (
-    'تم استلام الإيصال ✅ ' +
-    'سيتم مراجعته وإنشاء الطلب بعد تأكيد صاحب المتجر للتحويل. ' +
-    'هنبعتلك رسالة أول ما يتم التأكيد.'
-  );
-}

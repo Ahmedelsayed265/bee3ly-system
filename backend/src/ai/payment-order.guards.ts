@@ -19,6 +19,11 @@ export function assertCreateOrderAllowed(
   paymentMethod: string,
   notes = '',
 ): void {
+  if (!paymentMethod.trim()) {
+    throw new Error(
+      'paymentMethod is required — ask the customer to choose explicitly from Payment options in context; never assume cash on delivery',
+    );
+  }
   const paymentBlob = `${paymentMethod} ${notes}`.trim();
   if (ctx.paymentReviewPending) {
     throw new Error(

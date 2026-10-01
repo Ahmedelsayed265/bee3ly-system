@@ -433,6 +433,8 @@
   "orderShippingFee": "رسوم الشحن: {amount}",
   "orderColItems": "المنتجات",
   "orderColTotal": "الإجمالي",
+  "orderProductsSubtotal": "مجموع المنتجات",
+  "orderShippingLine": "الشحن",
   "orderColStatus": "الحالة",
   "orderColActions": "إجراء",
   "orderStatus_PENDING": "قيد الانتظار",

@@ -5,7 +5,7 @@ export type InboundAttachment = {
 
 /** Text stored + sent to AI when Meta delivers images without caption. */
 export const IMAGE_ATTACHMENT_AI_HINT =
-  '[IMAGE_ATTACHMENT: customer sent an image — treat as transfer/payment screenshot if checkout asked for one; use transferToHuman PAYMENT_REVIEW when prepaid flow applies]';
+  '[IMAGE_ATTACHMENT: customer sent an image — prepaid transfer screenshot; transferToHuman PAYMENT_REVIEW only; no customer-facing reply on this turn]';
 
 export function isImageAttachmentMessage(text: string): boolean {
   return text.includes('[IMAGE_ATTACHMENT:');

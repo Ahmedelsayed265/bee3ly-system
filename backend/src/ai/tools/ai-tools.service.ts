@@ -25,6 +25,7 @@ import {
   type ShippingLookup,
   type ShippingPricingMode,
 } from '../../businesses/shipping-zones';
+import { ORDER_CANCEL_HANDOFF } from '../handoff.constants';
 import { businessAllowsLocalShipping } from '../../businesses/uses-local-shipping';
 import { AiContextCacheService } from '../context/ai-context-cache.service';
 import { computeOrderTotals } from '../order-prepaid';
@@ -734,18 +735,33 @@ export class AiToolsService {
 
     const lineSubtotal = unitPrice * quantity;
 
-    await this.prisma.orderItem.create({
-      data: {
-        orderId: openOrder.id,
-        productId: product.id,
-        name: product.name,
-        size,
-        color,
-        quantity,
-        priceEgp: unitPrice,
-        costEgp: unitCost,
-      },
-    });
+    const existingLine = openOrder.items.find(
+      (item) =>
+        item.productId === product.id &&
+        (item.size ?? null) === size &&
+        (item.color ?? null) === color &&
+        item.priceEgp === unitPrice,
+    );
+
+    if (existingLine) {
+      await this.prisma.orderItem.update({
+        where: { id: existingLine.id },
+        data: { quantity: existingLine.quantity + quantity },
+      });
+    } else {
+      await this.prisma.orderItem.create({
+        data: {
+          orderId: openOrder.id,
+          productId: product.id,
+          name: product.name,
+          size,
+          color,
+          quantity,
+          priceEgp: unitPrice,
+          costEgp: unitCost,
+        },
+      });
+    }
 
     const updatedOrder = await this.prisma.order.update({
       where: { id: openOrder.id },
@@ -893,7 +909,8 @@ export class AiToolsService {
     args: Record<string, unknown>,
   ) {
     const reason = asString(args.reason, 'طلب العميل أو حاجة لتدخل بشري');
-    const paymentReview = reason === 'PAYMENT_REVIEW';
+    const paymentReview = reason === PAYMENT_REVIEW_HANDOFF;
+    const orderCancel = reason === ORDER_CANCEL_HANDOFF;
     await this.prisma.conversation.update({
       where: { id: ctx.conversationId },
       data: {
@@ -905,18 +922,33 @@ export class AiToolsService {
         aiSummary: args.summary ? asString(args.summary) : null,
       },
     });
-    await this.notifications.create(ctx.businessId, {
-      type: paymentReview ? NotificationType.ORDER : NotificationType.HANDOFF,
-      title: paymentReview ? 'إيصال يحتاج تأكيد' : 'تحويل لممثل',
-      body: paymentReview
+    const notifyTitle = paymentReview
+      ? 'إيصال يحتاج تأكيد'
+      : orderCancel
+        ? 'طلب إلغاء أوردر'
+        : 'تحويل لممثل';
+    const notifyBody = paymentReview
+      ? asString(
+          args.summary,
+          'تم استلام إيصال تحويل — راجع الصورة وأكد من صندوق الوارد',
+        )
+      : orderCancel
         ? asString(
             args.summary,
-            'تم استلام إيصال تحويل — راجع الصورة وأكد من صندوق الوارد',
+            'العميل طلب إلغاء الطلب — راجع المحادثة وقرّر',
           )
-        : reason,
+        : asString(args.summary, reason);
+    await this.notifications.create(ctx.businessId, {
+      type:
+        paymentReview || orderCancel
+          ? NotificationType.ORDER
+          : NotificationType.HANDOFF,
+      title: notifyTitle,
+      body: notifyBody,
       data: {
         conversationId: ctx.conversationId,
         ...(paymentReview ? { kind: 'PAYMENT_RECEIPT' } : {}),
+        ...(orderCancel ? { kind: 'ORDER_CANCEL' } : {}),
       },
     });
     return { ok: true, reason };

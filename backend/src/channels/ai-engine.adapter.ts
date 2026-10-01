@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MessageRole } from '@prisma/client';
 import { AiService } from '../ai/ai.service';
+import { PAYMENT_REVIEW_HANDOFF } from '../ai/payment-review.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import type {
@@ -320,28 +321,39 @@ export class AiEngineAdapter {
         if (trimmed) reply = trimmed;
       }
 
-      if (!reply) {
+      const silentPaymentReview =
+        needsHuman &&
+        handoffReason === PAYMENT_REVIEW_HANDOFF &&
+        !reply?.trim();
+
+      if (!reply?.trim() && !silentPaymentReview) {
         console.log('[AI_SERVICE] ⚠️  EMPTY / INVALID reply');
         this.logger.warn('AI Service returned empty reply');
         return this.safeFixedFallback(payload, 'INVALID_RESPONSE');
       }
 
-      console.log('[AI_SERVICE] ✅ FINAL AI REPLY:', JSON.stringify(reply));
+      if (reply?.trim()) {
+        console.log('[AI_SERVICE] ✅ FINAL AI REPLY:', JSON.stringify(reply));
+        await this.persistAiReply(
+          payload.businessId,
+          payload.conversationId,
+          reply,
+          'external',
+          { toolsUsed, order, lead, needsHuman, handoffReason },
+        );
+      } else {
+        console.log(
+          '[AI_SERVICE] ✅ Silent handoff (no customer message)',
+          handoffReason,
+        );
+      }
 
       console.log(
         '[AI_SERVICE] ==================================================\n',
       );
 
-      await this.persistAiReply(
-        payload.businessId,
-        payload.conversationId,
-        reply,
-        'external',
-        { toolsUsed, order, lead, needsHuman, handoffReason },
-      );
-
       if (needsHuman) {
-        const paymentReview = handoffReason === 'PAYMENT_REVIEW';
+        const paymentReview = handoffReason === PAYMENT_REVIEW_HANDOFF;
         await this.prisma.conversation.update({
           where: { id: payload.conversationId },
           data: {
@@ -366,7 +378,7 @@ export class AiEngineAdapter {
       }
 
       return {
-        reply,
+        reply: reply?.trim() ? reply : null,
         mode: 'external',
         toolsUsed,
         order,

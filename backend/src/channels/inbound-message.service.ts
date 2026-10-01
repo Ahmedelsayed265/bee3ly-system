@@ -18,10 +18,6 @@ import { MerchantTokenService } from './merchant-token.service';
 import { ContextBuilderService } from '../ai/context/context-builder.service';
 import { PAYMENT_REVIEW_HANDOFF } from '../ai/payment-review.constants';
 import { AiToolsService } from '../ai/tools/ai-tools.service';
-import {
-  inboundPrefersEnglish,
-  paymentScreenshotAckReply,
-} from './payment-screenshot-inbound';
 import { ChannelOutboundService } from '../social/channel-outbound.service';
 
 @Injectable()
@@ -335,36 +331,6 @@ export class InboundMessageService {
       reason: PAYMENT_REVIEW_HANDOFF,
       summary: `${customerLabel} — تم استلام إيصال تحويل ويحتاج تأكيد`,
     });
-
-    const english = inboundPrefersEnglish(
-      input.customerMessage,
-      ctx.history.map((m) => ({ role: m.role, content: m.content })),
-    );
-    const reply = paymentScreenshotAckReply(english);
-
-    await this.prisma.message.create({
-      data: {
-        conversationId: input.conversationId,
-        role: MessageRole.AI,
-        content: reply,
-        meta: {
-          source: 'payment_screenshot_ack',
-          needsHuman: true,
-          handoffReason: PAYMENT_REVIEW_HANDOFF,
-        },
-      },
-    });
-    await this.prisma.conversation.update({
-      where: { id: input.conversationId },
-      data: { lastMessageAt: new Date() },
-    });
-
-    if (input.account.status === SocialConnectionStatus.CONNECTED && reply) {
-      await this.outbound.sendText(
-        input.account.id,
-        input.externalSenderId,
-        reply,
-      );
-    }
+    // No auto-reply to customer — merchant confirms from inbox; notification already sent.
   }
 }

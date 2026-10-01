@@ -16,6 +16,7 @@ import {
 } from '@/features/orders/constants';
 import { OrderRowActions } from '@/features/orders/components/order-row-actions';
 import { OrderStatusBadge } from '@/features/orders/components/order-status-badge';
+import { orderGrandTotalEgp } from '@/features/orders/order-totals';
 
 type OrdersTableProps = {
   orders: OrderRow[];
@@ -175,7 +176,7 @@ export function OrdersTable({
                         .join(' · ')}
                     </td>
                     <td className="text-ink px-4 py-3 text-start font-medium tabular-nums">
-                      {money(o.totalEgp)}
+                      {money(orderGrandTotalEgp(o))}
                     </td>
                     <td className="px-4 py-3 text-start align-top">
                       <OrderStatusBadge status={o.status} />

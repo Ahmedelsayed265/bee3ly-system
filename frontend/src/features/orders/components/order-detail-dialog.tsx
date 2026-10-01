@@ -19,6 +19,7 @@ import {
   canReturn,
 } from '@/features/orders/hooks/use-orders';
 import { formatOrderShippingAddress } from '@/features/orders/order-shipping';
+import { orderGrandTotalEgp } from '@/features/orders/order-totals';
 
 type OrderDetailDialogProps = {
   order: OrderRow | null;
@@ -126,11 +127,27 @@ export function OrderDetailDialog({
                 </ul>
               </div>
 
-              <div className="bg-page flex items-center justify-between rounded-xl px-3 py-2.5">
-                <span className="text-muted text-sm">{t('orderColTotal')}</span>
-                <span className="text-ink text-base font-bold tabular-nums">
-                  {money(order.totalEgp)}
-                </span>
+              <div className="bg-page space-y-1.5 rounded-xl px-3 py-2.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">{t('orderProductsSubtotal')}</span>
+                  <span className="text-ink font-medium tabular-nums">
+                    {money(order.totalEgp)}
+                  </span>
+                </div>
+                {order.shippingEgp != null && order.shippingEgp > 0 ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted">{t('orderShippingLine')}</span>
+                    <span className="text-ink font-medium tabular-nums">
+                      {money(order.shippingEgp)}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="border-border flex items-center justify-between border-t pt-2">
+                  <span className="text-muted text-sm">{t('orderColTotal')}</span>
+                  <span className="text-ink text-base font-bold tabular-nums">
+                    {money(orderGrandTotalEgp(order))}
+                  </span>
+                </div>
               </div>
             </DialogBody>
             <DialogFooter>

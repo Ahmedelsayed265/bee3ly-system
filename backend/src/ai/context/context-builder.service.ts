@@ -13,6 +13,7 @@ import {
 } from '../../products/product-variants';
 import { presentKnowledge } from '../../businesses/knowledge-text';
 import { effectiveShippingPricingMode } from '../../businesses/uses-local-shipping';
+import { businessIsFoodVenue } from '../../businesses/uses-food-venue';
 import { businessUsesPhysicalHours } from '../../businesses/uses-physical-hours';
 import {
   formatShippingZonesForKnowledge,
@@ -290,7 +291,12 @@ export class ContextBuilderService {
         : ctx.business.deliveryInfo
           ? `Delivery: ${ctx.business.deliveryInfo}`
           : '',
-      ctx.business.paymentInfo ? `Payment: ${ctx.business.paymentInfo}` : '',
+      ctx.business.paymentInfo
+        ? `Payment (ONLY methods listed here — ask customer to pick one before createOrder; never assume COD): ${ctx.business.paymentInfo}`
+        : 'Payment: NOT CONFIGURED — ask merchant to add payment methods in Settings; do not createOrder until customer and merchant agree on payment in chat.',
+      businessIsFoodVenue(ctx.business.type)
+        ? 'Returns policy: this is a restaurant/cafe — no returns or refunds on prepared food orders; explain politely if asked.'
+        : '',
       ctx.business.faqs ? `FAQs:\n${ctx.business.faqs}` : '',
       `Agent goal: ${ctx.agent.primaryGoal}`,
       `Tone: ${ctx.agent.tone}`,
@@ -303,7 +309,7 @@ export class ContextBuilderService {
         ? 'MERCHANT PAYMENT CONFIRMED (internal): Merchant verified the transfer in dashboard. Before your customer-visible reply: if chat shows the customer agreed to extra catalog products not listed in open order Lines, call addOrderItem for each (correct qty/variant). Only describe products that appear in Lines after tools. Never claim an item was added without a successful addOrderItem in this turn. Confirm payment approved + delivery window; say fully paid only when balance due is 0.'
         : '',
       ctx.paymentReviewPending
-        ? 'Payment: transfer screenshot pending merchant review — reassure customer; do NOT createOrder yet; never tell customer the order is officially confirmed.'
+        ? 'Payment: transfer screenshot pending merchant review — do NOT send a customer auto-ack; merchant will confirm in inbox; do NOT createOrder yet.'
         : '',
       ctx.paymentConfirmedForAi && !ctx.openOrder
         ? 'Payment: merchant CONFIRMED transfer — you may createOrder if details are complete.'

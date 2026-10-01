@@ -97,13 +97,19 @@ SALES_TOOL_DECLARATIONS = [
                     description="City/district for local delivery zones",
                 ),
                 "address": types.Schema(type=T.STRING),
-                "paymentMethod": types.Schema(type=T.STRING),
+                "paymentMethod": types.Schema(
+                    type=T.STRING,
+                    description=(
+                        "طريقة الدفع التي اختارها العميل صراحةً من سطر Payment "
+                        "(مثلاً كاش عند الاستلام / إنستاباي — لا تفترض COD)"
+                    ),
+                ),
                 "notes": types.Schema(
                     type=T.STRING,
                     description="ملاحظات: إثبات تحويل، مراجعة دفع، …",
                 ),
             },
-            required=["customerName", "customerPhone"],
+            required=["customerName", "customerPhone", "paymentMethod"],
         ),
     ),
     types.FunctionDeclaration(
@@ -120,8 +126,8 @@ SALES_TOOL_DECLARATIONS = [
     types.FunctionDeclaration(
         name="transferToHuman",
         description=(
-            "طلب موظف، شكوى، خصم، أو PAYMENT_REVIEW بعد ما العميل أرسل/وعد "
-            "بصورة تحويل (دفع مسبق)."
+            "طلب موظف، شكوى، خصم، ORDER_CANCEL_REQUEST (إلغاء أوردر)، "
+            "أو PAYMENT_REVIEW بعد صورة تحويل (دفع مسبق)."
         ),
         parameters=types.Schema(
             type=T.OBJECT,

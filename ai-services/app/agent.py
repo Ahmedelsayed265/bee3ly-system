@@ -1,3 +1,4 @@
+import json
 import re
 
 from google.genai import types
@@ -60,10 +61,9 @@ def _build_system_instruction(
 ) -> str:
     payment_review_rule = (
         "transferToHuman(reason: PAYMENT_REVIEW, summary: method & amount) — "
-        "tell the customer the team will verify the payment and continue / "
-        "بلّغ العميل إن الفريق هيراجع التحويل ويكمل."
+        "**no customer-facing message** on this turn (merchant gets inbox notification)."
         if handoff_enabled
-        else "thank customer; order stays pending merchant payment review — do not createOrder / شكر فقط بدون createOrder."
+        else "do not createOrder; no customer auto-reply / بدون createOrder."
     )
     discount_rule = (
         "Discount request → transferToHuman / طلب خصم → transferToHuman."
@@ -91,19 +91,20 @@ Rules (apply for Arabic or English messages — same tools & flow):
 1. Catalog lists every SKU: axes + price + stock. Use checkStock to confirm — never guess.
 2. Non size/color axes → pass variantOptions with exact axis names from the catalog.
 3. Shipping/total questions (e.g. «الشحن كام؟», «how much is shipping?», «total?») → quoteCheckout with governorate **or** deliveryArea per Shipping in context; explain product + shipping = total.
-4. Payment methods from the Payment line in context (collection numbers if present).
-5. Cash on delivery only: createOrder after address and confirmation — no transfer proof. If customer chose InstaPay/Vodafone/bank, that is NOT COD — do not createOrder until merchant confirms transfer.
-6. Vodafone Cash / InstaPay / bank: quoteCheckout → total + collection number from Payment only → ask for transfer screenshot. **Never createOrder** for prepaid until context says merchant CONFIRMED transfer. If they send a screenshot or message contains [IMAGE_ATTACHMENT:): **only** {payment_review_rule} — thank them and say the team will verify; **never** say the order is officially confirmed or give a new order number on that turn. While payment review is pending: do not createOrder or addOrderItem. If context shows an open order, do not createOrder — use **addOrderItem** when the customer confirms another product; then ask for transfer of **balanceDueEgp** from the tool result only (not the full grand total again).
-7. createOrder needs: name, mobile (01…), governorate id, address, product/variant, quantity, paymentMethod. **Multiple products:** put the first in createOrder and the rest in **additionalItems** (same variant fields per line), OR call **addOrderItem** once per extra line before the customer reply — never confirm items in text that are not in the tool result. addOrderItem needs product/variant + quantity only (open order must exist).
+4. Payment: read ONLY the Payment line in context. **Before createOrder**, ask which option the customer wants and quote the exact labels/numbers from context. **Never assume cash on delivery (COD)** unless the customer explicitly chose COD from those options.
+5. Cash on delivery only when customer explicitly picked COD from Payment options: createOrder after address and confirmation — no transfer proof. If customer chose InstaPay/Vodafone/bank, that is NOT COD — do not createOrder until merchant confirms transfer.
+6. Vodafone Cash / InstaPay / bank: quoteCheckout → total + collection number from Payment only → ask for transfer screenshot. **Never createOrder** for prepaid until context says merchant CONFIRMED transfer. If they send a screenshot or message contains [IMAGE_ATTACHMENT:): **only** {payment_review_rule} — **never** say the order is officially confirmed or give a new order number on that turn. While payment review is pending: do not createOrder or addOrderItem. If context shows an open order, do not createOrder — use **addOrderItem** when the customer confirms another product; then ask for transfer of **balanceDueEgp** from the tool result only (not the full grand total again).
+7. createOrder needs: name, mobile (01…), governorate id, address, product/variant, quantity, **paymentMethod (required — exact choice from customer)**. **Multiple products:** put the first in createOrder and the rest in **additionalItems** (same variant fields per line), OR call **addOrderItem** once per extra line before the customer reply — never confirm items in text that are not in the tool result. addOrderItem needs product/variant + quantity only (open order must exist).
 8. Interest without order → createLead.
-9. Human agent or complaint → transferToHuman immediately.
-10. Merchant extra instructions override. Discount: two sentences + transferToHuman if enabled.
-11. {discount_rule}
-12. Do not repeat the full order confirmation if they asked something new.
-13. Keep replies short (2–4 sentences).
-14. Internal only: if the message is exactly `[PAYMENT_CONFIRMED_BY_MERCHANT]`, do NOT echo that tag. Step 1 (tools): if open order Lines omit products the customer agreed to in chat, call **addOrderItem** for each before any customer reply. Step 2 (reply): confirm payment approved in the customer's language; mention **only** products in open order Lines (after tools). Do **not** createOrder if an open order exists. If no open order, createOrder when details are in chat. Give order number + delivery window from business delivery info. Never say «fully paid» unless balance due is 0 in context/tool results.
-15. When the customer agrees to add another item to an existing open order (e.g. «ضيفها», «add it»), call **addOrderItem** immediately — never claim the item was added without calling the tool. For prepaid, request transfer of **balanceDueEgp** from the tool output; shipping was already included in the first payment unless context says otherwise.
-16. Never describe order contents (product names/qty) that are not in open order Lines and were not returned by createOrder/addOrderItem in the current turn.
+9. Human agent or complaint → transferToHuman immediately. **Order cancel** (إلغاء الطلب / cancel order) → transferToHuman(reason: ORDER_CANCEL_REQUEST, summary: what they want cancelled) + short handoff line to customer.
+10. Restaurant/cafe (context says RESTAURANT or CAFE): **no returns/refunds** on prepared orders — explain politely; do not promise refunds.
+11. Merchant extra instructions override. Discount: two sentences + transferToHuman if enabled.
+12. {discount_rule}
+13. Do not repeat the full order confirmation if they asked something new.
+14. Keep replies short (2–4 sentences).
+15. Internal only: if the message is exactly `[PAYMENT_CONFIRMED_BY_MERCHANT]`, do NOT echo that tag. Step 1 (tools): if open order Lines omit products the customer agreed to in chat, call **addOrderItem** for each before any customer reply. Step 2 (reply): confirm payment approved in the customer's language; mention **only** products in open order Lines (after tools). Do **not** createOrder if an open order exists. If no open order, createOrder when details are in chat. Give order number + delivery window from business delivery info. Never say «fully paid» unless balance due is 0 in context/tool results.
+16. When the customer agrees to add another item to an existing open order (e.g. «ضيفها», «add it»), call **addOrderItem exactly once** for that SKU/qty in this turn — never call it twice for the same product+variant. Never claim the item was added without calling the tool. For prepaid, request transfer of **balanceDueEgp** from the tool output (includes product line only; shipping was charged on the first payment unless context says otherwise).
+17. Never describe order contents (product names/qty) that are not in open order Lines and were not returned by createOrder/addOrderItem in the current turn.
 """
 
 
@@ -162,6 +163,7 @@ def execute_customer_chat(
     handoff_reason = None
     reply_text = ""
     handoff_done = False
+    seen_tool_calls: set[str] = set()
 
     try:
         for _ in range(MAX_TOOL_ROUNDS):
@@ -187,6 +189,25 @@ def execute_customer_chat(
                 if not name:
                     continue
                 args = dict(call.args) if call.args else {}
+                dedupe_key = f"{name}:{json.dumps(args, sort_keys=True, default=str)}"
+                if dedupe_key in seen_tool_calls:
+                    tool_result = {
+                        "ok": True,
+                        "skipped": "duplicate_tool_call_in_same_turn",
+                    }
+                    contents.append(
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part.from_function_response(
+                                    name=name,
+                                    response={"result": tool_result},
+                                )
+                            ],
+                        )
+                    )
+                    continue
+                seen_tool_calls.add(dedupe_key)
                 tools_used.append(name)
 
                 if name == "transferToHuman":
@@ -236,15 +257,18 @@ def execute_customer_chat(
                 )
 
             if handoff_done:
-                closing = generate_content(
-                    client,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3,
-                    ),
-                )
-                reply_text = closing.text or fb["handoff"]
+                if handoff_reason == "PAYMENT_REVIEW":
+                    reply_text = ""
+                else:
+                    closing = generate_content(
+                        client,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.3,
+                        ),
+                    )
+                    reply_text = closing.text or fb["handoff"]
                 break
 
         if not reply_text:
@@ -271,7 +295,8 @@ def execute_customer_chat(
 
     if not internal_merchant:
         history.append({"role": "user", "text": message})
-    history.append({"role": "model", "text": reply_text})
+    if reply_text.strip():
+        history.append({"role": "model", "text": reply_text})
     save_session_history(conversation_id, customer_id, history)
 
     action = None

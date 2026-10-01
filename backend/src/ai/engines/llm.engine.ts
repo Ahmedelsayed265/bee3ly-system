@@ -323,7 +323,7 @@ export class LlmEngine {
                   'How customer will pay (from business payment options)',
               },
             },
-            ['customerName', 'customerPhone'],
+            ['customerName', 'customerPhone', 'paymentMethod'],
           ),
         },
       },
