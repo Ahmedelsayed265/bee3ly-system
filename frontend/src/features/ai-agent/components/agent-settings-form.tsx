@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { SelectField } from '@/components/ui/select-field';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AI_GOALS,
   AI_TONES,
@@ -114,24 +114,26 @@ export function AgentSettingsForm({
           </div>
         </div>
 
-        <SelectField
+        <SingleSelectChecklist
           label={t('aiPrimaryGoal')}
-          value={primaryGoal ?? 'GET_ORDERS'}
-          onValueChange={(v) => onGoalChange(v as AiGoal)}
+          value={(primaryGoal ?? 'GET_ORDERS') as AiGoal}
+          disabled={isUpdating}
           options={AI_GOALS.map((goal) => ({
             value: goal,
             label: t(`aiGoal_${goal}` as MessageKey),
           }))}
+          onChange={onGoalChange}
         />
 
-        <SelectField
+        <SingleSelectChecklist
           label={t('aiTone')}
-          value={tone ?? 'FRIENDLY'}
-          onValueChange={(v) => onToneChange(v as AiTone)}
+          value={(tone ?? 'FRIENDLY') as AiTone}
+          disabled={isUpdating}
           options={AI_TONES.map((item) => ({
             value: item,
             label: t(`aiTone_${item}` as MessageKey),
           }))}
+          onChange={onToneChange}
         />
       </section>
 
@@ -189,5 +191,54 @@ export function AgentSettingsForm({
         </div>
       </section>
     </div>
+  );
+}
+
+function SingleSelectChecklist<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+  disabled?: boolean;
+}) {
+  const groupId = label.replace(/\s+/g, '-');
+
+  return (
+    <fieldset className="space-y-2" disabled={disabled}>
+      <legend className="text-ink text-sm font-medium">{label}</legend>
+      <ul className="grid grid-cols-2 gap-2">
+        {options.map((option) => {
+          const id = `${groupId}-${option.value}`;
+          const checked = value === option.value;
+          return (
+            <li key={option.value} className="min-w-0">
+              <label
+                htmlFor={id}
+                className={cn(
+                  'border-border flex h-full min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition',
+                  checked && 'border-brand/40 bg-brand/5',
+                  disabled && 'cursor-not-allowed opacity-60',
+                )}
+              >
+                <Checkbox
+                  id={id}
+                  checked={checked}
+                  onCheckedChange={(next) => {
+                    if (next === true) onChange(option.value);
+                  }}
+                />
+                <span className="text-ink font-normal">{option.label}</span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </fieldset>
   );
 }
