@@ -7,7 +7,7 @@
 | **مستثمر / شريك** | **[docs/bee3ly-investor-brief-ar.pdf](./docs/bee3ly-investor-brief-ar.pdf)** (PDF) · [investor-presentation.md](./docs/investor-presentation.md) |
 | **خارطة الطريق** | [docs/roadmap.md](./docs/roadmap.md) |
 | **فهرس الوثائق** | [docs/README.md](./docs/README.md) |
-| **مطور** | التشغيل المحلي ↓ + [architecture-modules.md](./docs/architecture-modules.md) |
+| **مطور** | التشغيل المحلي ↓ · [AWS deployment (EN)](./docs/aws-deployment.md) |
 
 ---
 

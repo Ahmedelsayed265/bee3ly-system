@@ -1,0 +1,25 @@
+{
+  "name": "bee3ly-infra",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "synth:dev": "cdk synth -c env=dev",
+    "synth:prod": "cdk synth -c env=prod",
+    "deploy:dev": "cdk deploy Bee3ly-dev -c env=dev --require-approval broadening",
+    "deploy:prod": "cdk deploy Bee3ly-prod -c env=prod --require-approval broadening",
+    "diff:dev": "cdk diff Bee3ly-dev -c env=dev",
+    "diff:prod": "cdk diff Bee3ly-prod -c env=prod"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "aws-cdk": "^2.1000.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.190.0",
+    "constructs": "^10.4.2"
+  }
+}

@@ -32,6 +32,8 @@ backend/.local-pg/
 
 # Deploy & logs
 .vercel
+infra/cdk.out/
+infra/node_modules/
 *.log
 coverage/
 

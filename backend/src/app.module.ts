@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { CommonModule } from './common/common.module';
+import { HealthModule } from './health/health.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OrdersModule } from './orders/orders.module';
@@ -23,6 +24,7 @@ import { SocialModule } from './social/social.module';
     ScheduleModule.forRoot(),
     PrismaModule,
     CommonModule,
+    HealthModule,
     RealtimeModule,
     AuthModule,
     BusinessesModule,
