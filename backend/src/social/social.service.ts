@@ -14,6 +14,8 @@ import {
   WhatsappEmbeddedService,
   type WhatsAppEmbeddedCompleteInput,
 } from './meta/whatsapp-embedded.service';
+import { TikTokOauthService } from './tiktok/tiktok-oauth.service';
+import { TikTokWebhookService } from './tiktok/tiktok-webhook.service';
 
 /**
  * Channel facade for Bee3ly.
@@ -30,6 +32,8 @@ export class SocialService implements OnModuleInit {
     private readonly metaOauth: MetaOauthService,
     private readonly metaWebhook: MetaWebhookService,
     private readonly whatsappEmbedded: WhatsappEmbeddedService,
+    private readonly tiktokOauth: TikTokOauthService,
+    private readonly tiktokWebhook: TikTokWebhookService,
   ) {}
 
   async onModuleInit() {
@@ -124,6 +128,7 @@ export class SocialService implements OnModuleInit {
       oauthUrl: this.metaOauth.buildOAuthUrl(businessId, userId),
       connectLabel: 'Connect Facebook & Instagram',
       whatsappEmbedded: this.whatsappEmbedded.getClientConfig(),
+      tiktokConfigured: this.tiktokOauth.isConfigured(),
     };
   }
 
@@ -145,13 +150,14 @@ export class SocialService implements OnModuleInit {
   ) {
     const businessId = await this.access.requireBusinessId(userId);
     const externalId = `demo-${platform.toLowerCase()}-${businessId.slice(0, 8)}`;
+    const provider = platform === SocialPlatform.TIKTOK ? 'TIKTOK' : 'META';
     const account = await this.prisma.socialAccount.upsert({
       where: {
         businessId_platform: { businessId, platform },
       },
       create: {
         businessId,
-        provider: 'META',
+        provider,
         platform,
         externalId,
         displayName: displayName ?? `${platform} (Simulation)`,
@@ -161,6 +167,7 @@ export class SocialService implements OnModuleInit {
         metadata: { mode: 'simulation' },
       },
       update: {
+        provider,
         displayName: displayName ?? `${platform} (Simulation)`,
         accessTokenEnc: this.metaOauth.encrypt('demo-token'),
         status: SocialConnectionStatus.SIMULATION,
@@ -226,5 +233,31 @@ export class SocialService implements OnModuleInit {
       }
       return { oauthUrl: url };
     });
+  }
+
+  startTikTokConnect(userId: string) {
+    return this.access.requireBusinessId(userId).then((businessId) => {
+      const url = this.tiktokOauth.buildOAuthUrl(businessId, userId);
+      if (!url) {
+        throw new BadRequestException(
+          'TIKTOK_CLIENT_KEY is not configured — use simulation or set TikTok credentials',
+        );
+      }
+      return { oauthUrl: url };
+    });
+  }
+
+  handleTikTokOAuthCallback(query: {
+    code?: string;
+    auth_code?: string;
+    state?: string;
+    error?: string;
+    error_description?: string;
+  }) {
+    return this.tiktokOauth.handleCallback(query);
+  }
+
+  handleTikTokWebhook(body: Record<string, unknown>) {
+    return this.tiktokWebhook.handle(body);
   }
 }

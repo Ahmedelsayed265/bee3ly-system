@@ -493,7 +493,15 @@ export async function fetchSocial() {
       appId: string | null;
       configId: string | null;
     };
+    tiktokConfigured?: boolean;
   }>('/social');
+  return data;
+}
+
+export async function startTikTokConnect() {
+  const { data } = await api.post<{ oauthUrl: string }>(
+    '/social/tiktok/connect',
+  );
   return data;
 }
 
@@ -548,14 +556,14 @@ export async function selectMetaPage(pendingId: string, pageId: string) {
 }
 
 export async function connectSocialDemo(
-  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP',
+  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK',
 ) {
   const { data } = await api.post('/social/connect-demo', { platform });
   return data;
 }
 
 export async function disconnectSocial(
-  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP',
+  platform: 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK',
 ) {
   const { data } = await api.delete('/social/disconnect', {
     data: { platform },

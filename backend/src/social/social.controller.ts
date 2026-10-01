@@ -75,6 +75,36 @@ export class SocialController {
     return this.social.startConnect(user.id);
   }
 
+  @Post('tiktok/connect')
+  @UseGuards(JwtAuthGuard)
+  startTikTokConnect(@CurrentUser() user: AuthUser) {
+    return this.social.startTikTokConnect(user.id);
+  }
+
+  @Get('tiktok/callback')
+  async tiktokCallback(
+    @Query('code') code: string,
+    @Query('auth_code') authCode: string,
+    @Query('state') state: string,
+    @Query('error') error: string,
+    @Query('error_description') errorDescription: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.social.handleTikTokOAuthCallback({
+      code,
+      auth_code: authCode,
+      state,
+      error,
+      error_description: errorDescription,
+    });
+    return res.redirect(result.redirectTo);
+  }
+
+  @Post('tiktok/webhook')
+  tiktokWebhook(@Body() body: Record<string, unknown>) {
+    return this.social.handleTikTokWebhook(body);
+  }
+
   @Post('connect-demo')
   @UseGuards(JwtAuthGuard)
   connectDemo(@CurrentUser() user: AuthUser, @Body() dto: ConnectDemoDto) {

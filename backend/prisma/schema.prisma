@@ -30,6 +30,7 @@ enum SocialPlatform {
   FACEBOOK
   INSTAGRAM
   WHATSAPP
+  TIKTOK
 }
 
 enum ConversationChannel {

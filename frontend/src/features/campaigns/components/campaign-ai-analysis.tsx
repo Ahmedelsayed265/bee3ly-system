@@ -167,7 +167,7 @@ function AnalysisBody({
           return (
             <span
               key={action.id}
-              className="bg-surface text-muted inline-flex rounded-full px-3 py-1 text-xs"
+              className="bg-surface text-muted inline-flex items-center justify-center rounded-full px-3 py-1 text-xs"
             >
               {t(labelKey)}
             </span>

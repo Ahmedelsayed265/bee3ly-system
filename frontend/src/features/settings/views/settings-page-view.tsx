@@ -80,12 +80,16 @@ export function SettingsPageView() {
           facebook={social.facebook}
           instagram={social.instagram}
           whatsapp={social.whatsapp}
+          tiktok={social.tiktok}
           metaReady={social.metaReady}
+          tiktokReady={social.tiktokReady}
           whatsappEmbeddedReady={social.whatsappEmbeddedReady}
           metaBusy={social.metaBusy}
+          tiktokBusy={social.tiktokBusy}
           isDisconnecting={social.isDisconnecting}
           isSelectingPage={social.isSelectingPage}
           onConnectMeta={social.connectMeta}
+          onConnectTikTok={social.connectTikTok}
           onConnectWhatsApp={social.connectWhatsApp}
           whatsappBusy={social.whatsappBusy}
           onDisconnect={social.disconnect}

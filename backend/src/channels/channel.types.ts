@@ -21,6 +21,8 @@ export type InboundMessageEvent = {
   text: string;
   attachments?: InboundAttachment[];
   timestamp?: number;
+  /** TikTok DM thread id (required for outbound send). */
+  tiktokConversationId?: string;
   raw?: unknown;
 };
 

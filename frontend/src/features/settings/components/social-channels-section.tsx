@@ -18,12 +18,16 @@ type SocialChannelsSectionProps = {
   facebook?: SocialAccount;
   instagram?: SocialAccount;
   whatsapp?: SocialAccount;
+  tiktok?: SocialAccount;
   metaReady: boolean;
+  tiktokReady: boolean;
   whatsappEmbeddedReady: boolean;
   metaBusy: boolean;
+  tiktokBusy: boolean;
   isDisconnecting: boolean;
   isSelectingPage: boolean;
   onConnectMeta: () => void;
+  onConnectTikTok: () => void;
   onConnectWhatsApp: () => void;
   whatsappBusy: boolean;
   onDisconnect: (platform: ChannelId) => void;
@@ -38,12 +42,16 @@ export function SocialChannelsSection({
   facebook,
   instagram,
   whatsapp,
+  tiktok,
   metaReady,
+  tiktokReady,
   whatsappEmbeddedReady,
   metaBusy,
+  tiktokBusy,
   isDisconnecting,
   isSelectingPage,
   onConnectMeta,
+  onConnectTikTok,
   onConnectWhatsApp,
   whatsappBusy,
   onDisconnect,
@@ -196,7 +204,36 @@ export function SocialChannelsSection({
           iconClassName="bg-ink/5 text-ink"
           title={t('channelTikTok')}
           description={t('channelTikTokHint')}
-          comingSoon
+          account={tiktok}
+          action={
+            <>
+              <Button
+                size="sm"
+                disabled={tiktokBusy || !tiktokReady}
+                onClick={onConnectTikTok}
+              >
+                {tiktok?.status === 'CONNECTED'
+                  ? t('channelReconnect')
+                  : t('channelConnect')}
+              </Button>
+              {tiktok && tiktok.status !== 'DISCONNECTED' ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-danger hover:bg-danger/10 hover:text-danger"
+                  disabled={isDisconnecting}
+                  onClick={() => onDisconnect('TIKTOK')}
+                >
+                  {t('disconnectAccount')}
+                </Button>
+              ) : null}
+            </>
+          }
+          footer={
+            !tiktokReady ? (
+              <p className="text-muted text-xs">{t('tiktokNotConfigured')}</p>
+            ) : null
+          }
         />
       </div>
     </section>

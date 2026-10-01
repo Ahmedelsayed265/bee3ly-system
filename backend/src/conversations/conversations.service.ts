@@ -16,7 +16,7 @@ import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
-import { MetaOutboundService } from '../social/meta/meta-outbound.service';
+import { ChannelOutboundService } from '../social/channel-outbound.service';
 import { upsertPrepaidVerifiedNote } from '../ai/order-prepaid';
 import {
   PAYMENT_CONFIRMED_AI_SUMMARY,
@@ -37,8 +37,8 @@ export class ConversationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
-    @Inject(forwardRef(() => MetaOutboundService))
-    private readonly outbound: MetaOutboundService,
+    @Inject(forwardRef(() => ChannelOutboundService))
+    private readonly outbound: ChannelOutboundService,
     private readonly realtime: RealtimeService,
     @Inject(forwardRef(() => AiEngineAdapter))
     private readonly aiEngine: AiEngineAdapter,
@@ -335,7 +335,8 @@ export class ConversationsService {
 
     if (
       (conversation.channel === ConversationChannel.FACEBOOK ||
-        conversation.channel === ConversationChannel.INSTAGRAM) &&
+        conversation.channel === ConversationChannel.INSTAGRAM ||
+        conversation.channel === ConversationChannel.TIKTOK) &&
       conversation.customer.externalId
     ) {
       const account = await this.prisma.socialAccount.findFirst({
@@ -392,7 +393,8 @@ export class ConversationsService {
 
     if (
       (conversation.channel === 'FACEBOOK' ||
-        conversation.channel === 'INSTAGRAM') &&
+        conversation.channel === 'INSTAGRAM' ||
+        conversation.channel === 'TIKTOK') &&
       conversation.customer.externalId
     ) {
       const account = await this.prisma.socialAccount.findFirst({

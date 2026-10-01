@@ -22,7 +22,7 @@ import {
   inboundPrefersEnglish,
   paymentScreenshotAckReply,
 } from './payment-screenshot-inbound';
-import { MetaOutboundService } from '../social/meta/meta-outbound.service';
+import { ChannelOutboundService } from '../social/channel-outbound.service';
 
 @Injectable()
 export class InboundMessageService {
@@ -32,7 +32,7 @@ export class InboundMessageService {
     private readonly prisma: PrismaService,
     private readonly aiEngine: AiEngineAdapter,
     private readonly tokens: MerchantTokenService,
-    private readonly outbound: MetaOutboundService,
+    private readonly outbound: ChannelOutboundService,
     private readonly realtime: RealtimeService,
     private readonly contextBuilder: ContextBuilderService,
     private readonly aiTools: AiToolsService,
@@ -93,13 +93,17 @@ export class InboundMessageService {
         ? SocialPlatform.INSTAGRAM
         : event.channel === 'WHATSAPP'
           ? SocialPlatform.WHATSAPP
-          : SocialPlatform.FACEBOOK;
+          : event.channel === 'TIKTOK'
+            ? SocialPlatform.TIKTOK
+            : SocialPlatform.FACEBOOK;
     const channel: ConversationChannel =
       event.channel === 'INSTAGRAM'
         ? ConversationChannel.INSTAGRAM
         : event.channel === 'WHATSAPP'
           ? ConversationChannel.WHATSAPP
-          : ConversationChannel.FACEBOOK;
+          : event.channel === 'TIKTOK'
+            ? ConversationChannel.TIKTOK
+            : ConversationChannel.FACEBOOK;
 
     let customer = await this.prisma.customer.findFirst({
       where: {
@@ -178,6 +182,9 @@ export class InboundMessageService {
           externalMessageId: event.externalMessageId ?? null,
           externalSenderId: event.externalSenderId,
           externalAccountId: event.externalAccountId,
+          ...(event.tiktokConversationId
+            ? { tiktokConversationId: event.tiktokConversationId }
+            : {}),
           ...(attachments.length ? { attachments } : {}),
           ...(attachments.some((a) => a.type === 'image')
             ? { paymentReceipt: true }

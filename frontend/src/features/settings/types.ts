@@ -1,5 +1,5 @@
 export type SettingsTab = 'social' | 'delivery' | 'knowledge';
-export type ChannelId = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP';
+export type ChannelId = 'FACEBOOK' | 'INSTAGRAM' | 'WHATSAPP' | 'TIKTOK';
 
 export type SocialAccount = {
   id: string;

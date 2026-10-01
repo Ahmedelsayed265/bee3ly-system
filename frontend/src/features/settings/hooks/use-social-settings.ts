@@ -9,6 +9,7 @@ import {
   fetchSocial,
   selectMetaPage,
   startMetaConnect,
+  startTikTokConnect,
 } from '@/features/business/api';
 import { useLocale } from '@/features/i18n/locale-context';
 import { launchWhatsAppEmbeddedSignup } from '@/features/settings/lib/whatsapp-embedded';
@@ -42,6 +43,14 @@ export function useSocialSettings() {
       toast.success(t('metaConnectedOk'));
       setSearchParams({}, { replace: true });
     }
+    if (searchParams.get('tiktok') === 'connected') {
+      toast.success(t('tiktokConnectedOk'));
+      setSearchParams({}, { replace: true });
+    }
+    if (searchParams.get('tiktok') === 'error') {
+      toast.error(t('tiktokConnectFailed'));
+      setSearchParams({}, { replace: true });
+    }
   }, [searchParams, setSearchParams, t]);
 
   const disconnectMut = useMutation({
@@ -62,6 +71,16 @@ export function useSocialSettings() {
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err) ?? t('connectionError'));
+    },
+  });
+
+  const tiktokConnectMut = useMutation({
+    mutationFn: startTikTokConnect,
+    onSuccess: (data) => {
+      window.location.href = data.oauthUrl;
+    },
+    onError: (err) => {
+      toast.error(getApiErrorMessage(err) ?? t('tiktokConnectFailed'));
     },
   });
 
@@ -166,7 +185,9 @@ export function useSocialSettings() {
   const facebook = accountsByPlatform.get('FACEBOOK');
   const instagram = accountsByPlatform.get('INSTAGRAM');
   const whatsapp = accountsByPlatform.get('WHATSAPP');
+  const tiktok = accountsByPlatform.get('TIKTOK');
   const metaReady = Boolean(socialQuery.data?.metaConfigured);
+  const tiktokReady = Boolean(socialQuery.data?.tiktokConfigured);
   const whatsappEmbeddedReady = Boolean(
     socialQuery.data?.whatsappEmbedded?.configured ||
     viteWhatsAppEmbeddedConfig()?.configured,
@@ -174,6 +195,7 @@ export function useSocialSettings() {
   const metaBusy = metaConnectMut.isPending;
 
   const connectMeta = () => metaConnectMut.mutate();
+  const connectTikTok = () => tiktokConnectMut.mutate();
   const connectWhatsApp = () => whatsappConnectMut.mutate();
   const disconnect = (platform: ChannelId) => {
     disconnectMut.mutate(platform);
@@ -187,13 +209,17 @@ export function useSocialSettings() {
     facebook,
     instagram,
     whatsapp,
+    tiktok,
     metaReady,
+    tiktokReady,
     whatsappEmbeddedReady,
     metaBusy,
+    tiktokBusy: tiktokConnectMut.isPending,
     whatsappBusy: whatsappConnectMut.isPending,
     isDisconnecting: disconnectMut.isPending,
     isSelectingPage: selectPageMut.isPending,
     connectMeta,
+    connectTikTok,
     connectWhatsApp,
     disconnect,
     selectPage: (pageId: string) => selectPageMut.mutate({ pageId }),
