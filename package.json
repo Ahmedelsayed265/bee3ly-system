@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:stop": "docker compose down",
-    "dev:docker": "docker compose up -d"
+    "dev:docker": "docker compose up -d",
+    "db:sync:aws": "node scripts/sync-local-db-to-aws.mjs --env dev --stack Bee3ly-dev --yes"
   }
 }

@@ -185,6 +185,37 @@ curl http://localhost:5000/health
 - **Scale**: Increase `desiredCount` in CDK or enable autoscaling in a follow-up change.
 - **Destroy dev**: `cdk destroy Bee3ly-dev -c env=dev -c frontendUrl=...` (RDS snapshot policy applies per stack config).
 
+### Copy local Postgres → RDS (dev)
+
+After one CDK deploy that includes `DbSyncBucket` / `DbSyncTaskDef` outputs:
+
+```bash
+docker compose up -d postgres   # local data source
+node scripts/sync-local-db-to-aws.mjs --env dev --stack Bee3ly-dev    # preview
+npm run db:sync:aws            # truncate RDS app tables + import local data
+```
+
+RDS is private; import runs as a one-off Fargate task inside the VPC.
+
+## 10. CI/CD (GitHub)
+
+| Workflow | Trigger | What it does |
+|----------|---------|----------------|
+| `.github/workflows/deploy-aws-dev.yml` | Push to `main` (backend, ai-services, infra) | `cdk deploy Bee3ly-dev` (builds Docker images on GitHub, updates ECS) |
+| `.github/workflows/frontend-ci.yml` | Push/PR touching `frontend/` | `npm run build` |
+| **Amplify** (Console) | Push when app is connected | Hosts SPA using `frontend/amplify.yml` |
+
+**GitHub Actions secrets** (repo → Settings → Secrets):
+
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — IAM user (e.g. `bee3ly-deploy`)
+- `AWS_ACCOUNT_ID` — e.g. `014498663501`
+
+**Repository variable** (optional):
+
+- `DEV_FRONTEND_URL` — Amplify URL for backend CORS (`-c frontendUrl`); defaults to `http://localhost:5173`
+
+Push to `main` redeploys API/AI after secrets are set. Set Amplify env `VITE_API_URL` to CDK `ApiUrl`.
+
 ## Related docs
 
 - [README.md](../README.md) — local dev and env overview

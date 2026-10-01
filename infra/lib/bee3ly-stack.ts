@@ -10,6 +10,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
@@ -237,6 +238,43 @@ export class Bee3lyStack extends cdk.Stack {
       containerInsights: envName === 'prod',
     });
 
+    const privateSubnetIds = vpc.selectSubnets({
+      subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+    }).subnetIds;
+
+    const dbSyncBucket = new s3.Bucket(this, 'DbSyncBucket', {
+      bucketName: `bee3ly-${envName}-db-sync-${this.account}`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      lifecycleRules: [{ expiration: cdk.Duration.days(7) }],
+      removalPolicy:
+        envName === 'prod' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: envName !== 'prod',
+    });
+
+    const dbSyncLogGroup = new logs.LogGroup(this, 'DbSyncLogGroup', {
+      logGroupName: `/bee3ly/${envName}/db-sync`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const dbSyncTaskDef = new ecs.FargateTaskDefinition(this, 'DbSyncTaskDef', {
+      cpu: 256,
+      memoryLimitMiB: 512,
+    });
+
+    dbSyncBucket.grantRead(dbSyncTaskDef.taskRole!);
+
+    dbSyncTaskDef.addContainer('Import', {
+      image: ecs.ContainerImage.fromRegistry('postgres:16-alpine'),
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'import',
+        logGroup: dbSyncLogGroup,
+      }),
+      essential: true,
+    });
+
     const namespace = new servicediscovery.PrivateDnsNamespace(
       this,
       'ServiceDiscovery',
@@ -416,6 +454,27 @@ export class Bee3lyStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'InternalAiUrl', {
       value: `http://ai.${namespaceName}:8000`,
+    });
+
+    new cdk.CfnOutput(this, 'EcsClusterName', {
+      value: cluster.clusterName,
+    });
+
+    new cdk.CfnOutput(this, 'PrivateSubnetIds', {
+      value: privateSubnetIds.join(','),
+      description: 'For db sync ECS task networking',
+    });
+
+    new cdk.CfnOutput(this, 'BackendSecurityGroupId', {
+      value: backendServiceSecurityGroup.securityGroupId,
+    });
+
+    new cdk.CfnOutput(this, 'DbSyncBucketName', {
+      value: dbSyncBucket.bucketName,
+    });
+
+    new cdk.CfnOutput(this, 'DbSyncTaskDefinitionArn', {
+      value: dbSyncTaskDef.taskDefinitionArn,
     });
   }
 }
