@@ -93,7 +93,7 @@ async function main() {
 
   log('Dumping local Postgres (docker compose)...');
   const dumpRaw = execSync(
-    'docker exec bee3ly-postgres pg_dump -U bay3ly --data-only --disable-triggers --exclude-table-data=_prisma_migrations bay3ly',
+    'docker exec bee3ly-postgres pg_dump -U bay3ly --data-only --exclude-table-data=_prisma_migrations bay3ly',
     { encoding: 'utf8', cwd: root },
   );
 
@@ -106,11 +106,6 @@ async function main() {
   log(`Uploading to ${s3Uri} ...`);
   execSync(`aws s3 cp "${sqlPath}" "${s3Uri}"`, { stdio: 'inherit' });
 
-  const presigned = execSync(
-    `aws s3 presign "${s3Uri}" --expires-in 3600`,
-    { encoding: 'utf8' },
-  ).trim();
-
   if (!yes) {
     log('This will REPLACE all application data in RDS (keeps _prisma_migrations).');
     log(`Host: ${host}  Database: ${database}`);
@@ -120,7 +115,7 @@ async function main() {
   }
 
   const importShell =
-    'set -e && apk add --no-cache curl && curl -fsSL "$PRESIGNED_URL" | psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1';
+    'set -e && apk add --no-cache aws-cli && export PGSSLMODE=require && aws s3 cp "s3://${S3_BUCKET}/${S3_KEY}" - | psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v ON_ERROR_STOP=1';
 
   const runTaskInput = {
     cluster,
@@ -144,7 +139,8 @@ async function main() {
             { name: 'PGUSER', value: user },
             { name: 'PGPASSWORD', value: password },
             { name: 'PGDATABASE', value: database },
-            { name: 'PRESIGNED_URL', value: presigned },
+            { name: 'S3_BUCKET', value: bucket },
+            { name: 'S3_KEY', value: s3Key },
           ],
         },
       ],
