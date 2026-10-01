@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:stop": "docker compose down"
+    "dev:stop": "docker compose down",
+    "dev:docker": "docker compose up -d"
   }
 }

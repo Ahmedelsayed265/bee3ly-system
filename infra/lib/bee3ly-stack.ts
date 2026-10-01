@@ -1,6 +1,8 @@
+import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as elasticache from 'aws-cdk-lib/aws-elasticache';
@@ -203,6 +205,14 @@ export class Bee3lyStack extends cdk.Stack {
       secretStringValue: cdk.SecretValue.unsafePlainText('REPLACE_ME'),
     });
 
+    const repoRoot = path.join(__dirname, '..', '..');
+    const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
+      directory: path.join(repoRoot, 'backend'),
+    });
+    const aiImageAsset = new DockerImageAsset(this, 'AiImageAsset', {
+      directory: path.join(repoRoot, 'ai-services'),
+    });
+
     const backendRepo = new ecr.Repository(this, 'BackendRepo', {
       repositoryName: `bee3ly-${envName}-backend`,
       removalPolicy:
@@ -255,7 +265,7 @@ export class Bee3lyStack extends cdk.Stack {
     const redisPort = redisCluster.attrRedisEndpointPort;
 
     aiTaskDef.addContainer('Ai', {
-      image: ecs.ContainerImage.fromEcrRepository(aiRepo, 'latest'),
+      image: ecs.ContainerImage.fromDockerImageAsset(aiImageAsset),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'ai',
         logGroup: aiLogGroup,
@@ -301,7 +311,7 @@ export class Bee3lyStack extends cdk.Stack {
         taskSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
         securityGroups: [backendServiceSecurityGroup],
         listenerPort: 80,
-        healthCheckGracePeriod: cdk.Duration.seconds(120),
+        healthCheckGracePeriod: cdk.Duration.seconds(300),
         cloudMapOptions: {
           name: 'backend',
           cloudMapNamespace: namespace,
@@ -309,7 +319,7 @@ export class Bee3lyStack extends cdk.Stack {
         },
         circuitBreaker: { rollback: true },
         taskImageOptions: {
-          image: ecs.ContainerImage.fromEcrRepository(backendRepo, 'latest'),
+          image: ecs.ContainerImage.fromDockerImageAsset(backendImageAsset),
           containerPort: 5000,
           environment: {
             NODE_ENV: envName === 'prod' ? 'production' : 'development',
@@ -328,22 +338,12 @@ export class Bee3lyStack extends cdk.Stack {
             DB_USER: ecs.Secret.fromSecretsManager(db.secret!, 'username'),
             DB_PASSWORD: ecs.Secret.fromSecretsManager(db.secret!, 'password'),
             DB_NAME: ecs.Secret.fromSecretsManager(db.secret!, 'dbname'),
-            JWT_ACCESS_SECRET: ecs.Secret.fromSecretsManager(
-              jwtAccessSecret,
-              'password',
-            ),
-            JWT_REFRESH_SECRET: ecs.Secret.fromSecretsManager(
-              jwtRefreshSecret,
-              'password',
-            ),
-            TOKEN_ENCRYPTION_KEY: ecs.Secret.fromSecretsManager(
-              tokenEncryptionSecret,
-              'password',
-            ),
-            AI_SERVICE_TOKEN_SECRET: ecs.Secret.fromSecretsManager(
-              aiServiceTokenSecret,
-              'password',
-            ),
+            JWT_ACCESS_SECRET: ecs.Secret.fromSecretsManager(jwtAccessSecret),
+            JWT_REFRESH_SECRET: ecs.Secret.fromSecretsManager(jwtRefreshSecret),
+            TOKEN_ENCRYPTION_KEY:
+              ecs.Secret.fromSecretsManager(tokenEncryptionSecret),
+            AI_SERVICE_TOKEN_SECRET:
+              ecs.Secret.fromSecretsManager(aiServiceTokenSecret),
           },
         },
       },
