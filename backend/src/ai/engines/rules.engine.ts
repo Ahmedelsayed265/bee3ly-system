@@ -525,7 +525,9 @@ export class RulesEngine {
     if (/instapay|انستاباي|insta\s*pay/.test(blob)) return 'InstaPay';
     if (/vodafone|فودافون/.test(blob)) return 'Vodafone Cash';
     if (/bank|بنك|تحويل بنك/.test(blob)) return 'Bank transfer';
-    if (/كاش|cod|cash\s*on\s*delivery|عند\s*الاستلام/.test(message.toLowerCase()))
+    if (
+      /كاش|cod|cash\s*on\s*delivery|عند\s*الاستلام/.test(message.toLowerCase())
+    )
       return 'Cash on delivery';
     return '';
   }

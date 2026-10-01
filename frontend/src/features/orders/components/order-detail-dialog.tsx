@@ -129,7 +129,9 @@ export function OrderDetailDialog({
 
               <div className="bg-page space-y-1.5 rounded-xl px-3 py-2.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted">{t('orderProductsSubtotal')}</span>
+                  <span className="text-muted">
+                    {t('orderProductsSubtotal')}
+                  </span>
                   <span className="text-ink font-medium tabular-nums">
                     {money(order.totalEgp)}
                   </span>
@@ -143,7 +145,9 @@ export function OrderDetailDialog({
                   </div>
                 ) : null}
                 <div className="border-border flex items-center justify-between border-t pt-2">
-                  <span className="text-muted text-sm">{t('orderColTotal')}</span>
+                  <span className="text-muted text-sm">
+                    {t('orderColTotal')}
+                  </span>
                   <span className="text-ink text-base font-bold tabular-nums">
                     {money(orderGrandTotalEgp(order))}
                   </span>

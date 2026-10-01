@@ -933,10 +933,7 @@ export class AiToolsService {
           'تم استلام إيصال تحويل — راجع الصورة وأكد من صندوق الوارد',
         )
       : orderCancel
-        ? asString(
-            args.summary,
-            'العميل طلب إلغاء الطلب — راجع المحادثة وقرّر',
-          )
+        ? asString(args.summary, 'العميل طلب إلغاء الطلب — راجع المحادثة وقرّر')
         : asString(args.summary, reason);
     await this.notifications.create(ctx.businessId, {
       type:

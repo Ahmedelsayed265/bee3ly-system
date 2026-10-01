@@ -28,4 +28,3 @@ export function inboundPrefersEnglish(
   }
   return false;
 }
-

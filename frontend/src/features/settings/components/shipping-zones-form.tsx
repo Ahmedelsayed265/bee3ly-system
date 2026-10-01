@@ -1,5 +1,4 @@
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -26,81 +25,6 @@ type ShippingZonesFormProps = {
   zones: ShippingZone[];
   onChange: (zones: ShippingZone[]) => void;
 };
-
-function LocalAliasEditor({
-  zone,
-  onChangeAreas,
-  placeholder,
-}: {
-  zone: ShippingZone;
-  onChangeAreas: (areas: string[]) => void;
-  placeholder: string;
-}) {
-  const [draft, setDraft] = useState('');
-
-  const add = () => {
-    const value = draft.trim();
-    if (!value) return;
-    if (
-      zone.areas.some((a) => a.toLowerCase() === value.toLowerCase()) ||
-      zone.name.toLowerCase() === value.toLowerCase()
-    ) {
-      setDraft('');
-      return;
-    }
-    onChangeAreas([...zone.areas, value]);
-    setDraft('');
-  };
-
-  if (!zone.areas.length && !draft) {
-    return (
-      <Input
-        className="mt-2"
-        placeholder={placeholder}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            add();
-          }
-        }}
-      />
-    );
-  }
-
-  return (
-    <div className="mt-2 space-y-2">
-      {zone.areas.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
-          {zone.areas.map((area) => (
-            <button
-              key={area}
-              type="button"
-              className="bg-surface text-muted rounded-full px-2 py-0.5 text-[10px] font-medium"
-              onClick={() =>
-                onChangeAreas(zone.areas.filter((item) => item !== area))
-              }
-            >
-              {area} ×
-            </button>
-          ))}
-        </div>
-      ) : null}
-      <Input
-        placeholder={placeholder}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            add();
-          }
-        }}
-      />
-    </div>
-  );
-}
 
 export function ShippingZonesForm({
   allowsLocalShipping,
@@ -197,11 +121,6 @@ export function ShippingZonesForm({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <LocalAliasEditor
-                zone={zone}
-                placeholder={t('shippingLocalAliasPlaceholder')}
-                onChangeAreas={(areas) => update(zone.id, { areas })}
-              />
             </div>
           ))
         : zones.map((zone) => {
