@@ -25,7 +25,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-c
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev \
-  && npm install prisma@^6.19.3 @nestjs/config@^12.0.0 --no-save \
+  && npm install prisma@^6.19.3 --no-save \
   && npx prisma generate
 
 COPY --from=builder /app/dist ./dist
