@@ -110,9 +110,7 @@ export class TikTokOauthService implements OnModuleInit {
     }
 
     const displayName =
-      token.display_name?.trim() ||
-      token.username?.trim() ||
-      'TikTok Business';
+      token.display_name?.trim() || token.username?.trim() || 'TikTok Business';
 
     const expiresAt =
       token.expires_in && token.expires_in > 0

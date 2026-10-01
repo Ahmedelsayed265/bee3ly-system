@@ -1,5 +1,5 @@
 import { Clock, Copy, Mail, MessageCircle, Check } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
 import { PrefsControls } from '@/components/preferences';
@@ -36,16 +36,13 @@ const TOPIC_KEYS: Record<
 export function ContactPageView() {
   const { t } = useLocale();
   const { user, isAuthenticated } = useAuth();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const name = nameDraft ?? user?.name ?? '';
+  const email = emailDraft ?? user?.email ?? '';
   const [topic, setTopic] = useState<ContactTopic>('general');
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (user?.name && !name) setName(user.name);
-    if (user?.email && !email) setEmail(user.email);
-  }, [user?.name, user?.email, name, email]);
 
   const topicOptions: SelectFieldOption[] = useMemo(
     () =>
@@ -199,7 +196,7 @@ export function ContactPageView() {
               id="contact-name"
               label={t('contactFieldName')}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setNameDraft(e.target.value)}
               autoComplete="name"
             />
             <InputField
@@ -207,7 +204,7 @@ export function ContactPageView() {
               label={t('contactFieldEmail')}
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmailDraft(e.target.value)}
               autoComplete="email"
               required
             />

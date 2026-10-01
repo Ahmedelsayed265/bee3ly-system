@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 /** Renders `**bold**` segments as <strong>; keeps newlines via whitespace-pre-wrap on parent. */
-export function chatTextWithBold(text: string): ReactNode[] {
+function chatTextWithBold(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   const re = /\*\*(.+?)\*\*/g;
   let last = 0;

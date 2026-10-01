@@ -17,7 +17,8 @@ export function useInbox() {
   const campaignId = params.get('campaignId') ?? '';
   const conversationParam = params.get('conversationId');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pickedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = conversationParam ?? pickedId;
   const [draft, setDraft] = useState('');
   const [pendingDelete, setPendingDelete] = useState(false);
 
@@ -51,10 +52,6 @@ export function useInbox() {
     conversation?.mode === 'HUMAN' ||
     (Boolean(conversation?.needsHuman) && !paymentReviewPending);
   const messages = conversation?.messages ?? [];
-
-  useEffect(() => {
-    if (conversationParam) setSelectedId(conversationParam);
-  }, [conversationParam]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: 'end' });

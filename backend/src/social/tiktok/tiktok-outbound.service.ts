@@ -18,15 +18,13 @@ export class TikTokOutboundService {
     private readonly oauth: TikTokOauthService,
   ) {}
 
-  async getSenderName(_socialAccountId: string, _senderId: string) {
+  getSenderName(socialAccountId: string, senderId: string): null {
+    void socialAccountId;
+    void senderId;
     return null;
   }
 
-  async sendText(
-    socialAccountId: string,
-    recipientId: string,
-    text: string,
-  ) {
+  async sendText(socialAccountId: string, recipientId: string, text: string) {
     const account = await this.prisma.socialAccount.findUnique({
       where: { id: socialAccountId },
     });

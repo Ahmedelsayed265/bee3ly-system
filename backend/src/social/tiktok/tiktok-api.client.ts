@@ -130,7 +130,9 @@ export class TikTokApiClient {
       event_type: 'DIRECT_MESSAGE',
       callback_url: callbackUrl,
     });
-    this.logger.log(`TikTok DIRECT_MESSAGE webhook subscribed → ${callbackUrl}`);
+    this.logger.log(
+      `TikTok DIRECT_MESSAGE webhook subscribed → ${callbackUrl}`,
+    );
   }
 
   async sendTextMessage(input: {

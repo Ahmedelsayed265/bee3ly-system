@@ -36,11 +36,6 @@ export class ChannelOutboundService {
     if (account?.platform === SocialPlatform.TIKTOK) {
       return this.tiktok.sendText(socialAccountId, recipientId, text);
     }
-    return this.meta.sendText(
-      socialAccountId,
-      recipientId,
-      text,
-      quickReplies,
-    );
+    return this.meta.sendText(socialAccountId, recipientId, text, quickReplies);
   }
 }
