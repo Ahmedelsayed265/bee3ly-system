@@ -435,6 +435,22 @@ export class Bee3lyStack extends cdk.Stack {
     tokenEncryptionSecret.grantRead(taskExecutionRole);
     aiServiceTokenSecret.grantRead(taskExecutionRole);
     metaAppSecret.grantRead(taskExecutionRole);
+    // ECS requests the secret by name, without the random ARN suffix.
+    // grantRead only allows name-*, so that call is denied.
+    const metaSecretBase = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/meta-app-secret`;
+    const metaSecretRead = new iam.Policy(this, 'MetaAppSecretReadPolicy', {
+      roles: [taskExecutionRole],
+      statements: [
+        new iam.PolicyStatement({
+          actions: [
+            'secretsmanager:GetSecretValue',
+            'secretsmanager:DescribeSecret',
+          ],
+          resources: [metaSecretBase, `${metaSecretBase}-*`],
+        }),
+      ],
+    });
+    albService.service.node.addDependency(metaSecretRead);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
