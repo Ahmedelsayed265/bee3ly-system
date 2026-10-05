@@ -206,10 +206,12 @@ export class Bee3lyStack extends cdk.Stack {
       secretStringValue: cdk.SecretValue.unsafePlainText('REPLACE_ME'),
     });
 
-    const metaAppSecret = secretsmanager.Secret.fromSecretNameV2(
+    // Full ARN, including the random suffix. A name-only ARN makes ECS call
+    // GetSecretValue on an identifier the execution role is not allowed to read.
+    const metaAppSecret = secretsmanager.Secret.fromSecretCompleteArn(
       this,
       'MetaAppSecret',
-      `bee3ly/${envName}/meta-app-secret`,
+      `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/meta-app-secret-3uADMt`,
     );
 
     const repoRoot = path.join(__dirname, '..', '..');
