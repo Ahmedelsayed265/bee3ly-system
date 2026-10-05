@@ -206,6 +206,17 @@ export class Bee3lyStack extends cdk.Stack {
       secretStringValue: cdk.SecretValue.unsafePlainText('REPLACE_ME'),
     });
 
+    const metaAppSecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'MetaAppSecret',
+      `bee3ly/${envName}/meta-app-secret`,
+    );
+    const whatsappAccessToken = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      'WhatsAppAccessToken',
+      `bee3ly/${envName}/whatsapp-access-token`,
+    );
+
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
       directory: path.join(repoRoot, 'backend'),
@@ -369,6 +380,15 @@ export class Bee3lyStack extends cdk.Stack {
             JWT_REFRESH_EXPIRES_IN: '7d',
             AI_SERVICE_TIMEOUT_MS: '20000',
             AI_SERVICE_TOKEN_TTL: '3600',
+            META_APP_ID: '2374012540084160',
+            META_REDIRECT_URI: 'https://api.bee3ly.net/social/meta/callback',
+            META_OAUTH_EXTRA_SCOPES:
+              'instagram_basic,instagram_manage_messages,instagram_manage_comments',
+            META_WHATSAPP_EMBEDDED_CONFIG_ID: '986448077802892',
+            META_COMMENT_POLLING_ENABLED: 'true',
+            META_COMMENT_POLL_INTERVAL_MS: '60000',
+            WHATSAPP_PHONE_NUMBER_ID: '1392264077293649',
+            META_WEBHOOK_VERIFY_TOKEN: 'bee3ly-verify',
           },
           secrets: {
             DB_HOST: ecs.Secret.fromSecretsManager(db.secret!, 'host'),
@@ -382,6 +402,9 @@ export class Bee3lyStack extends cdk.Stack {
               ecs.Secret.fromSecretsManager(tokenEncryptionSecret),
             AI_SERVICE_TOKEN_SECRET:
               ecs.Secret.fromSecretsManager(aiServiceTokenSecret),
+            META_APP_SECRET: ecs.Secret.fromSecretsManager(metaAppSecret),
+            WHATSAPP_ACCESS_TOKEN:
+              ecs.Secret.fromSecretsManager(whatsappAccessToken),
           },
         },
       },
@@ -419,6 +442,8 @@ export class Bee3lyStack extends cdk.Stack {
     jwtRefreshSecret.grantRead(taskExecutionRole);
     tokenEncryptionSecret.grantRead(taskExecutionRole);
     aiServiceTokenSecret.grantRead(taskExecutionRole);
+    metaAppSecret.grantRead(taskExecutionRole);
+    whatsappAccessToken.grantRead(taskExecutionRole);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
@@ -428,7 +453,7 @@ export class Bee3lyStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'FrontendUrlExpected', {
       value: frontendUrl,
-      description: 'FRONTEND_URL on backend / Amplify app origin',
+      description: 'FRONTEND_URL on the backend (Vercel site origin)',
     });
 
     new cdk.CfnOutput(this, 'BackendEcrUri', {
