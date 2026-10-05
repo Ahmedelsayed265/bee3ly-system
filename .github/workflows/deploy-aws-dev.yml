@@ -2,9 +2,9 @@
 # Requires GitHub repo secrets (Settings → Secrets and variables → Actions):
 #   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_ACCOUNT_ID
 # Repository variable (optional):
-#   DEV_FRONTEND_URL — CORS / FRONTEND_URL (default http://localhost:5173)
+#   DEV_FRONTEND_URL — CORS origin for the API (default https://bee3ly.net)
 #
-# Frontend: connect Amplify to this repo (frontend/amplify.yml) for automatic UI deploys.
+# The frontend is hosted on Vercel, not AWS. FRONTEND_URL is only the browser origin the API allows.
 
 name: Deploy AWS dev
 
@@ -50,7 +50,7 @@ jobs:
           CDK_DEFAULT_REGION: eu-north-1
           DEV_FRONTEND_URL: ${{ vars.DEV_FRONTEND_URL }}
         run: |
-          FRONTEND_URL="${DEV_FRONTEND_URL:-http://localhost:5173}"
+          FRONTEND_URL="${DEV_FRONTEND_URL:-https://bee3ly.net}"
           cd infra
           npm ci
           npx cdk deploy Bee3ly-dev \
