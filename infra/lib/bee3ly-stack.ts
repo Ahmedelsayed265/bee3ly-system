@@ -211,11 +211,6 @@ export class Bee3lyStack extends cdk.Stack {
       'MetaAppSecret',
       `bee3ly/${envName}/meta-app-secret`,
     );
-    const whatsappAccessToken = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      'WhatsAppAccessToken',
-      `bee3ly/${envName}/whatsapp-access-token`,
-    );
 
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
@@ -387,7 +382,6 @@ export class Bee3lyStack extends cdk.Stack {
             META_WHATSAPP_EMBEDDED_CONFIG_ID: '986448077802892',
             META_COMMENT_POLLING_ENABLED: 'true',
             META_COMMENT_POLL_INTERVAL_MS: '60000',
-            WHATSAPP_PHONE_NUMBER_ID: '1392264077293649',
             META_WEBHOOK_VERIFY_TOKEN: 'bee3ly-verify',
           },
           secrets: {
@@ -403,8 +397,6 @@ export class Bee3lyStack extends cdk.Stack {
             AI_SERVICE_TOKEN_SECRET:
               ecs.Secret.fromSecretsManager(aiServiceTokenSecret),
             META_APP_SECRET: ecs.Secret.fromSecretsManager(metaAppSecret),
-            WHATSAPP_ACCESS_TOKEN:
-              ecs.Secret.fromSecretsManager(whatsappAccessToken),
           },
         },
       },
@@ -443,7 +435,6 @@ export class Bee3lyStack extends cdk.Stack {
     tokenEncryptionSecret.grantRead(taskExecutionRole);
     aiServiceTokenSecret.grantRead(taskExecutionRole);
     metaAppSecret.grantRead(taskExecutionRole);
-    whatsappAccessToken.grantRead(taskExecutionRole);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {

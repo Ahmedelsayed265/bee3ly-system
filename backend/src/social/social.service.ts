@@ -37,6 +37,10 @@ export class SocialService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // A shared Cloud API test token overwrites whichever business is picked.
+    // Real merchants connect their own number through Embedded Signup.
+    if (this.config.get<string>('WHATSAPP_BIND_TEST_NUMBER') !== 'true') return;
+
     const token = this.config.get<string>('WHATSAPP_ACCESS_TOKEN')?.trim();
     const phoneNumberId = this.config
       .get<string>('WHATSAPP_PHONE_NUMBER_ID')

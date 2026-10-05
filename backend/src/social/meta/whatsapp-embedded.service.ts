@@ -17,7 +17,7 @@ export type WhatsAppEmbeddedCompleteInput = {
   phoneNumberId?: string;
   wabaId?: string;
   displayPhoneNumber?: string;
-  /** Page origin where FB.login ran, e.g. https://bee3ly-system.vercel.app */
+  /** Page origin where FB.login ran, e.g. https://bee3ly.net */
   frontendOrigin?: string;
 };
 
