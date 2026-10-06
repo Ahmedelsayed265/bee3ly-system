@@ -214,6 +214,12 @@ export class Bee3lyStack extends cdk.Stack {
       `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/meta-app-secret-3uADMt`,
     );
 
+    const tiktokClientSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'TikTokClientSecret',
+      `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/tiktok-client-secret-Yjyfql`,
+    );
+
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
       directory: path.join(repoRoot, 'backend'),
@@ -385,6 +391,11 @@ export class Bee3lyStack extends cdk.Stack {
             META_COMMENT_POLLING_ENABLED: 'true',
             META_COMMENT_POLL_INTERVAL_MS: '60000',
             META_WEBHOOK_VERIFY_TOKEN: 'bee3ly-verify',
+            TIKTOK_CLIENT_KEY: 'sbawc0m7ghba40oiqw',
+            TIKTOK_REDIRECT_URI: 'https://api.bee3ly.net/social/tiktok/callback',
+            TIKTOK_WEBHOOK_URL: 'https://api.bee3ly.net/social/tiktok/webhook',
+            TIKTOK_OAUTH_AUTHORIZE_URL: 'https://www.tiktok.com/v2/auth/authorize/',
+            TIKTOK_OAUTH_SCOPES: 'user.info.basic',
           },
           secrets: {
             DB_HOST: ecs.Secret.fromSecretsManager(db.secret!, 'host'),
@@ -399,6 +410,8 @@ export class Bee3lyStack extends cdk.Stack {
             AI_SERVICE_TOKEN_SECRET:
               ecs.Secret.fromSecretsManager(aiServiceTokenSecret),
             META_APP_SECRET: ecs.Secret.fromSecretsManager(metaAppSecret),
+            TIKTOK_CLIENT_SECRET:
+              ecs.Secret.fromSecretsManager(tiktokClientSecret),
           },
         },
       },
@@ -437,6 +450,7 @@ export class Bee3lyStack extends cdk.Stack {
     tokenEncryptionSecret.grantRead(taskExecutionRole);
     aiServiceTokenSecret.grantRead(taskExecutionRole);
     metaAppSecret.grantRead(taskExecutionRole);
+    tiktokClientSecret.grantRead(taskExecutionRole);
     // ECS requests the secret by name, without the random ARN suffix.
     // grantRead only allows name-*, so that call is denied.
     const metaSecretBase = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/meta-app-secret`;
@@ -453,6 +467,24 @@ export class Bee3lyStack extends cdk.Stack {
       ],
     });
     albService.service.node.addDependency(metaSecretRead);
+    const tiktokSecretBase = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/tiktok-client-secret`;
+    const tiktokSecretRead = new iam.Policy(this, 'TikTokClientSecretReadPolicy', {
+      roles: [taskExecutionRole],
+      statements: [
+        new iam.PolicyStatement({
+          actions: [
+            'secretsmanager:GetSecretValue',
+            'secretsmanager:DescribeSecret',
+          ],
+          resources: [
+            tiktokSecretBase,
+            `${tiktokSecretBase}-*`,
+            `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/tiktok-client-secret-Yjyfql`,
+          ],
+        }),
+      ],
+    });
+    albService.service.node.addDependency(tiktokSecretRead);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {

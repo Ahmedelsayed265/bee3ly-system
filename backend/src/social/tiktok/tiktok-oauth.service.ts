@@ -77,7 +77,7 @@ export class TikTokOauthService implements OnModuleInit {
       this.logger.warn(
         `TikTok OAuth error=${query.error} ${query.error_description ?? ''}`,
       );
-      return { redirectTo: `${frontend}/settings?tiktok=error` };
+      return { redirectTo: `${frontend}/app/settings?tiktok=error` };
     }
 
     const authCode = query.auth_code ?? query.code;
@@ -160,7 +160,7 @@ export class TikTokOauthService implements OnModuleInit {
       `TikTok connected business=${businessId} open_id=${openId}`,
     );
 
-    return { redirectTo: `${frontend}/settings?tiktok=connected` };
+    return { redirectTo: `${frontend}/app/settings?tiktok=connected` };
   }
 
   encrypt(value: string) {
