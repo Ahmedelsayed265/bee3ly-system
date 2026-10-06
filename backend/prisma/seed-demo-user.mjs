@@ -70,6 +70,245 @@ function defaultCost(priceEgp) {
   return Math.max(0, Math.round(priceEgp * 0.48))
 }
 
+function variantSkuKey(options) {
+  return Object.entries(options)
+    .map(([k, v]) => [k.trim(), String(v).trim()])
+    .filter(([k, v]) => k && v)
+    .sort(([a], [b]) => a.localeCompare(b, 'ar'))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('|')
+}
+
+/** Option catalogs. Extra values cover SKUs that are not in the base lists. */
+const VARIANT_DICTIONARY = [
+  {
+    id: 'size',
+    name: 'Size',
+    values: [
+      '250g',
+      '300g',
+      '500g',
+      '1 KG',
+      '2 KG',
+      '3 KG',
+      '5 KG',
+      '6 KG',
+      '600ml',
+    ],
+  },
+  {
+    id: 'flavor',
+    name: 'Flavor',
+    values: [
+      'Chocolate',
+      'Vanilla',
+      'Strawberry',
+      'Cookies & Cream',
+      'Peanut Butter',
+      'Fruit Punch',
+      'Blue Raspberry',
+      'Lemon',
+      'Orange',
+      'Unflavored',
+    ],
+  },
+  {
+    id: 'servings',
+    name: 'Servings',
+    values: [
+      '20 Servings',
+      '30 Servings',
+      '60 Servings',
+      '90 Servings',
+      '120 Servings',
+    ],
+  },
+  {
+    id: 'capsules',
+    name: 'Capsules',
+    values: [
+      '30 Capsules',
+      '60 Capsules',
+      '90 Capsules',
+      '120 Capsules',
+      '30 Capsules - 1000 IU',
+      '60 Capsules - 5000 IU',
+    ],
+  },
+  {
+    id: 'tablets',
+    name: 'Tablets',
+    values: ['30 Tablets', '60 Tablets'],
+  },
+  {
+    id: 'form',
+    name: 'Form',
+    values: ['Powder', 'Capsules', 'Tablets', 'Softgels', 'Sachets', 'Bars'],
+  },
+  {
+    id: 'color',
+    name: 'Color',
+    values: ['Black', 'White', 'Transparent', 'Red', 'Blue'],
+  },
+  {
+    id: 'pack_size',
+    name: 'Pack size',
+    values: ['Single', 'Pack of 6', 'Pack of 12', 'Pack of 24', 'Pair', '20 Sachets'],
+  },
+]
+
+const DEMO_STOCK = 20
+
+function catalogProduct(spec) {
+  const axisNames = [...new Set(spec.skus.flatMap((sku) => Object.keys(sku.options)))]
+  const axes = axisNames.map((name) => ({
+    name,
+    values: [
+      ...new Set(spec.skus.map((sku) => sku.options[name]).filter(Boolean)),
+    ],
+  }))
+  const skus = spec.skus.map((sku) => ({
+    key: variantSkuKey(sku.options),
+    options: sku.options,
+    priceEgp: sku.priceEgp,
+    costEgp: sku.costEgp,
+    stockQuantity: DEMO_STOCK,
+  }))
+  return {
+    name: spec.name,
+    description: spec.category,
+    priceEgp: Math.min(...skus.map((sku) => sku.priceEgp)),
+    costEgp: Math.min(...skus.map((sku) => sku.costEgp)),
+    attributes: { category: spec.category },
+    variants: { axes, skus },
+    stockQuantity: skus.reduce((sum, sku) => sum + sku.stockQuantity, 0),
+    inStock: true,
+  }
+}
+
+const CATALOG = [
+  catalogProduct({
+    name: 'Whey Protein',
+    category: 'Protein',
+    skus: [
+      { options: { Size: '1 KG', Flavor: 'Chocolate' }, costEgp: 1650, priceEgp: 2150 },
+      { options: { Size: '1 KG', Flavor: 'Vanilla' }, costEgp: 1650, priceEgp: 2150 },
+      { options: { Size: '2 KG', Flavor: 'Chocolate' }, costEgp: 3000, priceEgp: 3850 },
+      { options: { Size: '2 KG', Flavor: 'Vanilla' }, costEgp: 3000, priceEgp: 3850 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Creatine Monohydrate',
+    category: 'Creatine',
+    skus: [
+      { options: { Size: '300g', Flavor: 'Unflavored' }, costEgp: 650, priceEgp: 900 },
+      { options: { Size: '500g', Flavor: 'Unflavored' }, costEgp: 950, priceEgp: 1300 },
+    ],
+  }),
+  catalogProduct({
+    name: 'BCAA',
+    category: 'Amino Acids',
+    skus: [
+      { options: { Servings: '30 Servings', Flavor: 'Lemon' }, costEgp: 600, priceEgp: 850 },
+      { options: { Servings: '30 Servings', Flavor: 'Orange' }, costEgp: 600, priceEgp: 850 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Pre Workout',
+    category: 'Pre Workout',
+    skus: [
+      { options: { Servings: '30 Servings', Flavor: 'Fruit Punch' }, costEgp: 750, priceEgp: 1050 },
+      { options: { Servings: '30 Servings', Flavor: 'Blue Raspberry' }, costEgp: 750, priceEgp: 1050 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Mass Gainer',
+    category: 'Weight Gain',
+    skus: [
+      { options: { Size: '3 KG', Flavor: 'Chocolate' }, costEgp: 1800, priceEgp: 2400 },
+      { options: { Size: '3 KG', Flavor: 'Vanilla' }, costEgp: 1800, priceEgp: 2400 },
+      { options: { Size: '6 KG', Flavor: 'Chocolate' }, costEgp: 3200, priceEgp: 4200 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Omega 3',
+    category: 'Vitamins',
+    skus: [
+      { options: { Capsules: '60 Capsules' }, costEgp: 280, priceEgp: 400 },
+      { options: { Capsules: '120 Capsules' }, costEgp: 500, priceEgp: 700 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Multivitamin',
+    category: 'Vitamins',
+    skus: [
+      { options: { Tablets: '30 Tablets' }, costEgp: 250, priceEgp: 375 },
+      { options: { Tablets: '60 Tablets' }, costEgp: 430, priceEgp: 600 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Vitamin D3',
+    category: 'Vitamins',
+    skus: [
+      { options: { Capsules: '30 Capsules - 1000 IU' }, costEgp: 120, priceEgp: 180 },
+      { options: { Capsules: '60 Capsules - 5000 IU' }, costEgp: 220, priceEgp: 320 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Magnesium',
+    category: 'Minerals',
+    skus: [{ options: { Tablets: '60 Tablets' }, costEgp: 280, priceEgp: 400 }],
+  }),
+  catalogProduct({
+    name: 'Zinc',
+    category: 'Minerals',
+    skus: [{ options: { Tablets: '60 Tablets' }, costEgp: 180, priceEgp: 275 }],
+  }),
+  catalogProduct({
+    name: 'Electrolytes',
+    category: 'Hydration',
+    skus: [
+      { options: { 'Pack size': '20 Sachets', Flavor: 'Lemon' }, costEgp: 300, priceEgp: 450 },
+      { options: { 'Pack size': '20 Sachets', Flavor: 'Orange' }, costEgp: 300, priceEgp: 450 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Glutamine',
+    category: 'Amino Acids',
+    skus: [
+      { options: { Size: '300g', Flavor: 'Unflavored' }, costEgp: 550, priceEgp: 800 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Collagen',
+    category: 'Beauty & Wellness',
+    skus: [
+      { options: { Size: '300g', Flavor: 'Unflavored' }, costEgp: 700, priceEgp: 950 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Protein Bar',
+    category: 'Snacks',
+    skus: [
+      { options: { 'Pack size': 'Pack of 12', Flavor: 'Chocolate' }, costEgp: 450, priceEgp: 650 },
+      { options: { 'Pack size': 'Pack of 12', Flavor: 'Peanut Butter' }, costEgp: 450, priceEgp: 650 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Shaker Bottle',
+    category: 'Accessories',
+    skus: [
+      { options: { Size: '600ml', Color: 'Black' }, costEgp: 120, priceEgp: 200 },
+      { options: { Size: '600ml', Color: 'Transparent' }, costEgp: 120, priceEgp: 200 },
+    ],
+  }),
+  catalogProduct({
+    name: 'Lifting Straps',
+    category: 'Accessories',
+    skus: [{ options: { 'Pack size': 'Pair', Color: 'Black' }, costEgp: 150, priceEgp: 250 }],
+  }),
+]
+
 function daysAgo(n, hour = 12) {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -119,6 +358,7 @@ async function main() {
         'هل المنتج أصلي؟ نعم، استيراد رسمي.\nممكن أرجع؟ خلال 14 يوم بشرط عدم الفتح.\nالشحن للمنوفية؟ أيوه، حسب منطقة الشحن.',
       onboardingCompletedAt: new Date(),
       shippingZones: DEFAULT_SHIPPING_ZONES,
+      variantDictionary: VARIANT_DICTIONARY,
     },
   })
 
@@ -256,60 +496,13 @@ async function main() {
     }),
   ])
 
-  const products = await Promise.all(
-    [
-      {
-        name: 'واي بروتين شوكولاتة 2كجم',
-        description: '26g بروتين لكل سكoop',
-        priceEgp: 1850,
-        costEgp: 980,
-        attributes: { sizes: ['2كجم'], flavors: ['شوكولاتة'], protein_g: 26 },
-        stockQuantity: 40,
-        inStock: true,
-      },
-      {
-        name: 'كرياتين مونوهيدرات 300جم',
-        description: '5g يوميًا',
-        priceEgp: 450,
-        costEgp: 220,
-        attributes: { sizes: ['300جم'], serving: '5g' },
-        stockQuantity: 80,
-        inStock: true,
-      },
-      {
-        name: 'BCAA أمينو 60 سيرف',
-        priceEgp: 620,
-        costEgp: 310,
-        attributes: { sizes: ['60 سيرف'], flavors: ['مانجو', 'توت'] },
-        stockQuantity: 35,
-        inStock: true,
-      },
-      {
-        name: 'مالتي فيتامين يومي',
-        priceEgp: 280,
-        costEgp: 120,
-        attributes: { sizes: ['90 قرص'] },
-        stockQuantity: 50,
-        inStock: true,
-      },
-      {
-        name: 'بري ورك آوت',
-        priceEgp: 750,
-        costEgp: 380,
-        attributes: { sizes: ['30 سيرف'], flavors: ['تفاح أخضر'] },
-        stockQuantity: 0,
-        inStock: false,
-      },
-      {
-        name: 'أوميغا 3 فيش أويل',
-        priceEgp: 390,
-        costEgp: 175,
-        attributes: { sizes: ['60 كبسولة'] },
-        stockQuantity: 22,
-        inStock: true,
-      },
-    ].map((p) => prisma.product.create({ data: { businessId, ...p } })),
-  )
+  const products = []
+  for (const item of CATALOG) {
+    products.push(
+      await prisma.product.create({ data: { businessId, ...item } }),
+    )
+  }
+  const productByName = Object.fromEntries(products.map((p) => [p.name, p]))
 
   const customersData = [
     { name: 'سارة أحمد', phone: '01012345678', platform: 'INSTAGRAM' },
@@ -572,9 +765,12 @@ async function main() {
       day: 0,
       customer: customers[0],
       campaign: campWhey,
-      product: products[0],
+      product: productByName['Whey Protein'],
       status: 'PENDING',
-      size: '2كجم',
+      size: '2 KG',
+      color: 'Chocolate',
+      unitPrice: 3850,
+      unitCost: 3000,
       governorate: 'cairo',
       address: 'شارع 9، المعادي، برج 12، الدور 3',
       payment: 'إنستاباي',
@@ -583,9 +779,12 @@ async function main() {
       day: 0,
       customer: customers[5],
       campaign: campWhey,
-      product: products[1],
+      product: productByName['Creatine Monohydrate'],
       status: 'CONFIRMED',
-      size: '300جم',
+      size: '300g',
+      color: 'Unflavored',
+      unitPrice: 900,
+      unitCost: 650,
       governorate: 'giza',
       address: '6 أكتوبر، الحي السابع، فيلا 8',
       payment: 'كاش عند الاستلام',
@@ -594,10 +793,12 @@ async function main() {
       day: 1,
       customer: customers[2],
       campaign: campWhey,
-      product: products[2],
+      product: productByName['BCAA'],
       status: 'COMPLETED',
-      size: '60 سيرف',
-      color: 'مانجو',
+      size: '30 Servings',
+      color: 'Lemon',
+      unitPrice: 850,
+      unitCost: 600,
       qty: 2,
       governorate: 'alexandria',
       address: 'سموحة، شارع فوزي معاذ، عمارة 15',
@@ -607,9 +808,11 @@ async function main() {
       day: 2,
       customer: customers[1],
       campaign: campLeads,
-      product: products[3],
+      product: productByName['Multivitamin'],
       status: 'COMPLETED',
-      size: '90 قرص',
+      size: '60 Tablets',
+      unitPrice: 600,
+      unitCost: 430,
       governorate: 'sharqia',
       address: 'الزقازيق، شارع الجلاء',
       payment: 'كاش عند الاستلام',
@@ -618,9 +821,11 @@ async function main() {
       day: 3,
       customer: customers[6],
       campaign: campLeads,
-      product: products[5],
+      product: productByName['Omega 3'],
       status: 'CONFIRMED',
-      size: '60 كبسولة',
+      size: '60 Capsules',
+      unitPrice: 400,
+      unitCost: 280,
       governorate: 'cairo',
       address: 'مدينة نصر، عباس العقاد',
       payment: 'Instapay',
@@ -629,9 +834,12 @@ async function main() {
       day: 4,
       customer: customers[7],
       campaign: null,
-      product: products[0],
+      product: productByName['Whey Protein'],
       status: 'COMPLETED',
-      size: '2كجم',
+      size: '2 KG',
+      color: 'Chocolate',
+      unitPrice: 3850,
+      unitCost: 3000,
       governorate: 'qalyubia',
       address: 'شبرا الخيمة، شارع مسجد الفتح',
       payment: 'كاش عند الاستلام',
@@ -640,10 +848,12 @@ async function main() {
       day: 5,
       customer: customers[3],
       campaign: campRetarget,
-      product: products[2],
+      product: productByName['BCAA'],
       status: 'CANCELLED',
-      size: '60 سيرف',
-      color: 'توت',
+      size: '30 Servings',
+      color: 'Orange',
+      unitPrice: 850,
+      unitCost: 600,
       governorate: 'cairo',
       address: 'التجمع الخامس، بوابة 3',
     },
@@ -651,9 +861,12 @@ async function main() {
       day: 6,
       customer: customers[4],
       campaign: campRetarget,
-      product: products[1],
+      product: productByName['Creatine Monohydrate'],
       status: 'COMPLETED',
-      size: '300جم',
+      size: '300g',
+      color: 'Unflavored',
+      unitPrice: 900,
+      unitCost: 650,
       governorate: 'ismailia',
       address: 'الإسماعيلية، شارع صلاح سالم',
       payment: 'كاش عند الاستلام',
@@ -662,9 +875,11 @@ async function main() {
       day: 1,
       customer: customers[1],
       campaign: campLeads,
-      product: products[5],
+      product: productByName['Omega 3'],
       status: 'COMPLETED',
-      size: '60 كبسولة',
+      size: '60 Capsules',
+      unitPrice: 400,
+      unitCost: 280,
       governorate: 'cairo',
       address: 'مصر الجديدة، شارع الخمسين',
       payment: 'فودافون كاش',
@@ -673,9 +888,11 @@ async function main() {
       day: 2,
       customer: customers[0],
       campaign: campWhey,
-      product: products[3],
+      product: productByName['Multivitamin'],
       status: 'CONFIRMED',
-      size: '90 قرص',
+      size: '30 Tablets',
+      unitPrice: 375,
+      unitCost: 250,
       qty: 2,
       governorate: 'giza',
       address: 'الدقي، شارع التحرير، الدور 5',
@@ -686,11 +903,12 @@ async function main() {
   let orderNumber = 1040
   for (const o of orderPlan) {
     const qty = o.qty ?? 1
-    const total = o.product.priceEgp * qty
+    const unitPrice = o.unitPrice ?? o.product.priceEgp
+    const total = unitPrice * qty
     const governorate = o.governorate ?? 'cairo'
     const shippingEgp =
       o.status === 'CANCELLED' ? null : shippingFor(governorate)
-    const costEgp = o.product.costEgp ?? defaultCost(o.product.priceEgp)
+    const costEgp = o.unitCost ?? o.product.costEgp ?? defaultCost(unitPrice)
     const createdAt = daysAgo(o.day, 10 + (orderNumber % 8))
     const noteParts = []
     if (o.address && o.status !== 'CANCELLED') {
@@ -724,7 +942,7 @@ async function main() {
               size: o.size ?? null,
               color: o.color ?? null,
               quantity: qty,
-              priceEgp: o.product.priceEgp,
+              priceEgp: unitPrice,
               costEgp: o.status === 'CANCELLED' ? null : costEgp,
             },
           ],
