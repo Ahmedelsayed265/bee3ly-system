@@ -77,7 +77,9 @@ export function useSocialSettings() {
   const tiktokConnectMut = useMutation({
     mutationFn: startTikTokConnect,
     onSuccess: (data) => {
-      window.location.href = data.oauthUrl;
+      const url = new URL(data.oauthUrl);
+      url.searchParams.set('lang', 'en');
+      window.location.href = url.toString();
     },
     onError: (err) => {
       toast.error(getApiErrorMessage(err) ?? t('tiktokConnectFailed'));

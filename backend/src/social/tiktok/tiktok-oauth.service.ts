@@ -58,6 +58,7 @@ export class TikTokOauthService implements OnModuleInit {
       scope: scopes,
       redirect_uri: redirect,
       state,
+      lang: 'en',
     });
     return `${authorizeBase}?${params.toString()}`;
   }

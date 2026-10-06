@@ -65,29 +65,7 @@ export class TikTokApiClient {
       grant_type: 'authorization_code',
       redirect_uri: redirectUri,
     });
-    const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cache-Control': 'no-cache',
-      },
-      body: params.toString(),
-    });
-    const json = (await res.json()) as {
-      error?: string;
-      error_description?: string;
-      data?: TikTokTokenResponse;
-    };
-    if (!res.ok || json.error) {
-      throw new Error(
-        json.error_description ?? json.error ?? `HTTP ${res.status}`,
-      );
-    }
-    const token = json.data;
-    if (!token?.access_token) {
-      throw new Error('TikTok Login Kit token response missing access_token');
-    }
-    return token;
+    return this.postLoginKitToken(params, 'TikTok Login Kit');
   }
 
   async refreshAccessToken(refreshToken: string): Promise<TikTokTokenResponse> {
@@ -97,6 +75,13 @@ export class TikTokApiClient {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
     });
+    return this.postLoginKitToken(params, 'TikTok refresh');
+  }
+
+  private async postLoginKitToken(
+    params: URLSearchParams,
+    label: string,
+  ): Promise<TikTokTokenResponse> {
     const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
       method: 'POST',
       headers: {
@@ -105,7 +90,7 @@ export class TikTokApiClient {
       },
       body: params.toString(),
     });
-    const json = (await res.json()) as {
+    const json = (await res.json()) as TikTokTokenResponse & {
       error?: string;
       error_description?: string;
       data?: TikTokTokenResponse;
@@ -115,9 +100,9 @@ export class TikTokApiClient {
         json.error_description ?? json.error ?? `HTTP ${res.status}`,
       );
     }
-    const token = json.data;
+    const token = json.access_token ? json : json.data;
     if (!token?.access_token) {
-      throw new Error('TikTok refresh response missing access_token');
+      throw new Error(`${label} token response missing access_token`);
     }
     return token;
   }
