@@ -2,7 +2,6 @@ import * as path from 'path';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
-import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as elasticache from 'aws-cdk-lib/aws-elasticache';
@@ -13,6 +12,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
+import { DockerImageAsset } from 'aws-cdk-lib/aws-ecr-assets';
 import { Construct } from 'constructs';
 import {
   Bee3lyEnvName,
@@ -220,11 +220,17 @@ export class Bee3lyStack extends cdk.Stack {
       `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/tiktok-client-secret-Yjyfql`,
     );
 
+    const billingSecret = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'BillingSecret',
+      `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/billing-43iITd`,
+
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
       directory: path.join(repoRoot, 'backend'),
     });
     const aiImageAsset = new DockerImageAsset(this, 'AiImageAsset', {
+    );
       directory: path.join(repoRoot, 'ai-services'),
     });
 
@@ -412,6 +418,38 @@ export class Bee3lyStack extends cdk.Stack {
             META_APP_SECRET: ecs.Secret.fromSecretsManager(metaAppSecret),
             TIKTOK_CLIENT_SECRET:
               ecs.Secret.fromSecretsManager(tiktokClientSecret),
+            BACKEND_PUBLIC_URL: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'BACKEND_PUBLIC_URL',
+            ),
+            BILLING_ALLOW_DEV_CONFIRM: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'BILLING_ALLOW_DEV_CONFIRM',
+            ),
+            BILLING_METRICS_KEY: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'BILLING_METRICS_KEY',
+            ),
+            PAYMOB_INTEGRATION_ID: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'PAYMOB_INTEGRATION_ID',
+            ),
+            PAYMOB_PUBLIC_KEY: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'PAYMOB_PUBLIC_KEY',
+            ),
+            PAYMOB_SECRET_KEY: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'PAYMOB_SECRET_KEY',
+            ),
+            PAYMOB_HMAC_SECRET: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'PAYMOB_HMAC_SECRET',
+            ),
+            TAP_SECRET_KEY: ecs.Secret.fromSecretsManager(
+              billingSecret,
+              'TAP_SECRET_KEY',
+            ),
           },
         },
       },
@@ -485,6 +523,24 @@ export class Bee3lyStack extends cdk.Stack {
       ],
     });
     albService.service.node.addDependency(tiktokSecretRead);
+    const billingSecretBase = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/billing`;
+    const billingSecretRead = new iam.Policy(this, 'BillingSecretReadPolicy', {
+      roles: [taskExecutionRole],
+      statements: [
+        new iam.PolicyStatement({
+          actions: [
+            'secretsmanager:GetSecretValue',
+            'secretsmanager:DescribeSecret',
+          ],
+          resources: [
+            billingSecretBase,
+            `${billingSecretBase}-*`,
+            `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/billing-43iITd`,
+          ],
+        }),
+      ],
+    });
+    albService.service.node.addDependency(billingSecretRead);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
