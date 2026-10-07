@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { BusinessesModule } from './businesses/businesses.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { CommonModule } from './common/common.module';
@@ -26,6 +27,7 @@ import { SocialModule } from './social/social.module';
     CommonModule,
     HealthModule,
     RealtimeModule,
+    BillingModule,
     AuthModule,
     BusinessesModule,
     ProductsModule,

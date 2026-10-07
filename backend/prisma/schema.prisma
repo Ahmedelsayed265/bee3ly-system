@@ -76,6 +76,66 @@ enum PlanTier {
   FREE
   STARTER
   GROWTH
+  PRO
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  PAUSED
+  CANCELED
+  EXPIRED
+}
+
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
+enum BillingRegion {
+  EG
+  SA
+  AE
+}
+
+enum UsageMeter {
+  CONVERSATION
+  WHATSAPP_MESSAGE
+  AI_ACTION
+  ORDER
+  API_REQUEST
+}
+
+enum CreditKind {
+  WHATSAPP
+  AI
+}
+
+enum PaymentPurpose {
+  SUBSCRIPTION
+  CREDITS
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum BillingEventType {
+  CHECKOUT_CREATED
+  PAYMENT_SUCCEEDED
+  PAYMENT_FAILED
+  SUBSCRIPTION_ACTIVATED
+  SUBSCRIPTION_CANCELED
+  SUBSCRIPTION_PAUSED
+  SUBSCRIPTION_RESUMED
+  TRIAL_STARTED
+  TRIAL_EXPIRED
+  USAGE_WARNING
+  CREDIT_PURCHASED
+  PLAN_CHANGE_SCHEDULED
 }
 
 enum CampaignObjective {
@@ -195,17 +255,25 @@ model Business {
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
-  members        TeamMember[]
-  products       Product[]
-  customers      Customer[]
-  conversations  Conversation[]
-  leads          Lead[]
-  orders         Order[]
-  socialAccounts SocialAccount[]
-  pageComments   PageComment[]
-  aiAgent        AIAgent?
-  notifications  Notification[]
-  campaigns      Campaign[]
+  members             TeamMember[]
+  products            Product[]
+  customers           Customer[]
+  conversations       Conversation[]
+  leads               Lead[]
+  orders              Order[]
+  socialAccounts      SocialAccount[]
+  pageComments        PageComment[]
+  aiAgent             AIAgent?
+  notifications       Notification[]
+  campaigns           Campaign[]
+  subscription        Subscription?
+  payments            Payment[]
+  usageRecords        UsageRecord[]
+  usageSummaries      UsageSummary[]
+  creditWallet        CreditWallet?
+  creditTransactions  CreditTransaction[]
+  invoices            Invoice[]
+  billingEvents       BillingEvent[]
 
   @@map("businesses")
 }
@@ -534,4 +602,154 @@ model Campaign {
 
   @@index([businessId, createdAt])
   @@map("campaigns")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid())
+  businessId             String             @unique
+  plan                   PlanTier           @default(GROWTH)
+  status                 SubscriptionStatus @default(TRIALING)
+  interval               BillingInterval    @default(MONTHLY)
+  region                 BillingRegion      @default(EG)
+  currency               String             @default("EGP")
+  amount                 Int                @default(0)
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  trialEndsAt            DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  pastDueAt              DateTime?
+  scheduledPlan          PlanTier?
+  scheduledInterval      BillingInterval?
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  business Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+model Payment {
+  id                String          @id @default(uuid())
+  businessId        String
+  subscriptionId    String?
+  purpose           PaymentPurpose
+  status            PaymentStatus   @default(PENDING)
+  provider          String
+  providerReference String?
+  amount            Int
+  currency          String
+  plan              PlanTier?
+  interval          BillingInterval?
+  creditPackId      String?
+  metadata          Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  business     Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, createdAt])
+  @@index([providerReference])
+  @@map("payments")
+}
+
+model UsageRecord {
+  id                String     @id @default(uuid())
+  businessId        String
+  type              UsageMeter
+  quantity          Int
+  unit              String
+  source            String
+  externalReference String?
+  metadata          Json?
+  createdAt         DateTime   @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, type, createdAt])
+  @@map("usage_records")
+}
+
+model UsageSummary {
+  id                String   @id @default(uuid())
+  businessId        String
+  periodKey         String
+  conversations     Int      @default(0)
+  whatsappMessages  Int      @default(0)
+  whatsappUsageCost Int      @default(0)
+  aiActions         Int      @default(0)
+  orders            Int      @default(0)
+  apiRequests       Int      @default(0)
+  warningFlags      Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, periodKey])
+  @@map("usage_summaries")
+}
+
+model CreditWallet {
+  id              String   @id @default(uuid())
+  businessId      String   @unique
+  whatsappCredits Int      @default(0)
+  aiCredits       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@map("credit_wallets")
+}
+
+model CreditTransaction {
+  id                String     @id @default(uuid())
+  businessId        String
+  kind              CreditKind
+  delta             Int
+  balanceAfter      Int
+  source            String
+  externalReference String?
+  createdAt         DateTime   @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@map("credit_transactions")
+}
+
+model Invoice {
+  id          String    @id @default(uuid())
+  businessId  String
+  paymentId   String?   @unique
+  number      String
+  amount      Int
+  currency    String
+  status      String
+  periodStart DateTime?
+  periodEnd   DateTime?
+  createdAt   DateTime  @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@map("invoices")
+}
+
+model BillingEvent {
+  id         String           @id @default(uuid())
+  businessId String
+  type       BillingEventType
+  payload    Json?
+  createdAt  DateTime         @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
+  @@map("billing_events")
 }

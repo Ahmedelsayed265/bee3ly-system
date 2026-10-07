@@ -10,6 +10,9 @@ import {
   type AttributionChain,
 } from '../analytics/attribution.service';
 import { computeMetrics, EMPTY_DELIVERY } from '../analytics/campaign-metrics';
+import { EntitlementsService } from '../billing/entitlements.service';
+import { AI_ACTION_WEIGHTS } from '../billing/plans/limits';
+import { UsageService } from '../billing/usage.service';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -31,6 +34,8 @@ export class CampaignsService {
     private readonly attribution: AttributionService,
     private readonly config: ConfigService,
     private readonly campaignBrains: CampaignAiBrainsService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService,
   ) {}
 
   async list(userId: string, page = 1, limit = 10) {
@@ -92,18 +97,33 @@ export class CampaignsService {
       spendEgp: null,
     });
 
-    const enriched = await this.campaignBrains.enrichAnalysis(businessId, {
-      locale: loc,
-      campaign: {
-        id: campaign.id,
-        name: campaign.name,
-        objective: campaign.objective,
-        status: campaign.status,
-        budget: campaign.budget,
-        offer: campaign.offer,
-      },
-      rules: analysis,
-    });
+    const canAnalyze = await this.usage.hasAiCapacity(
+      businessId,
+      AI_ACTION_WEIGHTS.productAnalysis,
+    );
+    const enriched = canAnalyze
+      ? await this.campaignBrains.enrichAnalysis(businessId, {
+          locale: loc,
+          campaign: {
+            id: campaign.id,
+            name: campaign.name,
+            objective: campaign.objective,
+            status: campaign.status,
+            budget: campaign.budget,
+            offer: campaign.offer,
+          },
+          rules: analysis,
+        })
+      : null;
+
+    if (enriched && enriched.mode !== 'rules') {
+      await this.usage.consumeAi(
+        businessId,
+        AI_ACTION_WEIGHTS.productAnalysis,
+        'campaign_analysis',
+        campaign.id,
+      );
+    }
 
     if (enriched) {
       return {
@@ -127,6 +147,7 @@ export class CampaignsService {
 
   async create(userId: string, dto: CreateCampaignDto) {
     const businessId = await this.access.requireBusinessId(userId);
+    await this.entitlements.assertCanCreateCampaign(businessId);
     const business = await this.prisma.business.findUniqueOrThrow({
       where: { id: businessId },
     });
@@ -268,36 +289,51 @@ export class CampaignsService {
     if (!product) throw new NotFoundException('Product not found');
 
     const locale = dto.locale === 'en' ? 'en' : 'ar';
-    const content = await this.campaignBrains.generateContent(
+    const rulesCopy = () => {
+      const adCopy = this.fallbackAdCopy(dto.name.trim(), product);
+      return {
+        adCopy,
+        adCopyVariations: [],
+        headline: dto.name.trim(),
+        valueProposition: dto.valueProposition?.trim() ?? '',
+        cta: '',
+        creativeBrief: '',
+        audienceHint: '',
+        mode: 'rules' as const,
+      };
+    };
+    const canDraft = await this.usage.hasAiCapacity(
       businessId,
-      {
-        name: dto.name.trim(),
-        productId: dto.productId,
-        objective: dto.objective,
-        audienceDescription: dto.audienceDescription,
-        budget: dto.budget,
-        valueProposition: dto.valueProposition,
-        locale,
-        product: {
-          name: product.name,
-          description: product.description,
-          priceEgp: product.priceEgp,
-        },
-      },
-      () => {
-        const adCopy = this.fallbackAdCopy(dto.name.trim(), product);
-        return {
-          adCopy,
-          adCopyVariations: [],
-          headline: dto.name.trim(),
-          valueProposition: dto.valueProposition?.trim() ?? '',
-          cta: '',
-          creativeBrief: '',
-          audienceHint: '',
-          mode: 'rules',
-        };
-      },
+      AI_ACTION_WEIGHTS.productAnalysis,
     );
+    const content = canDraft
+      ? await this.campaignBrains.generateContent(
+          businessId,
+          {
+            name: dto.name.trim(),
+            productId: dto.productId,
+            objective: dto.objective,
+            audienceDescription: dto.audienceDescription,
+            budget: dto.budget,
+            valueProposition: dto.valueProposition,
+            locale,
+            product: {
+              name: product.name,
+              description: product.description,
+              priceEgp: product.priceEgp,
+            },
+          },
+          rulesCopy,
+        )
+      : rulesCopy();
+    if (content.mode !== 'rules') {
+      await this.usage.consumeAi(
+        businessId,
+        AI_ACTION_WEIGHTS.productAnalysis,
+        'campaign_copy',
+        dto.productId,
+      );
+    }
 
     return {
       copy: sanitizeSocialAdCopy(content.adCopy),

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AiContextCacheService } from '../ai/context/ai-context-cache.service';
 import { Prisma } from '@prisma/client';
+import { EntitlementsService } from '../billing/entitlements.service';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -24,6 +25,7 @@ export class ProductsService {
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
     private readonly aiContextCache: AiContextCacheService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   private async businessType(businessId: string) {
@@ -161,6 +163,7 @@ export class ProductsService {
 
   async create(userId: string, dto: CreateProductDto) {
     const businessId = await this.access.requireBusinessId(userId);
+    await this.entitlements.assertCanCreateProduct(businessId);
     const type = await this.businessType(businessId);
     const attributes = asAttributes(dto.attributes);
     const variants = this.normalizeVariants(

@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ActorType, LeadStatus, NotificationType } from '@prisma/client';
+import { EntitlementsService } from '../../billing/entitlements.service';
+import { UsageService } from '../../billing/usage.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -71,6 +73,8 @@ export class AiToolsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly aiContextCache: AiContextCacheService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService,
   ) {}
 
   private effectiveShippingMode(business: {
@@ -544,6 +548,8 @@ export class AiToolsService {
     if (paymentMethod) noteParts.push(`الدفع: ${paymentMethod}`);
     if (orderNotes) noteParts.push(orderNotes);
 
+    await this.entitlements.assertCanCreateOrder(ctx.businessId);
+
     const order = await this.prisma.order.create({
       data: {
         businessId: ctx.businessId,
@@ -572,6 +578,7 @@ export class AiToolsService {
       },
       include: { items: true },
     });
+    await this.usage.recordOrder(ctx.businessId, order.id);
 
     for (const line of resolvedLines) {
       await this.applyStockAfterSale(ctx, line);

@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import type { Response } from 'express';
 import type { StringValue } from 'ms';
+import { SubscriptionService } from '../billing/subscription.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly subscriptions: SubscriptionService,
   ) {}
 
   async register(dto: RegisterDto, res: Response) {
@@ -74,11 +76,12 @@ export class AuthService {
         data: { businessId: business.id },
       });
 
-      return createdUser;
+      return { createdUser, businessId: business.id };
     });
 
-    const tokens = await this.issueTokens(user, res);
-    return { user, accessToken: tokens.accessToken };
+    await this.subscriptions.ensure(user.businessId);
+    const tokens = await this.issueTokens(user.createdUser, res);
+    return { user: user.createdUser, accessToken: tokens.accessToken };
   }
 
   async login(dto: LoginDto, res: Response) {
@@ -245,6 +248,7 @@ export class AuthService {
         include: { business: true },
       });
       await this.prisma.aIAgent.create({ data: { businessId: business.id } });
+      await this.subscriptions.ensure(business.id);
     }
 
     const freshUser = await this.prisma.user.findUniqueOrThrow({

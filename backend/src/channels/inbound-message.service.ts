@@ -5,6 +5,10 @@ import {
   SocialConnectionStatus,
   SocialPlatform,
 } from '@prisma/client';
+import { isBillingLimit } from '../billing/billing.http';
+import { EntitlementsService } from '../billing/entitlements.service';
+import { trivialReply } from '../billing/trivial-message';
+import { UsageService } from '../billing/usage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AiEngineAdapter } from './ai-engine.adapter';
@@ -32,6 +36,8 @@ export class InboundMessageService {
     private readonly realtime: RealtimeService,
     private readonly contextBuilder: ContextBuilderService,
     private readonly aiTools: AiToolsService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService,
   ) {}
 
   async ingest(event: InboundMessageEvent): Promise<InboundIngestResult> {
@@ -156,7 +162,10 @@ export class InboundMessageService {
       },
       orderBy: { updatedAt: 'desc' },
     });
+    let openedOverCap = false;
     if (!conversation) {
+      const room = await this.conversationRoom(businessId);
+      openedOverCap = !room;
       conversation = await this.prisma.conversation.create({
         data: {
           businessId,
@@ -164,6 +173,7 @@ export class InboundMessageService {
           channel,
         },
       });
+      await this.usage.recordConversation(businessId, conversation.id);
     }
 
     const attachments = event.attachments ?? [];
@@ -223,7 +233,38 @@ export class InboundMessageService {
       };
     }
 
-    const shouldRunAi = conversation.mode !== 'HUMAN' && !paymentReviewPending;
+    const canned = trivialReply(event.text);
+    if (
+      canned &&
+      conversation.mode !== 'HUMAN' &&
+      !paymentReviewPending &&
+      account.status === SocialConnectionStatus.CONNECTED
+    ) {
+      try {
+        await this.outbound.sendText(account.id, event.externalSenderId, canned);
+      } catch (error) {
+        if (!isBillingLimit(error)) throw error;
+        this.logger.warn(
+          `Skipped trivial reply for ${conversation.id}: plan limit`,
+        );
+      }
+      this.realtime.notifyConversationUpdated(businessId, conversation.id);
+      return {
+        businessId,
+        conversationId: conversation.id,
+        customerId: customer.id,
+        messageId: message.id,
+        duplicate: false,
+      };
+    }
+
+    const access = await this.entitlements.access(businessId);
+    const shouldRunAi =
+      conversation.mode !== 'HUMAN' &&
+      !paymentReviewPending &&
+      !openedOverCap &&
+      !access.restricted &&
+      access.features.ai;
 
     if (shouldRunAi) {
       // Issue a short-lived signed JWT so the AI Service can securely
@@ -283,14 +324,21 @@ export class InboundMessageService {
       // reply message. Here we only care about SENDING it through the
       // original channel if the account is connected and a reply exists.
       if (reply && account.status === SocialConnectionStatus.CONNECTED) {
-        const sent = await this.outbound.sendText(
-          account.id,
-          event.externalSenderId,
-          reply,
-        );
-        if (!sent.sent) {
+        try {
+          const sent = await this.outbound.sendText(
+            account.id,
+            event.externalSenderId,
+            reply,
+          );
+          if (!sent.sent) {
+            this.logger.warn(
+              `Outbound reply not sent for conversation ${conversation.id}`,
+            );
+          }
+        } catch (error) {
+          if (!isBillingLimit(error)) throw error;
           this.logger.warn(
-            `Outbound reply not sent for conversation ${conversation.id}`,
+            `Skipped AI reply for ${conversation.id}: plan limit`,
           );
         }
       }
@@ -305,6 +353,16 @@ export class InboundMessageService {
       messageId: message.id,
       duplicate: false,
     };
+  }
+
+  private async conversationRoom(businessId: string) {
+    try {
+      await this.entitlements.assertCanStartConversation(businessId);
+      return true;
+    } catch (error) {
+      if (isBillingLimit(error)) return false;
+      throw error;
+    }
   }
 
   /** Prepaid screenshot: merchant review only — never Gemini createOrder on this turn. */

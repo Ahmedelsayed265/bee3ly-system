@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import { EntitlementsService } from '../../billing/entitlements.service';
 import { BusinessAccessService } from '../../common/business-access.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetaGraphClient } from './meta-graph.client';
@@ -28,6 +29,7 @@ export class WhatsappEmbeddedService implements OnModuleInit {
   constructor(
     private readonly config: ConfigService,
     private readonly access: BusinessAccessService,
+    private readonly entitlements: EntitlementsService,
     private readonly prisma: PrismaService,
     private readonly graph: MetaGraphClient,
     private readonly metaOauth: MetaOauthService,
@@ -68,6 +70,10 @@ export class WhatsappEmbeddedService implements OnModuleInit {
     }
 
     const businessId = await this.access.requireBusinessId(userId);
+    await this.entitlements.assertCanConnect(
+      businessId,
+      SocialPlatform.WHATSAPP,
+    );
     let accessToken: string;
     try {
       const token = await this.graph.exchangeEmbeddedSignupCode(

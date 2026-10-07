@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MessageRole } from '@prisma/client';
+import { AI_ACTION_WEIGHTS } from '../billing/plans/limits';
+import { UsageService } from '../billing/usage.service';
 import { AiService } from '../ai/ai.service';
 import { PAYMENT_REVIEW_HANDOFF } from '../ai/payment-review.constants';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,6 +43,7 @@ export class AiEngineAdapter {
     @Inject(forwardRef(() => AiService))
     private readonly ai: AiService,
     private readonly realtime: RealtimeService,
+    private readonly usage: UsageService,
   ) {}
 
   async handleInbound(
@@ -52,7 +55,31 @@ export class AiEngineAdapter {
     );
 
     if (engineUrl) {
-      return this.callExternalEngine(engineUrl, payload);
+      const allowed = await this.usage.hasAiCapacity(
+        payload.businessId,
+        AI_ACTION_WEIGHTS.simpleReply,
+      );
+      if (!allowed) {
+        this.logger.warn(
+          `AI quota reached for business ${payload.businessId}`,
+        );
+        return {
+          reply: null,
+          mode: 'fixed_fallback',
+          needsHuman: true,
+          handoffReason: 'AI_QUOTA',
+        };
+      }
+      const result = await this.callExternalEngine(engineUrl, payload);
+      if (result.mode === 'external') {
+        await this.usage.consumeAi(
+          payload.businessId,
+          AI_ACTION_WEIGHTS.simpleReply,
+          'customer_reply',
+          payload.messageId,
+        );
+      }
+      return result;
     }
 
     const useFallback =

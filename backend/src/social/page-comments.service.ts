@@ -6,6 +6,7 @@ import {
   SocialConnectionStatus,
   SocialPlatform,
 } from '@prisma/client';
+import { UsageService } from '../billing/usage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AiEngineAdapter } from '../channels/ai-engine.adapter';
@@ -43,6 +44,7 @@ export class PageCommentsService {
     private readonly config: ConfigService,
     private readonly aiEngine: AiEngineAdapter,
     private readonly tokens: MerchantTokenService,
+    private readonly usage: UsageService,
   ) {}
 
   async createFromWebhook(input: CreatePageCommentFromWebhookInput) {
@@ -156,6 +158,7 @@ export class PageCommentsService {
           lastMessageAt: row.commentedAt,
         },
       });
+      await this.usage.recordConversation(row.businessId, conversation.id);
       this.logger.log(
         `New conversation from comment conversationId=${conversation.id} commentId=${row.commentId}`,
       );

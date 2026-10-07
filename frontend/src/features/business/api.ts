@@ -17,7 +17,7 @@ export type BusinessGoal =
   | 'BOOK_APPOINTMENTS'
   | 'INCREASE_SALES';
 
-export type PlanTier = 'FREE' | 'STARTER' | 'GROWTH';
+export type PlanTier = 'FREE' | 'STARTER' | 'GROWTH' | 'PRO';
 
 export type VariantDictionaryOption = {
   id: string;

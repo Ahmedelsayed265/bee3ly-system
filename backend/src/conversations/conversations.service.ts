@@ -12,6 +12,8 @@ import {
   Prisma,
   SocialConnectionStatus,
 } from '@prisma/client';
+import { EntitlementsService } from '../billing/entitlements.service';
+import { UsageService } from '../billing/usage.service';
 import { BusinessAccessService } from '../common/business-access.service';
 import { pageMeta, pageWindow } from '../common/pagination';
 import { PrismaService } from '../prisma/prisma.service';
@@ -43,6 +45,8 @@ export class ConversationsService {
     @Inject(forwardRef(() => AiEngineAdapter))
     private readonly aiEngine: AiEngineAdapter,
     private readonly merchantTokens: MerchantTokenService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService,
   ) {}
 
   async list(userId: string) {
@@ -368,6 +372,7 @@ export class ConversationsService {
     quickReplies?: Array<{ title: string; payload: string }>,
   ) {
     const businessId = await this.access.requireBusinessId(userId);
+    await this.entitlements.assertCanSend(businessId);
     const conversation = await this.prisma.conversation.findFirst({
       where: { id: conversationId, businessId },
       include: { customer: true },
@@ -426,6 +431,7 @@ export class ConversationsService {
     });
     if (existing) return existing;
 
+    await this.entitlements.assertCanStartConversation(businessId);
     const customer = await this.prisma.customer.create({
       data: {
         businessId,
@@ -434,7 +440,7 @@ export class ConversationsService {
       },
     });
 
-    return this.prisma.conversation.create({
+    const conversation = await this.prisma.conversation.create({
       data: {
         businessId,
         customerId: customer.id,
@@ -442,5 +448,7 @@ export class ConversationsService {
       },
       include: { customer: true, messages: true },
     });
+    await this.usage.recordConversation(businessId, conversation.id);
+    return conversation;
   }
 }

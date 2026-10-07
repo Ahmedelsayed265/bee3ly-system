@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { SocialPlatform } from '@prisma/client';
+import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import { EntitlementsService } from '../billing/entitlements.service';
+import { UsageService } from '../billing/usage.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
 import { TikTokOutboundService } from './tiktok/tiktok-outbound.service';
@@ -10,6 +12,8 @@ export class ChannelOutboundService {
     private readonly prisma: PrismaService,
     private readonly meta: MetaOutboundService,
     private readonly tiktok: TikTokOutboundService,
+    private readonly entitlements: EntitlementsService,
+    private readonly usage: UsageService,
   ) {}
 
   async getSenderName(socialAccountId: string, senderId: string) {
@@ -31,11 +35,28 @@ export class ChannelOutboundService {
   ) {
     const account = await this.prisma.socialAccount.findUnique({
       where: { id: socialAccountId },
-      select: { platform: true },
+      select: { platform: true, businessId: true, status: true },
     });
-    if (account?.platform === SocialPlatform.TIKTOK) {
-      return this.tiktok.sendText(socialAccountId, recipientId, text);
+    if (!account) return { sent: false as const };
+    await this.entitlements.assertCanSend(account.businessId);
+    const meterWhatsApp =
+      account.platform === SocialPlatform.WHATSAPP &&
+      account.status === SocialConnectionStatus.CONNECTED;
+    if (meterWhatsApp) {
+      await this.usage.assertWhatsAppAvailable(account.businessId);
     }
-    return this.meta.sendText(socialAccountId, recipientId, text, quickReplies);
+    const sent =
+      account.platform === SocialPlatform.TIKTOK
+        ? await this.tiktok.sendText(socialAccountId, recipientId, text)
+        : await this.meta.sendText(
+            socialAccountId,
+            recipientId,
+            text,
+            quickReplies,
+          );
+    if (meterWhatsApp && sent.sent) {
+      await this.usage.consumeWhatsApp(account.businessId, 1, 'outbound');
+    }
+    return sent;
   }
 }

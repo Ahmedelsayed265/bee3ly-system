@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import { EntitlementsService } from '../../billing/entitlements.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetaOauthService } from '../meta/meta-oauth.service';
 import { TikTokApiClient } from './tiktok-api.client';
@@ -19,6 +20,7 @@ export class TikTokOauthService implements OnModuleInit {
     private readonly config: ConfigService,
     private readonly api: TikTokApiClient,
     private readonly tokenCrypto: MetaOauthService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async onModuleInit() {
@@ -117,6 +119,8 @@ export class TikTokOauthService implements OnModuleInit {
       token.expires_in && token.expires_in > 0
         ? new Date(Date.now() + token.expires_in * 1000)
         : null;
+
+    await this.entitlements.assertCanConnect(businessId, SocialPlatform.TIKTOK);
 
     await this.prisma.socialAccount.upsert({
       where: {

@@ -14,7 +14,6 @@ import {
 import {
   BusinessGoal,
   BusinessType,
-  PlanTier,
   ShippingPricingMode,
 } from '@prisma/client';
 import { GOVERNORATE_IDS } from '../shipping-zones';
@@ -67,10 +66,6 @@ export class UpdateBusinessDto {
   @IsOptional()
   @IsEnum(BusinessType)
   type?: BusinessType;
-
-  @IsOptional()
-  @IsEnum(PlanTier)
-  plan?: PlanTier;
 
   @IsOptional()
   @IsString()

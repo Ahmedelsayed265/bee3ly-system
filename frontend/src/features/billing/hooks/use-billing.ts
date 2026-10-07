@@ -1,20 +1,46 @@
-import { useMutation } from '@tanstack/react-query';
-import { useAuth } from '@/features/auth/auth-context';
-import { updateBusiness, type PlanTier } from '@/features/business/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  cancelSubscription,
+  confirmDevPayment,
+  fetchBillingCatalog,
+  fetchBillingOverview,
+  startCheckout,
+  type BillingInterval,
+  type PublicPlan,
+} from '@/features/billing/api';
 
 export function useBilling() {
-  const { business, refreshMe } = useAuth();
-  const current = business?.plan ?? 'FREE';
+  const queryClient = useQueryClient();
+  const overview = useQuery({
+    queryKey: ['billing', 'overview'],
+    queryFn: fetchBillingOverview,
+  });
+  const catalog = useQuery({
+    queryKey: ['billing', 'catalog'],
+    queryFn: fetchBillingCatalog,
+  });
 
-  const switchMut = useMutation({
-    mutationFn: (plan: PlanTier) => updateBusiness({ plan }),
-    onSuccess: async () => {
-      await refreshMe();
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['billing'] });
+  };
+
+  const checkout = useMutation({
+    mutationFn: (input: { plan: PublicPlan; interval: BillingInterval }) =>
+      startCheckout(input),
+    onSuccess: async (result) => {
+      if (result.mode !== 'checkout') await refresh();
     },
   });
 
-  return {
-    current,
-    switchMut,
-  };
+  const confirm = useMutation({
+    mutationFn: confirmDevPayment,
+    onSuccess: refresh,
+  });
+
+  const cancel = useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: refresh,
+  });
+
+  return { overview, catalog, checkout, confirm, cancel };
 }

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import { EntitlementsService } from '../billing/entitlements.service';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetaOauthService } from './meta/meta-oauth.service';
@@ -34,6 +35,7 @@ export class SocialService implements OnModuleInit {
     private readonly whatsappEmbedded: WhatsappEmbeddedService,
     private readonly tiktokOauth: TikTokOauthService,
     private readonly tiktokWebhook: TikTokWebhookService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async onModuleInit() {
@@ -153,6 +155,7 @@ export class SocialService implements OnModuleInit {
     displayName?: string,
   ) {
     const businessId = await this.access.requireBusinessId(userId);
+    await this.entitlements.assertCanConnect(businessId, platform);
     const externalId = `demo-${platform.toLowerCase()}-${businessId.slice(0, 8)}`;
     const provider = platform === SocialPlatform.TIKTOK ? 'TIKTOK' : 'META';
     const account = await this.prisma.socialAccount.upsert({

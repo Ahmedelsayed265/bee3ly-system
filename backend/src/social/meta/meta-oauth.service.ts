@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialConnectionStatus, SocialPlatform } from '@prisma/client';
+import { isBillingLimit } from '../../billing/billing.http';
+import { EntitlementsService } from '../../billing/entitlements.service';
 import { BusinessAccessService } from '../../common/business-access.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MetaGraphClient } from './meta-graph.client';
@@ -23,6 +25,7 @@ export class MetaOauthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: BusinessAccessService,
+    private readonly entitlements: EntitlementsService,
     private readonly config: ConfigService,
     private readonly graph: MetaGraphClient,
   ) {}
@@ -102,6 +105,11 @@ export class MetaOauthService {
 
     this.logger.log(
       `Meta pending pages ready: ${pages.map((p) => `${p.name}(${p.id})${p.instagram_business_account?.id ? '+ig' : ''}`).join(', ')}`,
+    );
+
+    await this.entitlements.assertCanConnect(
+      businessId,
+      SocialPlatform.FACEBOOK,
     );
 
     const pending = await this.prisma.pendingMetaConnection.create({
@@ -245,6 +253,10 @@ export class MetaOauthService {
 
     let ig = null;
     if (igAccount?.id) {
+      await this.entitlements.assertCanConnect(
+        businessId,
+        SocialPlatform.INSTAGRAM,
+      );
       ig = await this.prisma.socialAccount.upsert({
         where: {
           businessId_platform: {
@@ -290,6 +302,10 @@ export class MetaOauthService {
       const phones = await this.graph.discoverWhatsAppPhoneNumbers(userToken);
       if (phones.length > 0) {
         const pick = phones[0];
+        await this.entitlements.assertCanConnect(
+          businessId,
+          SocialPlatform.WHATSAPP,
+        );
         const waRow = await this.prisma.socialAccount.upsert({
           where: {
             businessId_platform: {
@@ -337,6 +353,7 @@ export class MetaOauthService {
         );
       }
     } catch (err) {
+      if (isBillingLimit(err)) throw err;
       this.logger.warn(
         `WhatsApp discovery after page select failed: ${err instanceof Error ? err.message : String(err)}`,
       );
