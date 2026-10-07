@@ -41,6 +41,12 @@ export class VariantSkuDto {
   @Min(0)
   priceEgp!: number;
 
+  @IsOptional()
+  @Transform(({ value }) => optionalMoney(value))
+  @IsInt()
+  @Min(0)
+  costEgp?: number | null;
+
   @Type(() => Number)
   @IsInt()
   @Min(0)
