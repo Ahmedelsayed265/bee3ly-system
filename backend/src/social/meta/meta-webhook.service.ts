@@ -334,8 +334,7 @@ export class MetaWebhookService {
 
     const message = typeof value.message === 'string' ? value.message : '';
     const postObj = value.post as
-      | { message?: string; story?: string }
-      | undefined;
+      { message?: string; story?: string } | undefined;
     const postMessage =
       (typeof postObj?.message === 'string' && postObj.message.trim()) ||
       (typeof postObj?.story === 'string' && postObj.story.trim()) ||

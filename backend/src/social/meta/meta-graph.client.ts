@@ -789,8 +789,7 @@ export class MetaGraphClient {
         (typeof json.permalink_url === 'string' && json.permalink_url) ||
         (typeof json.permalink === 'string' && json.permalink) ||
         null,
-      mediaType:
-        typeof json.media_type === 'string' ? json.media_type : null,
+      mediaType: typeof json.media_type === 'string' ? json.media_type : null,
     };
   }
 

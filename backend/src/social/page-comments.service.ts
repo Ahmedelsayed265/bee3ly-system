@@ -447,7 +447,11 @@ export class PageCommentsService {
   ): unknown {
     const hint = postMessage?.trim();
     if (!hint) return rawPayload ?? null;
-    if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+    if (
+      rawPayload &&
+      typeof rawPayload === 'object' &&
+      !Array.isArray(rawPayload)
+    ) {
       return { ...(rawPayload as Record<string, unknown>), postMessage: hint };
     }
     return { postMessage: hint, raw: rawPayload ?? null };
@@ -504,9 +508,7 @@ export class PageCommentsService {
       ].join('\n');
     }
 
-    const mediaHint = post.mediaType
-      ? ` (نوع المحتوى: ${post.mediaType})`
-      : '';
+    const mediaHint = post.mediaType ? ` (نوع المحتوى: ${post.mediaType})` : '';
     const linkHint = post.permalink ? `\nرابط المنشور: ${post.permalink}` : '';
     return [
       `تعليق على منشور${mediaHint}${linkHint}`,
