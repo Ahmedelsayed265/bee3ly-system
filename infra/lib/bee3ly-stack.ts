@@ -226,6 +226,12 @@ export class Bee3lyStack extends cdk.Stack {
       `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/billing-43iITd`,
     );
 
+    const whatsappAccessToken = secretsmanager.Secret.fromSecretCompleteArn(
+      this,
+      'WhatsAppAccessToken',
+      `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/whatsapp-access-token-WIhO7P`,
+    );
+
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
       directory: path.join(repoRoot, 'backend'),
@@ -394,6 +400,9 @@ export class Bee3lyStack extends cdk.Stack {
             META_OAUTH_EXTRA_SCOPES:
               'instagram_basic,instagram_manage_messages,instagram_manage_comments',
             META_WHATSAPP_EMBEDDED_CONFIG_ID: '986448077802892',
+            // Meta Cloud API test number — binds on boot when true (dev only).
+            WHATSAPP_BIND_TEST_NUMBER: envName === 'prod' ? 'false' : 'true',
+            WHATSAPP_PHONE_NUMBER_ID: '1392264077293649',
             META_COMMENT_POLLING_ENABLED: 'true',
             META_COMMENT_POLL_INTERVAL_MS: '60000',
             META_WEBHOOK_VERIFY_TOKEN: 'bee3ly-verify',
@@ -449,6 +458,9 @@ export class Bee3lyStack extends cdk.Stack {
             TAP_SECRET_KEY: ecs.Secret.fromSecretsManager(
               billingSecret,
               'TAP_SECRET_KEY',
+            ),
+            WHATSAPP_ACCESS_TOKEN: ecs.Secret.fromSecretsManager(
+              whatsappAccessToken,
             ),
           },
         },
@@ -541,6 +553,29 @@ export class Bee3lyStack extends cdk.Stack {
       ],
     });
     albService.service.node.addDependency(billingSecretRead);
+    whatsappAccessToken.grantRead(taskExecutionRole);
+    const whatsappSecretBase = `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/whatsapp-access-token`;
+    const whatsappSecretRead = new iam.Policy(
+      this,
+      'WhatsAppAccessTokenReadPolicy',
+      {
+        roles: [taskExecutionRole],
+        statements: [
+          new iam.PolicyStatement({
+            actions: [
+              'secretsmanager:GetSecretValue',
+              'secretsmanager:DescribeSecret',
+            ],
+            resources: [
+              whatsappSecretBase,
+              `${whatsappSecretBase}-*`,
+              `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/whatsapp-access-token-WIhO7P`,
+            ],
+          }),
+        ],
+      },
+    );
+    albService.service.node.addDependency(whatsappSecretRead);
     geminiSecret.grantRead(aiTaskDef.executionRole!);
 
     new cdk.CfnOutput(this, 'ApiUrl', {
