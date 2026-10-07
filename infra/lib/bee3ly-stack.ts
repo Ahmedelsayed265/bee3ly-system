@@ -224,13 +224,13 @@ export class Bee3lyStack extends cdk.Stack {
       this,
       'BillingSecret',
       `arn:aws:secretsmanager:${this.region}:${this.account}:secret:bee3ly/${envName}/billing-43iITd`,
+    );
 
     const repoRoot = path.join(__dirname, '..', '..');
     const backendImageAsset = new DockerImageAsset(this, 'BackendImageAsset', {
       directory: path.join(repoRoot, 'backend'),
     });
     const aiImageAsset = new DockerImageAsset(this, 'AiImageAsset', {
-    );
       directory: path.join(repoRoot, 'ai-services'),
     });
 
