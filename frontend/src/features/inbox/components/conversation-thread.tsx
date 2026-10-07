@@ -216,24 +216,24 @@ export function ConversationThread({
             (m) => m.role !== 'SYSTEM' && m.meta?.hiddenFromInbox !== true,
           )
           .map((m) => (
-          <MessageBubble
-            key={m.id}
-            role={m.role}
-            content={
-              m.role === 'CUSTOMER'
-                ? customerMessageDisplayText(m.content)
-                : m.content
-            }
-            customerName={conversation?.customer.name}
-            quickReplies={m.meta?.quickReplies}
-            attachments={messageAttachments(m.meta)}
-            paymentConfirmOnImage={
-              paymentReviewPending && m.id === receiptMessageId
-            }
-            onConfirmPayment={onConfirmPayment}
-            isConfirmPaymentPending={isConfirmPaymentPending}
-          />
-        ))}
+            <MessageBubble
+              key={m.id}
+              role={m.role}
+              content={
+                m.role === 'CUSTOMER'
+                  ? customerMessageDisplayText(m.content)
+                  : m.content
+              }
+              customerName={conversation?.customer.name}
+              quickReplies={m.meta?.quickReplies}
+              attachments={messageAttachments(m.meta)}
+              paymentConfirmOnImage={
+                paymentReviewPending && m.id === receiptMessageId
+              }
+              onConfirmPayment={onConfirmPayment}
+              isConfirmPaymentPending={isConfirmPaymentPending}
+            />
+          ))}
         {!selectedId ? (
           <p className="text-muted text-sm">{t('inboxEmptyHint')}</p>
         ) : null}
