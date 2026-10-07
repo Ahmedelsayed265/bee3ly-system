@@ -40,8 +40,12 @@ export class TapProvider implements PaymentProvider {
           phone: { country_code: '966', number: '500000000' },
         },
         source: { id: 'src_all' },
-        post: input.notificationUrl ? { url: input.notificationUrl } : undefined,
-        redirect: input.redirectionUrl ? { url: input.redirectionUrl } : undefined,
+        post: input.notificationUrl
+          ? { url: input.notificationUrl }
+          : undefined,
+        redirect: input.redirectionUrl
+          ? { url: input.redirectionUrl }
+          : undefined,
       }),
     });
     const data = (await res.json().catch(() => null)) as {
@@ -65,15 +69,18 @@ export class TapProvider implements PaymentProvider {
     return this.createCheckout(input);
   }
 
-  cancelSubscription(_providerSubscriptionId: string) {
+  cancelSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
-  pauseSubscription(_providerSubscriptionId: string) {
+  pauseSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
-  resumeSubscription(_providerSubscriptionId: string) {
+  resumeSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
@@ -81,7 +88,10 @@ export class TapProvider implements PaymentProvider {
     return this.createCheckout(input);
   }
 
-  handleWebhook(payload: unknown, hmac: string | undefined): Promise<WebhookOutcome> {
+  handleWebhook(
+    payload: unknown,
+    hmac: string | undefined,
+  ): Promise<WebhookOutcome> {
     const secret = this.config.get<string>('TAP_SECRET_KEY')?.trim();
     if (!payload || typeof payload !== 'object') {
       return Promise.resolve({ paymentId: null, status: 'ignored' });
@@ -100,15 +110,30 @@ export class TapProvider implements PaymentProvider {
       return Promise.resolve({ paymentId: null, status: 'ignored' });
     }
     const paymentId =
-      typeof body.metadata?.paymentId === 'string' ? body.metadata.paymentId : null;
-    const status = typeof body.status === 'string' ? body.status.toUpperCase() : '';
+      typeof body.metadata?.paymentId === 'string'
+        ? body.metadata.paymentId
+        : null;
+    const status =
+      typeof body.status === 'string' ? body.status.toUpperCase() : '';
     const succeeded = status === 'CAPTURED' || status === 'SUCCESS';
-    const failed = status === 'FAILED' || status === 'CANCELLED' || status === 'DECLINED';
+    const failed =
+      status === 'FAILED' || status === 'CANCELLED' || status === 'DECLINED';
     return Promise.resolve({
       paymentId,
       status: succeeded ? 'succeeded' : failed ? 'failed' : 'ignored',
       providerReference: typeof body.id === 'string' ? body.id : undefined,
     });
+  }
+
+  private text(value: unknown): string {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return String(value);
+    }
+    return '';
   }
 
   private hashMatches(
@@ -123,12 +148,12 @@ export class TapProvider implements PaymentProvider {
     secret: string,
   ) {
     const toHash = [
-      `x_id${body.id ?? ''}`,
-      `x_amount${body.amount ?? ''}`,
-      `x_currency${body.currency ?? ''}`,
-      `x_gateway_reference${body.reference?.gateway ?? ''}`,
-      `x_payment_reference${body.reference?.payment ?? ''}`,
-      `x_status${body.status ?? ''}`,
+      `x_id${this.text(body.id)}`,
+      `x_amount${this.text(body.amount)}`,
+      `x_currency${this.text(body.currency)}`,
+      `x_gateway_reference${this.text(body.reference?.gateway)}`,
+      `x_payment_reference${this.text(body.reference?.payment)}`,
+      `x_status${this.text(body.status)}`,
     ].join('');
     const digest = createHmac('sha256', secret).update(toHash).digest('hex');
     const a = Buffer.from(digest);

@@ -82,9 +82,7 @@ export class BillingController {
   }
 
   @Get('metrics')
-  async metricsSnapshot(
-    @Headers('x-billing-metrics-key') key?: string,
-  ) {
+  async metricsSnapshot(@Headers('x-billing-metrics-key') key?: string) {
     const expected = this.config.get<string>('BILLING_METRICS_KEY')?.trim();
     if (!expected || key !== expected) {
       throw new UnauthorizedException('Not allowed');

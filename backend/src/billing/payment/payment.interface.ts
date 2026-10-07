@@ -26,9 +26,15 @@ export interface PaymentProvider {
   readonly id: 'paymob' | 'tap';
   createCheckout(input: CheckoutInput): Promise<CheckoutSession>;
   createSubscription(input: CheckoutInput): Promise<CheckoutSession>;
-  cancelSubscription(providerSubscriptionId: string): Promise<{ supported: boolean }>;
-  pauseSubscription(providerSubscriptionId: string): Promise<{ supported: boolean }>;
-  resumeSubscription(providerSubscriptionId: string): Promise<{ supported: boolean }>;
+  cancelSubscription(
+    providerSubscriptionId: string,
+  ): Promise<{ supported: boolean }>;
+  pauseSubscription(
+    providerSubscriptionId: string,
+  ): Promise<{ supported: boolean }>;
+  resumeSubscription(
+    providerSubscriptionId: string,
+  ): Promise<{ supported: boolean }>;
   updateSubscription(input: CheckoutInput): Promise<CheckoutSession>;
   handleWebhook(
     payload: unknown,

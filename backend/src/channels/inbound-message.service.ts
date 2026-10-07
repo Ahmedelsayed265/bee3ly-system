@@ -241,7 +241,11 @@ export class InboundMessageService {
       account.status === SocialConnectionStatus.CONNECTED
     ) {
       try {
-        await this.outbound.sendText(account.id, event.externalSenderId, canned);
+        await this.outbound.sendText(
+          account.id,
+          event.externalSenderId,
+          canned,
+        );
       } catch (error) {
         if (!isBillingLimit(error)) throw error;
         this.logger.warn(

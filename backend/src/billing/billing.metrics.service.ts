@@ -34,9 +34,7 @@ export class BillingMetricsService {
       arpu: paying ? round(mrr / paying) : 0,
       payingCustomers: paying,
       trialing,
-      trialToPaid: trialsClosed
-        ? round(activated / trialsClosed)
-        : null,
+      trialToPaid: trialsClosed ? round(activated / trialsClosed) : null,
       canceled,
       cogsPerCustomer: null,
       grossMargin: null,

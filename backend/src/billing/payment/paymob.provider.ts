@@ -18,7 +18,9 @@ export class PaymobProvider implements PaymentProvider {
   async createCheckout(input: CheckoutInput): Promise<CheckoutSession> {
     const secret = this.config.get<string>('PAYMOB_SECRET_KEY')?.trim();
     const publicKey = this.config.get<string>('PAYMOB_PUBLIC_KEY')?.trim();
-    const integrationId = this.config.get<string>('PAYMOB_INTEGRATION_ID')?.trim();
+    const integrationId = this.config
+      .get<string>('PAYMOB_INTEGRATION_ID')
+      ?.trim();
     if (!secret || !publicKey || !integrationId) {
       return { configured: false };
     }
@@ -90,15 +92,18 @@ export class PaymobProvider implements PaymentProvider {
     return this.createCheckout(input);
   }
 
-  cancelSubscription(_providerSubscriptionId: string) {
+  cancelSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
-  pauseSubscription(_providerSubscriptionId: string) {
+  pauseSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
-  resumeSubscription(_providerSubscriptionId: string) {
+  resumeSubscription(providerSubscriptionId: string) {
+    void providerSubscriptionId;
     return Promise.resolve({ supported: false });
   }
 
@@ -106,7 +111,10 @@ export class PaymobProvider implements PaymentProvider {
     return this.createCheckout(input);
   }
 
-  handleWebhook(payload: unknown, hmac: string | undefined): Promise<WebhookOutcome> {
+  handleWebhook(
+    payload: unknown,
+    hmac: string | undefined,
+  ): Promise<WebhookOutcome> {
     const secret = this.config.get<string>('PAYMOB_HMAC_SECRET')?.trim();
     const obj = this.transactionObject(payload);
     if (!obj) return Promise.resolve({ paymentId: null, status: 'ignored' });
@@ -116,14 +124,16 @@ export class PaymobProvider implements PaymentProvider {
     }
 
     const order = (obj.order ?? {}) as { merchant_order_id?: unknown };
-    const extra = (obj.payment_key_claims as { extra?: { paymentId?: unknown } } | undefined)
-      ?.extra;
-    const paymentId = this.asId(order.merchant_order_id) ?? this.asId(extra?.paymentId);
+    const extra = (
+      obj.payment_key_claims as { extra?: { paymentId?: unknown } } | undefined
+    )?.extra;
+    const paymentId =
+      this.asId(order.merchant_order_id) ?? this.asId(extra?.paymentId);
     const success = obj.success === true && obj.pending !== true;
     return Promise.resolve({
       paymentId,
       status: success ? 'succeeded' : 'failed',
-      providerReference: obj.id != null ? String(obj.id) : undefined,
+      providerReference: this.text(obj.id) || undefined,
     });
   }
 
@@ -133,6 +143,17 @@ export class PaymobProvider implements PaymentProvider {
     const obj = body.obj ?? payload;
     if (!obj || typeof obj !== 'object') return null;
     return obj as Record<string, unknown>;
+  }
+
+  private text(value: unknown): string {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return String(value);
+    }
+    return '';
   }
 
   private asId(value: unknown): string | null {
@@ -168,9 +189,11 @@ export class PaymobProvider implements PaymentProvider {
       source.type,
       obj.success,
     ]
-      .map((value) => (value == null ? '' : String(value)))
+      .map((value) => this.text(value))
       .join('');
-    const digest = createHmac('sha512', secret).update(concatenated).digest('hex');
+    const digest = createHmac('sha512', secret)
+      .update(concatenated)
+      .digest('hex');
     const a = Buffer.from(digest);
     const b = Buffer.from(hmac);
     return a.length === b.length && timingSafeEqual(a, b);

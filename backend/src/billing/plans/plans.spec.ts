@@ -4,8 +4,14 @@ import { trivialKind, trivialReply } from '../trivial-message';
 
 describe('plan prices', () => {
   it('prices every plan in USD', () => {
-    expect(priceFor('STARTER', 'MONTHLY')).toEqual({ amount: 9, currency: 'USD' });
-    expect(priceFor('GROWTH', 'MONTHLY')).toEqual({ amount: 19, currency: 'USD' });
+    expect(priceFor('STARTER', 'MONTHLY')).toEqual({
+      amount: 9,
+      currency: 'USD',
+    });
+    expect(priceFor('GROWTH', 'MONTHLY')).toEqual({
+      amount: 19,
+      currency: 'USD',
+    });
     expect(priceFor('PRO', 'MONTHLY')).toEqual({ amount: 39, currency: 'USD' });
   });
 

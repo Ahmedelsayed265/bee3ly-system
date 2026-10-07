@@ -5,7 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BillingInterval, PaymentPurpose, PlanTier } from '@prisma/client';
+import { PaymentPurpose } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreditsService } from './credits.service';
@@ -175,10 +175,7 @@ export class BillingService {
     });
   }
 
-  async checkoutCredits(
-    userId: string,
-    input: { packId: string },
-  ) {
+  async checkoutCredits(userId: string, input: { packId: string }) {
     const pack = findCreditPack(input.packId);
     const amount = pack ? this.packAmount(pack.id) : null;
     if (!pack || pack.credits == null || amount == null) {
@@ -218,9 +215,7 @@ export class BillingService {
       data: { status: 'CANCELED', cancelAtPeriodEnd: true },
     });
     if (sub.providerSubscriptionId && sub.provider) {
-      await this.provider().cancelSubscription(
-        sub.providerSubscriptionId,
-      );
+      await this.provider().cancelSubscription(sub.providerSubscriptionId);
     }
     await this.prisma.billingEvent.create({
       data: {
@@ -311,7 +306,7 @@ export class BillingService {
       return;
     }
 
-    const priced = priceFor(payment.plan as PublicPlan, payment.interval);
+    const priced = priceFor(payment.plan, payment.interval);
     const periodStart = new Date();
     const periodEnd = addBillingInterval(periodStart, payment.interval);
     await this.prisma.subscription.update({
@@ -334,7 +329,7 @@ export class BillingService {
     });
     await this.prisma.business.update({
       where: { id: payment.businessId },
-      data: { plan: payment.plan as PlanTier },
+      data: { plan: payment.plan },
     });
     await this.prisma.invoice.create({
       data: {
@@ -428,9 +423,7 @@ export class BillingService {
         amount: input.amount,
         currency: input.currency,
         plan: input.plan,
-        interval: input.interval
-          ? (input.interval as BillingInterval)
-          : undefined,
+        interval: input.interval ? input.interval : undefined,
         creditPackId: input.creditPackId,
         metadata: { currency: input.currency },
       },
@@ -486,7 +479,7 @@ export class BillingService {
   private provider(): PaymentProvider {
     const paymobReady = Boolean(
       this.config.get<string>('PAYMOB_SECRET_KEY')?.trim() &&
-        this.config.get<string>('PAYMOB_PUBLIC_KEY')?.trim(),
+      this.config.get<string>('PAYMOB_PUBLIC_KEY')?.trim(),
     );
     return paymobReady ? this.paymob : this.tap;
   }

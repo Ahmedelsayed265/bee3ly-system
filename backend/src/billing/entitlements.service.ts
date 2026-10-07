@@ -39,35 +39,44 @@ export class EntitlementsService {
   async snapshot(businessId: string) {
     const access = await this.subscriptions.resolve(businessId);
     const monthStart = startOfUtcMonth();
-    const [products, orders, conversations, campaigns, team, channels, summary, apiToday, wallet] =
-      await Promise.all([
-        this.prisma.product.count({ where: { businessId } }),
-        this.prisma.order.count({
-          where: { businessId, createdAt: { gte: monthStart } },
-        }),
-        this.prisma.conversation.count({
-          where: { businessId, createdAt: { gte: monthStart } },
-        }),
-        this.prisma.campaign.count({
-          where: { businessId, status: { in: ACTIVE_CAMPAIGN_STATUSES } },
-        }),
-        this.prisma.teamMember.count({ where: { businessId } }),
-        this.prisma.socialAccount.groupBy({
-          by: ['platform'],
-          where: {
-            businessId,
-            status: { in: [...OCCUPIED_CHANNEL_STATUSES] },
-          },
-          _count: { _all: true },
-        }),
-        this.usage.periodSummary(businessId),
-        this.usage.apiRequestsToday(businessId),
-        this.prisma.creditWallet.upsert({
-          where: { businessId },
-          create: { businessId },
-          update: {},
-        }),
-      ]);
+    const [
+      products,
+      orders,
+      conversations,
+      campaigns,
+      team,
+      channels,
+      summary,
+      apiToday,
+      wallet,
+    ] = await Promise.all([
+      this.prisma.product.count({ where: { businessId } }),
+      this.prisma.order.count({
+        where: { businessId, createdAt: { gte: monthStart } },
+      }),
+      this.prisma.conversation.count({
+        where: { businessId, createdAt: { gte: monthStart } },
+      }),
+      this.prisma.campaign.count({
+        where: { businessId, status: { in: ACTIVE_CAMPAIGN_STATUSES } },
+      }),
+      this.prisma.teamMember.count({ where: { businessId } }),
+      this.prisma.socialAccount.groupBy({
+        by: ['platform'],
+        where: {
+          businessId,
+          status: { in: [...OCCUPIED_CHANNEL_STATUSES] },
+        },
+        _count: { _all: true },
+      }),
+      this.usage.periodSummary(businessId),
+      this.usage.apiRequestsToday(businessId),
+      this.prisma.creditWallet.upsert({
+        where: { businessId },
+        create: { businessId },
+        update: {},
+      }),
+    ]);
 
     const byPlatform = Object.fromEntries(
       channels.map((row) => [row.platform, row._count._all]),
@@ -110,7 +119,10 @@ export class EntitlementsService {
         ['conversations', meters.conversations],
       ] as const
     )
-      .map(([meter, row]) => ({ meter, level: usageLevel(row.used, row.limit) }))
+      .map(([meter, row]) => ({
+        meter,
+        level: usageLevel(row.used, row.limit),
+      }))
       .filter((row) => row.level > 0);
 
     return { access, meters, warnings, credits: wallet, byPlatform };

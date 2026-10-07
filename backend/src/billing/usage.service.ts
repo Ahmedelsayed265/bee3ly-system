@@ -80,7 +80,10 @@ export class UsageService {
     if (access.restricted || !access.features.ai) return false;
     const summary = await this.periodSummary(businessId);
     const wallet = await this.wallet(businessId);
-    const includedLeft = Math.max(0, access.limits.aiActions - summary.aiActions);
+    const includedLeft = Math.max(
+      0,
+      access.limits.aiActions - summary.aiActions,
+    );
     return includedLeft + wallet.aiCredits >= quantity;
   }
 
@@ -149,12 +152,14 @@ export class UsageService {
     this.subscriptions.assertWritable(access);
     const summary = await this.periodSummary(businessId);
     const wallet = await this.wallet(businessId);
-    const used = meter === 'whatsapp' ? summary.whatsappMessages : summary.aiActions;
+    const used =
+      meter === 'whatsapp' ? summary.whatsappMessages : summary.aiActions;
     const limit =
       meter === 'whatsapp'
         ? access.limits.whatsappMessages
         : access.limits.aiActions;
-    const credits = meter === 'whatsapp' ? wallet.whatsappCredits : wallet.aiCredits;
+    const credits =
+      meter === 'whatsapp' ? wallet.whatsappCredits : wallet.aiCredits;
     const includedLeft = Math.max(0, limit - used);
     if (includedLeft + credits < quantity) {
       throw new BillingLimitException(

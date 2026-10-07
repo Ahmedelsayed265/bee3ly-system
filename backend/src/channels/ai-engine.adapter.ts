@@ -60,9 +60,7 @@ export class AiEngineAdapter {
         AI_ACTION_WEIGHTS.simpleReply,
       );
       if (!allowed) {
-        this.logger.warn(
-          `AI quota reached for business ${payload.businessId}`,
-        );
+        this.logger.warn(`AI quota reached for business ${payload.businessId}`);
         return {
           reply: null,
           mode: 'fixed_fallback',

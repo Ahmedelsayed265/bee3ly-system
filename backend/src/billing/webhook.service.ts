@@ -15,13 +15,21 @@ export class WebhookService {
 
   async handlePaymob(payload: unknown, hmac?: string) {
     const outcome = await this.paymob.handleWebhook(payload, hmac);
-    await this.apply(outcome.paymentId, outcome.status, outcome.providerReference);
+    await this.apply(
+      outcome.paymentId,
+      outcome.status,
+      outcome.providerReference,
+    );
     return { received: true };
   }
 
   async handleTap(payload: unknown, hmac?: string) {
     const outcome = await this.tap.handleWebhook(payload, hmac);
-    await this.apply(outcome.paymentId, outcome.status, outcome.providerReference);
+    await this.apply(
+      outcome.paymentId,
+      outcome.status,
+      outcome.providerReference,
+    );
     return { received: true };
   }
 

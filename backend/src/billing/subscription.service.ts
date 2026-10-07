@@ -105,6 +105,7 @@ export class SubscriptionService {
     let sub = await this.ensure(businessId);
     const now = new Date();
     let status = sub.status;
+    const overdueGraceEnd = graceEndsAt(sub);
 
     if (status === 'TRIALING' && sub.trialEndsAt && sub.trialEndsAt <= now) {
       sub = await this.prisma.subscription.update({
@@ -152,8 +153,8 @@ export class SubscriptionService {
       status = 'EXPIRED';
     } else if (
       status === 'PAST_DUE' &&
-      sub.pastDueAt &&
-      addDays(sub.pastDueAt, PAST_DUE_GRACE_DAYS) <= now
+      overdueGraceEnd != null &&
+      overdueGraceEnd <= now
     ) {
       sub = await this.prisma.subscription.update({
         where: { id: sub.id },
@@ -164,12 +165,12 @@ export class SubscriptionService {
 
     const trialing = status === 'TRIALING';
     const plan = isPublicPaidPlan(sub.plan) ? sub.plan : 'GROWTH';
-    const inGrace =
-      status === 'PAST_DUE' &&
-      !!sub.pastDueAt &&
-      addDays(sub.pastDueAt, PAST_DUE_GRACE_DAYS) > now;
+    const graceEnd = graceEndsAt(sub);
+    const inGrace = status === 'PAST_DUE' && graceEnd != null && graceEnd > now;
     const restricted =
-      status === 'EXPIRED' || status === 'PAUSED' || (status === 'PAST_DUE' && !inGrace);
+      status === 'EXPIRED' ||
+      status === 'PAUSED' ||
+      (status === 'PAST_DUE' && !inGrace);
     const neverPaid = sub.amount === 0 && !sub.provider;
     const restriction = !restricted
       ? null
@@ -223,6 +224,11 @@ export class SubscriptionService {
       data: { businessId, type: 'TRIAL_EXPIRED' },
     });
   }
+}
+
+function graceEndsAt(row: { pastDueAt: Date | null }): Date | null {
+  if (row.pastDueAt == null) return null;
+  return addDays(row.pastDueAt, PAST_DUE_GRACE_DAYS);
 }
 
 function isPublicPaidPlan(
