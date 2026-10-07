@@ -127,6 +127,8 @@
   "paymentStatus_PENDING": "Pending",
   "paymentStatus_SUCCEEDED": "Paid",
   "paymentStatus_FAILED": "Payment failed",
+  "billingPaymentApproved": "Payment received. Your plan is active.",
+  "billingPaymentFailed": "The payment did not go through. Try again.",
   "billingMonthly": "Monthly",
   "billingAnnual": "Annual",
   "billingTwoMonths": "About 2 months free",

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   cancelSubscription,
   confirmDevPayment,
+  confirmPaymobReturn,
   fetchBillingCatalog,
   fetchBillingOverview,
   startCheckout,
@@ -37,10 +38,15 @@ export function useBilling() {
     onSuccess: refresh,
   });
 
+  const confirmReturn = useMutation({
+    mutationFn: confirmPaymobReturn,
+    onSuccess: refresh,
+  });
+
   const cancel = useMutation({
     mutationFn: cancelSubscription,
     onSuccess: refresh,
   });
 
-  return { overview, catalog, checkout, confirm, cancel };
+  return { overview, catalog, checkout, confirm, confirmReturn, cancel };
 }

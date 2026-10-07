@@ -137,6 +137,49 @@ export class PaymobProvider implements PaymentProvider {
     });
   }
 
+  parseRedirect(query: Record<string, string>) {
+    const secret = this.config.get<string>('PAYMOB_HMAC_SECRET')?.trim();
+    const hmac = query.hmac;
+    const obj: Record<string, unknown> = {
+      amount_cents: query.amount_cents,
+      created_at: query.created_at,
+      currency: query.currency,
+      error_occured: query.error_occured,
+      has_parent_transaction: query.has_parent_transaction,
+      id: query.id,
+      integration_id: query.integration_id,
+      is_3d_secure: query.is_3d_secure,
+      is_auth: query.is_auth,
+      is_capture: query.is_capture,
+      is_refunded: query.is_refunded,
+      is_standalone_payment: query.is_standalone_payment,
+      is_voided: query.is_voided,
+      order: { id: query.order },
+      owner: query.owner,
+      pending: query.pending,
+      source_data: {
+        pan: query['source_data.pan'],
+        sub_type: query['source_data.sub_type'],
+        type: query['source_data.type'],
+      },
+      success: query.success,
+    };
+    if (!secret || !hmac || !this.hmacMatches(obj, hmac, secret)) {
+      this.logger.warn('Rejected Paymob return with invalid HMAC');
+      return null;
+    }
+    const amountCents = Number(query.amount_cents);
+    const success = query.success === 'true' && query.pending !== 'true';
+    return {
+      paymentId: this.asId(query.merchant_order_id),
+      status: success ? ('succeeded' as const) : ('failed' as const),
+      transactionId: this.text(query.id),
+      amountCents: Number.isInteger(amountCents) ? amountCents : null,
+      currency: query.currency ?? '',
+      integrationId: query.integration_id ?? '',
+    };
+  }
+
   private transactionObject(payload: unknown): Record<string, unknown> | null {
     if (!payload || typeof payload !== 'object') return null;
     const body = payload as { obj?: unknown };

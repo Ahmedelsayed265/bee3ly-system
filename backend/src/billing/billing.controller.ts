@@ -21,6 +21,7 @@ import {
   CheckoutDto,
   ConfirmPaymentDto,
   CreditCheckoutDto,
+  PaymobReturnDto,
 } from './dto/billing.dto';
 import { WebhookService } from './webhook.service';
 
@@ -47,14 +48,28 @@ export class BillingController {
 
   @Post('checkout')
   @UseGuards(JwtAuthGuard)
-  checkout(@CurrentUser() user: AuthUser, @Body() dto: CheckoutDto) {
-    return this.billing.checkout(user.id, dto);
+  checkout(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CheckoutDto,
+    @Headers('origin') origin?: string,
+  ) {
+    return this.billing.checkout(user.id, dto, origin);
   }
 
   @Post('credits/checkout')
   @UseGuards(JwtAuthGuard)
-  credits(@CurrentUser() user: AuthUser, @Body() dto: CreditCheckoutDto) {
-    return this.billing.checkoutCredits(user.id, dto);
+  credits(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreditCheckoutDto,
+    @Headers('origin') origin?: string,
+  ) {
+    return this.billing.checkoutCredits(user.id, dto, origin);
+  }
+
+  @Post('paymob-return')
+  @UseGuards(JwtAuthGuard)
+  paymobReturn(@CurrentUser() user: AuthUser, @Body() dto: PaymobReturnDto) {
+    return this.billing.confirmPaymobReturn(user.id, dto.search);
   }
 
   @Post('dev/confirm')

@@ -127,6 +127,8 @@
   "paymentStatus_PENDING": "قيد الانتظار",
   "paymentStatus_SUCCEEDED": "مدفوع",
   "paymentStatus_FAILED": "فشل الدفع",
+  "billingPaymentApproved": "تم الدفع وتفعيل الباقة.",
+  "billingPaymentFailed": "الدفع ما اكتملش. حاول مرة تانية.",
   "billingMonthly": "شهري",
   "billingAnnual": "سنوي",
   "billingTwoMonths": "حوالي شهرين مجانًا",

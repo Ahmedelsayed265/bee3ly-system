@@ -117,6 +117,15 @@ export function startCheckout(input: {
     .then((res) => res.data);
 }
 
+export function confirmPaymobReturn(search: string) {
+  return api
+    .post<{ ok: boolean; status: 'succeeded' | 'failed' }>(
+      '/billing/paymob-return',
+      { search },
+    )
+    .then((res) => res.data);
+}
+
 export function confirmDevPayment(paymentId: string) {
   return api
     .post<{ ok: boolean }>('/billing/dev/confirm', { paymentId })

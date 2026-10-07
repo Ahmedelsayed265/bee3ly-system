@@ -1,4 +1,4 @@
-import { IsIn, IsString, MinLength } from 'class-validator';
+import { IsIn, IsString, MaxLength, MinLength } from 'class-validator';
 import type { BillingIntervalCode, PublicPlan } from '../plans/plans';
 
 export class CheckoutDto {
@@ -19,4 +19,11 @@ export class ConfirmPaymentDto {
   @IsString()
   @MinLength(1)
   paymentId!: string;
+}
+
+export class PaymobReturnDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(12000)
+  search!: string;
 }

@@ -5,10 +5,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentPurpose } from '@prisma/client';
+import { PaymentPurpose, Prisma } from '@prisma/client';
 import { BusinessAccessService } from '../common/business-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreditsService } from './credits.service';
+import { billingReturnOrigin } from './frontend-origin';
+import { usdToEgp } from './fx/usd-egp';
 import { EntitlementsService } from './entitlements.service';
 import { PaymobProvider } from './payment/paymob.provider';
 import { TapProvider } from './payment/tap.provider';
@@ -119,6 +121,7 @@ export class BillingService {
       plan: PublicPlan;
       interval: BillingIntervalCode;
     },
+    origin?: string,
   ) {
     const businessId = await this.access.requireBusinessId(userId);
     const access = await this.subscriptions.resolve(businessId);
@@ -172,10 +175,15 @@ export class BillingService {
       plan: input.plan,
       interval: input.interval,
       description: `Bee3ly ${input.plan} ${input.interval}`,
+      origin,
     });
   }
 
-  async checkoutCredits(userId: string, input: { packId: string }) {
+  async checkoutCredits(
+    userId: string,
+    input: { packId: string },
+    origin?: string,
+  ) {
     const pack = findCreditPack(input.packId);
     const amount = pack ? this.packAmount(pack.id) : null;
     if (!pack || pack.credits == null || amount == null) {
@@ -192,7 +200,60 @@ export class BillingService {
       currency: BILLING_CURRENCY,
       creditPackId: pack.id,
       description: `Bee3ly credits ${pack.id}`,
+      origin,
     });
+  }
+
+  async confirmPaymobReturn(userId: string, search: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const query = Object.fromEntries(
+      new URLSearchParams(search.replace(/^\?/, '')),
+    );
+    const parsed = this.paymob.parseRedirect(query);
+    if (!parsed?.paymentId || parsed.amountCents == null) {
+      throw new BadRequestException('تعذر تأكيد الدفع من Paymob.');
+    }
+    const payment = await this.prisma.payment.findFirst({
+      where: { id: parsed.paymentId, businessId, provider: 'paymob' },
+    });
+    if (!payment) throw new NotFoundException('Payment not found');
+    const integrationId = this.config
+      .get<string>('PAYMOB_INTEGRATION_ID')
+      ?.trim();
+    if (
+      parsed.currency !== payment.currency ||
+      parsed.amountCents !== payment.amount * 100 ||
+      (integrationId && parsed.integrationId !== integrationId)
+    ) {
+      throw new BadRequestException('تعذر تأكيد الدفع من Paymob.');
+    }
+    if (parsed.transactionId) {
+      const replay = await this.prisma.payment.findFirst({
+        where: {
+          id: { not: payment.id },
+          metadata: {
+            path: ['paymobTransactionId'],
+            equals: parsed.transactionId,
+          },
+        },
+        select: { id: true },
+      });
+      if (replay) throw new BadRequestException('تعذر تأكيد الدفع من Paymob.');
+    }
+    if (payment.status === 'SUCCEEDED') {
+      return { ok: true, status: 'succeeded' as const };
+    }
+    if (parsed.status === 'failed') {
+      await this.markPaymentFailed(payment.id);
+      return { ok: true, status: 'failed' as const };
+    }
+    await this.rememberPaymobTransaction(
+      payment.id,
+      payment.metadata,
+      parsed.transactionId,
+    );
+    await this.activatePayment(payment.id);
+    return { ok: true, status: 'succeeded' as const };
   }
 
   async confirmDevPayment(userId: string, paymentId: string) {
@@ -271,10 +332,11 @@ export class BillingService {
       where: { id: paymentId },
     });
     if (!payment || payment.status === 'SUCCEEDED') return;
-    await this.prisma.payment.update({
-      where: { id: payment.id },
+    const claimed = await this.prisma.payment.updateMany({
+      where: { id: payment.id, status: { not: 'SUCCEEDED' } },
       data: { status: 'SUCCEEDED' },
     });
+    if (claimed.count === 0) return;
     await this.prisma.billingEvent.create({
       data: {
         businessId: payment.businessId,
@@ -398,6 +460,7 @@ export class BillingService {
     interval?: BillingIntervalCode;
     creditPackId?: string;
     description: string;
+    origin?: string;
   }) {
     const [user, business, subscription] = await Promise.all([
       this.prisma.user.findUnique({
@@ -414,29 +477,38 @@ export class BillingService {
       }),
     ]);
     const provider = this.provider();
+    const charge = await this.chargeAmount(
+      provider.id,
+      input.amount,
+      input.currency,
+    );
     const payment = await this.prisma.payment.create({
       data: {
         businessId: input.businessId,
         subscriptionId: subscription?.id,
         purpose: input.purpose,
         provider: provider.id,
-        amount: input.amount,
-        currency: input.currency,
+        amount: charge.amount,
+        currency: charge.currency,
         plan: input.plan,
         interval: input.interval ? input.interval : undefined,
         creditPackId: input.creditPackId,
-        metadata: { currency: input.currency },
+        metadata: {
+          listAmount: input.amount,
+          listCurrency: input.currency,
+          fxRate: charge.rate,
+        },
       },
     });
-    const frontend = this.config.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:5173',
+    const frontend = billingReturnOrigin(
+      this.config.get<string>('FRONTEND_URL'),
+      input.origin,
     );
     const backend = this.config.get<string>('BACKEND_PUBLIC_URL')?.trim();
     const session = await provider.createCheckout({
       paymentId: payment.id,
-      amount: input.amount,
-      currency: input.currency,
+      amount: charge.amount,
+      currency: charge.currency,
       description: input.description,
       customerName: business?.name || user?.name,
       email: user?.email,
@@ -474,6 +546,45 @@ export class BillingService {
       devConfirm: !session.checkoutUrl && this.devConfirmEnabled(),
       providerConfigured: session.configured,
     };
+  }
+
+  private async rememberPaymobTransaction(
+    paymentId: string,
+    metadata: Prisma.JsonValue,
+    transactionId: string,
+  ) {
+    const current =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+        ? metadata
+        : {};
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        metadata: { ...current, paymobTransactionId: transactionId },
+      },
+    });
+  }
+
+  private async chargeAmount(
+    providerId: PaymentProvider['id'],
+    amount: number,
+    currency: string,
+  ) {
+    if (providerId !== 'paymob' || currency !== 'USD') {
+      return { amount, currency, rate: null as number | null };
+    }
+    try {
+      const converted = await usdToEgp(amount);
+      return {
+        amount: converted.egp,
+        currency: 'EGP',
+        rate: converted.rate,
+      };
+    } catch {
+      throw new ServiceUnavailableException(
+        'تعذر تحويل السعر للجنيه دلوقتي. حاول تاني بعد شوية.',
+      );
+    }
   }
 
   private provider(): PaymentProvider {

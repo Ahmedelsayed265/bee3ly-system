@@ -1,6 +1,6 @@
 import { Megaphone, ShieldCheck, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PageLayout } from '@/components/layout/page-layout';
 import { Button } from '@/components/ui/button';
@@ -96,10 +96,34 @@ function planRank(plan: PublicPlan) {
 
 export function BillingPageView() {
   const { t, locale } = useLocale();
+  const navigate = useNavigate();
+  const returnStarted = useRef(false);
   const [devPaymentId, setDevPaymentId] = useState<string | null>(null);
-  const { overview, catalog, checkout, confirm, cancel } = useBilling();
+  const { overview, catalog, checkout, confirm, confirmReturn, cancel } =
+    useBilling();
   const sub = overview.data?.subscription;
   const usage = overview.data?.usage;
+
+  useEffect(() => {
+    const search = window.location.search;
+    const params = new URLSearchParams(search);
+    if (!params.get('hmac') || !params.get('merchant_order_id')) return;
+    if (returnStarted.current) return;
+    returnStarted.current = true;
+    void confirmReturn
+      .mutateAsync(search)
+      .then((result) => {
+        if (result.status === 'succeeded')
+          toast.success(t('billingPaymentApproved'));
+        else toast.error(t('billingPaymentFailed'));
+      })
+      .catch((error: unknown) => {
+        toast.error(getApiErrorMessage(error) ?? t('billingPaymentFailed'));
+      })
+      .finally(() => {
+        void navigate(paths.billing, { replace: true });
+      });
+  }, [confirmReturn, navigate, t]);
 
   const onSelect = async (plan: PublicPlan, interval: 'MONTHLY' | 'ANNUAL') => {
     try {
