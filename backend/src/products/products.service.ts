@@ -16,7 +16,11 @@ import {
   variantsTotalStock,
   type ProductVariants,
 } from './product-variants';
-import { resolveInStock, usesQuantityStock } from './stock-mode';
+import {
+  inStockForVariants,
+  resolveInStock,
+  usesQuantityStock,
+} from './stock-mode';
 import type { ProductStockFilter } from './product-query.dto';
 
 @Injectable()
@@ -79,7 +83,11 @@ export class ProductsService {
       const stock = resolveInStock({
         type: input.type,
         stockQuantity: total,
-        inStock: total > 0,
+        inStock: inStockForVariants({
+          type: input.type,
+          totalStock: total,
+          inStock: input.inStock,
+        }),
       });
       return {
         attributes,

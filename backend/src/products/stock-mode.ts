@@ -3,6 +3,16 @@ export function usesQuantityStock(type: string): boolean {
   return type !== 'REAL_ESTATE' && type !== 'RESTAURANT' && type !== 'CAFE';
 }
 
+/** Quantity businesses follow the SKU total. Listings keep the merchant's available/unavailable choice. */
+export function inStockForVariants(input: {
+  type: string;
+  totalStock: number;
+  inStock?: boolean;
+}): boolean {
+  if (usesQuantityStock(input.type)) return input.totalStock > 0;
+  return input.inStock ?? true;
+}
+
 export function resolveInStock(input: {
   type: string;
   stockQuantity?: number | null;
