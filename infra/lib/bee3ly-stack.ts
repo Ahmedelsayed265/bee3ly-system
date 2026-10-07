@@ -402,6 +402,8 @@ export class Bee3lyStack extends cdk.Stack {
             META_WHATSAPP_EMBEDDED_CONFIG_ID: '986448077802892',
             // Meta Cloud API test number — binds on boot when true (dev only).
             WHATSAPP_BIND_TEST_NUMBER: envName === 'prod' ? 'false' : 'true',
+            // Pin test WhatsApp to a specific merchant (override via redeploy/env).
+            // WHATSAPP_BIND_BUSINESS_ID: '<your-business-uuid>',
             WHATSAPP_PHONE_NUMBER_ID: '1392264077293649',
             META_COMMENT_POLLING_ENABLED: 'true',
             META_COMMENT_POLL_INTERVAL_MS: '60000',

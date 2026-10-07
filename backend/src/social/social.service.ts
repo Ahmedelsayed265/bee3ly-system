@@ -49,18 +49,23 @@ export class SocialService implements OnModuleInit {
       ?.trim();
     if (!token || !phoneNumberId) return;
 
-    const existing = await this.prisma.socialAccount.findFirst({
-      where: { platform: SocialPlatform.WHATSAPP, externalId: phoneNumberId },
-      select: { businessId: true },
-    });
-    const businessId =
-      existing?.businessId ?? (await this.pickWhatsAppBusinessId());
+    const businessId = await this.resolveWhatsAppBindBusinessId(phoneNumberId);
     if (!businessId) {
       this.logger.warn(
-        'WhatsApp test token is set, but there is no business to attach it to',
+        'WhatsApp test token is set, but there is no business to attach it to — set WHATSAPP_BIND_BUSINESS_ID',
       );
       return;
     }
+
+    // Phone number id is unique across merchants for this test flow: drop any
+    // stale row on another business so the number moves to the pinned one.
+    await this.prisma.socialAccount.deleteMany({
+      where: {
+        platform: SocialPlatform.WHATSAPP,
+        externalId: phoneNumberId,
+        NOT: { businessId },
+      },
+    });
 
     await this.prisma.socialAccount.upsert({
       where: {
@@ -92,6 +97,32 @@ export class SocialService implements OnModuleInit {
     this.logger.log(
       `WhatsApp test number bound phoneNumberId=${phoneNumberId} business=${businessId}`,
     );
+  }
+
+  /**
+   * Prefer explicit WHATSAPP_BIND_BUSINESS_ID so the shared test number
+   * lands on the merchant you are developing against.
+   */
+  private async resolveWhatsAppBindBusinessId(phoneNumberId: string) {
+    const pinned = this.config.get<string>('WHATSAPP_BIND_BUSINESS_ID')?.trim();
+    if (pinned) {
+      const exists = await this.prisma.business.findUnique({
+        where: { id: pinned },
+        select: { id: true },
+      });
+      if (exists) return exists.id;
+      this.logger.warn(
+        `WHATSAPP_BIND_BUSINESS_ID=${pinned} not found — falling back`,
+      );
+    }
+
+    const existing = await this.prisma.socialAccount.findFirst({
+      where: { platform: SocialPlatform.WHATSAPP, externalId: phoneNumberId },
+      select: { businessId: true },
+    });
+    if (existing) return existing.businessId;
+
+    return this.pickWhatsAppBusinessId();
   }
 
   private async pickWhatsAppBusinessId() {
