@@ -55,6 +55,8 @@ export class InboundMessageService {
           ],
         },
       },
+      // If a test number was bound to multiple merchants, prefer the newest.
+      orderBy: { updatedAt: 'desc' },
     });
 
     if (!account) {
