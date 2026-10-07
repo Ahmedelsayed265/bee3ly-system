@@ -8,7 +8,11 @@ import type { PublicPlan } from '@/features/billing/api';
 import { BillingComparisonTable } from '@/features/billing/components/billing-comparison-table';
 import { BillingPlanCard } from '@/features/billing/components/billing-plan-card';
 import { useBilling } from '@/features/billing/hooks/use-billing';
-import { cardLines, formatPlanPrice, formatStorage } from '@/features/billing/plan-copy';
+import {
+  cardLines,
+  formatPlanPrice,
+  formatStorage,
+} from '@/features/billing/plan-copy';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
@@ -61,7 +65,11 @@ const PLAN_AUDIENCE: Record<PublicPlan, MessageKey> = {
 
 const BILLING_HINTS = [
   { icon: Megaphone, title: 'billingHintAdsTitle', body: 'billingAdSpend' },
-  { icon: Sparkles, title: 'billingHintCreditsTitle', body: 'billingCreditsLater' },
+  {
+    icon: Sparkles,
+    title: 'billingHintCreditsTitle',
+    body: 'billingCreditsLater',
+  },
   { icon: ShieldCheck, title: 'billingHintFairTitle', body: 'billingFairUse' },
 ] as const;
 
@@ -142,18 +150,20 @@ export function BillingPageView() {
         {BILLING_HINTS.map((hint) => {
           const Icon = hint.icon;
           return (
-          <article
-            key={hint.title}
-            className="border-border bg-surface flex items-start gap-3 rounded-2xl border p-4"
-          >
-            <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <Icon className="size-5" />
-            </span>
-            <div>
-              <p className="text-ink text-sm font-bold">{t(hint.title)}</p>
-              <p className="text-muted mt-1 text-sm leading-6">{t(hint.body)}</p>
-            </div>
-          </article>
+            <article
+              key={hint.title}
+              className="border-border bg-surface flex items-start gap-3 rounded-2xl border p-4"
+            >
+              <span className="bg-brand/10 text-brand inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <Icon className="size-5" />
+              </span>
+              <div>
+                <p className="text-ink text-sm font-bold">{t(hint.title)}</p>
+                <p className="text-muted mt-1 text-sm leading-6">
+                  {t(hint.body)}
+                </p>
+              </div>
+            </article>
           );
         })}
       </section>
@@ -200,8 +210,12 @@ export function BillingPageView() {
           <BillingComparisonTable plans={catalog.data.plans} t={t} />
           <section className="border-border bg-surface w-full rounded-3xl border p-5">
             <div className="mb-4">
-              <h2 className="text-ink text-lg font-bold">{t('billingAnnualPlans')}</h2>
-              <p className="text-muted mt-1 text-sm">{t('billingAnnualSave')}</p>
+              <h2 className="text-ink text-lg font-bold">
+                {t('billingAnnualPlans')}
+              </h2>
+              <p className="text-muted mt-1 text-sm">
+                {t('billingAnnualSave')}
+              </p>
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               {catalog.data.plans.map((plan) => {
@@ -246,7 +260,9 @@ export function BillingPageView() {
       <section className="border-border bg-surface w-full rounded-3xl border p-5">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-muted text-xs font-medium">{t('currentPlanLabel')}</p>
+            <p className="text-muted text-xs font-medium">
+              {t('currentPlanLabel')}
+            </p>
             <p className="text-ink mt-1 text-xl font-bold">
               {sub?.trialing
                 ? t('planName_TRIAL')
@@ -283,7 +299,9 @@ export function BillingPageView() {
                     : t('billingNotIncluded');
               return (
                 <div key={key} className="bg-page rounded-2xl px-4 py-3">
-                  <p className="text-muted text-xs font-medium">{t(METER_LABEL[key])}</p>
+                  <p className="text-muted text-xs font-medium">
+                    {t(METER_LABEL[key])}
+                  </p>
                   <p className="text-ink mt-1 text-sm font-bold" dir="ltr">
                     {value}
                   </p>
@@ -322,8 +340,9 @@ export function BillingPageView() {
                       : 'usageWarn70',
                   {
                     meter: t(
-                      METER_LABEL[warning.meter as (typeof USAGE_KEYS)[number]] ??
-                        'usageWhatsapp',
+                      METER_LABEL[
+                        warning.meter as (typeof USAGE_KEYS)[number]
+                      ] ?? 'usageWhatsapp',
                     ),
                   },
                 )}
@@ -349,8 +368,12 @@ export function BillingPageView() {
 
       <section className="border-border bg-surface flex w-full flex-wrap items-center justify-between gap-4 rounded-3xl border p-5">
         <div>
-          <h2 className="text-ink text-base font-bold">{t('billingEnterprise')}</h2>
-          <p className="text-muted mt-1 max-w-xl text-sm">{t('billingEnterpriseBody')}</p>
+          <h2 className="text-ink text-base font-bold">
+            {t('billingEnterprise')}
+          </h2>
+          <p className="text-muted mt-1 max-w-xl text-sm">
+            {t('billingEnterpriseBody')}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild>
@@ -361,7 +384,9 @@ export function BillingPageView() {
               variant="outline"
               disabled={cancel.isPending}
               onClick={() =>
-                void cancel.mutateAsync().then(() => toast.success(t('billingScheduled')))
+                void cancel
+                  .mutateAsync()
+                  .then(() => toast.success(t('billingScheduled')))
               }
             >
               {t('billingCancel')}
@@ -371,7 +396,9 @@ export function BillingPageView() {
       </section>
 
       <section className="border-border bg-surface w-full rounded-3xl border p-5">
-        <h2 className="text-ink mb-4 text-lg font-bold">{t('billingHistory')}</h2>
+        <h2 className="text-ink mb-4 text-lg font-bold">
+          {t('billingHistory')}
+        </h2>
         {overview.data?.payments.length ? (
           <ul className="space-y-2">
             {overview.data.payments.map((payment) => (
@@ -382,7 +409,10 @@ export function BillingPageView() {
                 <div>
                   <p className="text-ink text-sm font-bold">
                     {payment.plan
-                      ? t(PLAN_NAME[payment.plan as PublicPlan] ?? 'planName_GROWTH')
+                      ? t(
+                          PLAN_NAME[payment.plan as PublicPlan] ??
+                            'planName_GROWTH',
+                        )
                       : payment.purpose}
                   </p>
                   <p className="text-muted mt-0.5 text-xs">

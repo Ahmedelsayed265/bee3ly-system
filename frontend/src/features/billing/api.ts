@@ -101,9 +101,7 @@ export type CheckoutResult =
     };
 
 export function fetchBillingOverview() {
-  return api
-    .get<BillingOverview>('/billing/overview')
-    .then((res) => res.data);
+  return api.get<BillingOverview>('/billing/overview').then((res) => res.data);
 }
 
 export function fetchBillingCatalog() {

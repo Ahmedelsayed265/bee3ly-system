@@ -28,12 +28,17 @@ type BillingComparisonTableProps = {
   t: (key: MessageKey, params?: Record<string, string>) => string;
 };
 
-export function BillingComparisonTable({ plans, t }: BillingComparisonTableProps) {
+export function BillingComparisonTable({
+  plans,
+  t,
+}: BillingComparisonTableProps) {
   const rows = comparisonRows(t);
 
   return (
     <section className="border-border bg-surface w-full overflow-hidden rounded-3xl border">
-      <h2 className="text-ink px-5 pt-5 text-lg font-bold">{t('compareTitle')}</h2>
+      <h2 className="text-ink px-5 pt-5 text-lg font-bold">
+        {t('compareTitle')}
+      </h2>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-sm">
           <thead>
@@ -59,7 +64,10 @@ export function BillingComparisonTable({ plans, t }: BillingComparisonTableProps
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.label} className="border-border border-b last:border-0">
+              <tr
+                key={row.label}
+                className="border-border border-b last:border-0"
+              >
                 <th className="text-ink px-5 py-3 text-start font-medium">
                   <RowLabel icon={row.icon} label={row.label} />
                 </th>
@@ -101,8 +109,7 @@ function RowLabel({
 function comparisonRows(
   t: (key: MessageKey, params?: Record<string, string>) => string,
 ) {
-  const count = (value: number) =>
-    value > 0 ? value.toLocaleString() : '—';
+  const count = (value: number) => (value > 0 ? value.toLocaleString() : '—');
   return [
     {
       icon: Share2,
