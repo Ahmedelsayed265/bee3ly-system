@@ -97,7 +97,7 @@ export function DashboardSidebarPanel({
           <button
             type="button"
             onClick={handleLogout}
-            className="text-muted cursor-pointer hover:bg-surface hover:text-danger inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors"
+            className="text-muted hover:bg-surface hover:text-danger inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors"
             aria-label={t('logout')}
             title={t('logout')}
           >

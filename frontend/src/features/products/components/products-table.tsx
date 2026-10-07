@@ -200,7 +200,7 @@ export function ProductsTable({
                     <td className="px-4 py-3 text-start align-top">
                       <span
                         className={cn(
-                          'inline-flex rounded-full px-2.5 whitespace-nowrap py-1 text-[11px] font-semibold',
+                          'inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap',
                           isOut
                             ? 'bg-danger/10 text-danger'
                             : isLow
