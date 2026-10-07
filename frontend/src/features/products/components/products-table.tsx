@@ -266,7 +266,7 @@ export function ProductsTable({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="text-danger hover:bg-danger/10 border-danger hover:text-danger h-8 px-2.5 text-xs"
+                          className="text-danger hover:bg-danger/10 border-danger/30 hover:text-danger h-8 border px-2.5 text-xs"
                           onClick={() =>
                             onDelete({ id: product.id, name: product.name })
                           }
