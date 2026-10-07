@@ -255,10 +255,14 @@ export class MetaWebhookService {
 
     const commentId = typeof value.id === 'string' ? value.id : '';
     if (!commentId) return;
-    const media = value.media as { id?: string } | undefined;
+    const media = value.media as { id?: string; caption?: string } | undefined;
     const postId = typeof media?.id === 'string' ? media.id : '';
     if (!postId) return;
     const message = typeof value.text === 'string' ? value.text : '';
+    const postMessage =
+      typeof media?.caption === 'string' && media.caption.trim()
+        ? media.caption.trim()
+        : null;
 
     const created = await this.claimEvent(
       'META',
@@ -275,6 +279,7 @@ export class MetaWebhookService {
         pageId: igUserId,
         commentId,
         postId,
+        postMessage,
         fromUserId,
         fromName: from?.username ?? from?.name ?? null,
         message,
@@ -328,6 +333,13 @@ export class MetaWebhookService {
     if (!postId) return;
 
     const message = typeof value.message === 'string' ? value.message : '';
+    const postObj = value.post as
+      | { message?: string; story?: string }
+      | undefined;
+    const postMessage =
+      (typeof postObj?.message === 'string' && postObj.message.trim()) ||
+      (typeof postObj?.story === 'string' && postObj.story.trim()) ||
+      null;
     const createdRaw = value.created_time;
     const commentedAt =
       typeof createdRaw === 'number'
@@ -349,6 +361,7 @@ export class MetaWebhookService {
         pageId,
         commentId,
         postId,
+        postMessage,
         fromUserId,
         fromName: from?.name ?? null,
         message,

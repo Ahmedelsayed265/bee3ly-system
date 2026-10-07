@@ -23,6 +23,8 @@ export type CreatePageCommentFromWebhookInput = {
   pageId: string;
   commentId: string;
   postId: string;
+  /** Caption/body of the parent post when already known (poll/webhook). */
+  postMessage?: string | null;
   fromUserId: string;
   fromName?: string | null;
   message: string;
@@ -100,6 +102,11 @@ export class PageCommentsService {
       return existing;
     }
 
+    const rawPayload = this.withPostMessageHint(
+      input.rawPayload,
+      input.postMessage,
+    );
+
     const row = await this.prisma.pageComment.create({
       data: {
         commentId: input.commentId,
@@ -110,7 +117,7 @@ export class PageCommentsService {
         commentedAt: input.commentedAt,
         businessId: account.businessId,
         customerId: customer.id,
-        rawPayload: input.rawPayload as object,
+        rawPayload: rawPayload as object,
       },
     });
 
@@ -175,7 +182,10 @@ export class PageCommentsService {
     });
 
     let seededMessageId: string | null = null;
-    const content = row.message?.trim() || `(تعليق على المنشور ${row.postId})`;
+    const commentText =
+      row.message?.trim() || `(تعليق على المنشور ${row.postId})`;
+    const postContext = await this.resolvePostContext(row);
+    const content = this.formatCommentWithPostContext(commentText, postContext);
 
     if (!alreadySeeded) {
       const msg = await this.prisma.message.create({
@@ -188,6 +198,9 @@ export class PageCommentsService {
             pageCommentId: row.commentId,
             postId: row.postId,
             pageId: row.pageId,
+            postMessage: postContext.text,
+            postPermalink: postContext.permalink,
+            postMediaType: postContext.mediaType,
           },
         },
       });
@@ -208,7 +221,8 @@ export class PageCommentsService {
     // ------------------------------------------------------------------
     // Trigger AI for the newly-seeded comment conversation so the
     // merchant gets an AI-generated reply in the inbox exactly like
-    // a normal inbound DM.
+    // a normal inbound DM. Post caption/body is included in `content`
+    // so the model knows what the customer commented on.
     // ------------------------------------------------------------------
     if (conversation.mode !== 'HUMAN' && !conversation.needsHuman) {
       void this.runAiForCommentConversation({
@@ -370,6 +384,136 @@ export class PageCommentsService {
   // ------------------------------------------------------------------
   // Internal helpers
   // ------------------------------------------------------------------
+
+  /**
+   * Resolve parent post caption/body for AI + inbox context.
+   * Prefer payload/poll hint, then Graph API fetch.
+   */
+  private async resolvePostContext(row: {
+    postId: string;
+    pageId: string;
+    businessId: string;
+    rawPayload: unknown;
+  }): Promise<{
+    text: string | null;
+    permalink: string | null;
+    mediaType: string | null;
+  }> {
+    const fromPayload = this.extractPostMessageFromPayload(row.rawPayload);
+    if (fromPayload) {
+      return { text: fromPayload, permalink: null, mediaType: null };
+    }
+
+    const account = await this.prisma.socialAccount.findFirst({
+      where: {
+        businessId: row.businessId,
+        externalId: row.pageId,
+        status: SocialConnectionStatus.CONNECTED,
+        accessTokenEnc: { not: null },
+      },
+      select: { accessTokenEnc: true, platform: true },
+    });
+    if (!account?.accessTokenEnc) {
+      return { text: null, permalink: null, mediaType: null };
+    }
+
+    let token: string;
+    try {
+      token = this.oauth.decrypt(account.accessTokenEnc);
+    } catch {
+      return { text: null, permalink: null, mediaType: null };
+    }
+
+    const platform =
+      account.platform === SocialPlatform.INSTAGRAM ? 'INSTAGRAM' : 'FACEBOOK';
+    const fetched = await this.graph.getPostContent(
+      row.postId,
+      token,
+      platform,
+    );
+    if (!fetched.ok) {
+      return { text: null, permalink: null, mediaType: null };
+    }
+    return {
+      text: fetched.text,
+      permalink: fetched.permalink,
+      mediaType: fetched.mediaType,
+    };
+  }
+
+  private withPostMessageHint(
+    rawPayload: unknown,
+    postMessage?: string | null,
+  ): unknown {
+    const hint = postMessage?.trim();
+    if (!hint) return rawPayload ?? null;
+    if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+      return { ...(rawPayload as Record<string, unknown>), postMessage: hint };
+    }
+    return { postMessage: hint, raw: rawPayload ?? null };
+  }
+
+  private extractPostMessageFromPayload(raw: unknown): string | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const root = raw as Record<string, unknown>;
+
+    // Poller / createFromWebhook may stash post text at the top level.
+    if (typeof root.postMessage === 'string' && root.postMessage.trim()) {
+      return root.postMessage.trim();
+    }
+
+    const value =
+      root.value && typeof root.value === 'object'
+        ? (root.value as Record<string, unknown>)
+        : root;
+
+    const post = value.post as Record<string, unknown> | undefined;
+    if (post) {
+      if (typeof post.message === 'string' && post.message.trim()) {
+        return post.message.trim();
+      }
+      if (typeof post.story === 'string' && post.story.trim()) {
+        return post.story.trim();
+      }
+    }
+
+    const media = value.media as Record<string, unknown> | undefined;
+    if (media && typeof media.caption === 'string' && media.caption.trim()) {
+      return media.caption.trim();
+    }
+
+    return null;
+  }
+
+  /** Build customer/AI message that includes the parent post. */
+  private formatCommentWithPostContext(
+    commentText: string,
+    post: {
+      text: string | null;
+      permalink: string | null;
+      mediaType: string | null;
+    },
+  ) {
+    const postBody = post.text?.trim();
+    if (postBody) {
+      return [
+        'تعليق على المنشور التالي:',
+        postBody,
+        '',
+        `تعليق العميل: ${commentText}`,
+      ].join('\n');
+    }
+
+    const mediaHint = post.mediaType
+      ? ` (نوع المحتوى: ${post.mediaType})`
+      : '';
+    const linkHint = post.permalink ? `\nرابط المنشور: ${post.permalink}` : '';
+    return [
+      `تعليق على منشور${mediaHint}${linkHint}`,
+      '',
+      `تعليق العميل: ${commentText}`,
+    ].join('\n');
+  }
 
   /** Acknowledgment shown on a public comment — merchant-owned wording. */
   private publicCommentAck(

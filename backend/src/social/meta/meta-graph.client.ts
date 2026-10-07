@@ -730,6 +730,71 @@ export class MetaGraphClient {
   }
 
   /**
+   * Fetch Facebook Page post or Instagram media text so comment AI
+   * replies know what the customer was reacting to.
+   */
+  async getPostContent(
+    postId: string,
+    accessToken: string,
+    platform: 'FACEBOOK' | 'INSTAGRAM' = 'FACEBOOK',
+  ): Promise<{
+    ok: boolean;
+    text: string | null;
+    permalink: string | null;
+    mediaType: string | null;
+    error?: string;
+  }> {
+    const fields =
+      platform === 'INSTAGRAM'
+        ? 'caption,permalink,media_type,timestamp'
+        : 'message,story,permalink_url,created_time';
+    const url = new URL(`${this.base()}/${postId}`);
+    url.searchParams.set('fields', fields);
+    url.searchParams.set('access_token', accessToken);
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      const text = await res.text();
+      this.logger.warn(
+        `Get post content failed postId=${postId} platform=${platform}: ${text.slice(0, 300)}`,
+      );
+      return {
+        ok: false,
+        text: null,
+        permalink: null,
+        mediaType: null,
+        error: text,
+      };
+    }
+
+    const json = (await res.json()) as {
+      message?: string;
+      story?: string;
+      caption?: string;
+      permalink_url?: string;
+      permalink?: string;
+      media_type?: string;
+    };
+
+    const text =
+      (typeof json.message === 'string' && json.message.trim()) ||
+      (typeof json.caption === 'string' && json.caption.trim()) ||
+      (typeof json.story === 'string' && json.story.trim()) ||
+      null;
+
+    return {
+      ok: true,
+      text,
+      permalink:
+        (typeof json.permalink_url === 'string' && json.permalink_url) ||
+        (typeof json.permalink === 'string' && json.permalink) ||
+        null,
+      mediaType:
+        typeof json.media_type === 'string' ? json.media_type : null,
+    };
+  }
+
+  /**
    * Recent Page posts + nested comments (Dev-mode polling fallback when
    * feed webhooks are not delivered).
    */
@@ -743,7 +808,7 @@ export class MetaGraphClient {
     const url = new URL(`${this.base()}/${pageId}/feed`);
     url.searchParams.set(
       'fields',
-      `id,created_time,comments.limit(${commentLimit}){id,message,from,created_time}`,
+      `id,message,story,created_time,comments.limit(${commentLimit}){id,message,from,created_time}`,
     );
     url.searchParams.set('limit', String(postLimit));
     url.searchParams.set('access_token', pageAccessToken);
@@ -764,6 +829,7 @@ export class MetaGraphClient {
           fromUserId: string;
           fromName: string | null;
           message: string;
+          postMessage: string | null;
           commentedAt: Date;
           raw: unknown;
         }>,
@@ -773,6 +839,8 @@ export class MetaGraphClient {
     const json = (await res.json()) as {
       data?: Array<{
         id?: string;
+        message?: string;
+        story?: string;
         comments?: {
           data?: Array<{
             id?: string;
@@ -791,6 +859,7 @@ export class MetaGraphClient {
       fromUserId: string;
       fromName: string | null;
       message: string;
+      postMessage: string | null;
       commentedAt: Date;
       raw: unknown;
     }> = [];
@@ -798,6 +867,10 @@ export class MetaGraphClient {
     for (const post of json.data ?? []) {
       const postId = typeof post.id === 'string' ? post.id : '';
       if (!postId) continue;
+      const postMessage =
+        (typeof post.message === 'string' && post.message.trim()) ||
+        (typeof post.story === 'string' && post.story.trim()) ||
+        null;
       for (const c of post.comments?.data ?? []) {
         const commentId = typeof c.id === 'string' ? c.id : '';
         const fromUserId = c.from?.id;
@@ -810,6 +883,7 @@ export class MetaGraphClient {
           fromUserId,
           fromName: c.from?.name?.trim() || null,
           message: typeof c.message === 'string' ? c.message : '',
+          postMessage,
           commentedAt: c.created_time ? new Date(c.created_time) : new Date(),
           raw: c,
         });
@@ -833,7 +907,7 @@ export class MetaGraphClient {
     const url = new URL(`${this.base()}/${igUserId}/media`);
     url.searchParams.set(
       'fields',
-      `id,comments.limit(${commentLimit}){id,text,username,timestamp,from}`,
+      `id,caption,comments.limit(${commentLimit}){id,text,username,timestamp,from}`,
     );
     url.searchParams.set('limit', String(postLimit));
     url.searchParams.set('access_token', pageAccessToken);
@@ -854,6 +928,7 @@ export class MetaGraphClient {
           fromUserId: string;
           fromName: string | null;
           message: string;
+          postMessage: string | null;
           commentedAt: Date;
           raw: unknown;
         }>,
@@ -863,6 +938,7 @@ export class MetaGraphClient {
     const json = (await res.json()) as {
       data?: Array<{
         id?: string;
+        caption?: string;
         comments?: {
           data?: Array<{
             id?: string;
@@ -882,6 +958,7 @@ export class MetaGraphClient {
       fromUserId: string;
       fromName: string | null;
       message: string;
+      postMessage: string | null;
       commentedAt: Date;
       raw: unknown;
     }> = [];
@@ -889,6 +966,10 @@ export class MetaGraphClient {
     for (const media of json.data ?? []) {
       const postId = typeof media.id === 'string' ? media.id : '';
       if (!postId) continue;
+      const postMessage =
+        typeof media.caption === 'string' && media.caption.trim()
+          ? media.caption.trim()
+          : null;
       for (const c of media.comments?.data ?? []) {
         const commentId = typeof c.id === 'string' ? c.id : '';
         const fromUserId = c.from?.id;
@@ -902,6 +983,7 @@ export class MetaGraphClient {
           fromUserId,
           fromName: username,
           message: typeof c.text === 'string' ? c.text : '',
+          postMessage,
           commentedAt: c.timestamp ? new Date(c.timestamp) : new Date(),
           raw: c,
         });

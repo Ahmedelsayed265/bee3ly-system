@@ -191,6 +191,7 @@ export class PageCommentsPollerService implements OnModuleInit {
             pageId: comment.pageId,
             commentId: comment.commentId,
             postId: comment.postId,
+            postMessage: comment.postMessage,
             fromUserId: comment.fromUserId,
             fromName: comment.fromName,
             message: comment.message,
@@ -198,6 +199,7 @@ export class PageCommentsPollerService implements OnModuleInit {
             rawPayload: {
               source: 'polling',
               comment: comment.raw,
+              postMessage: comment.postMessage,
             },
           });
           if (row) {
@@ -371,11 +373,16 @@ export class PageCommentsPollerService implements OnModuleInit {
           pageId: account.externalId,
           commentId: comment.commentId,
           postId: comment.postId,
+          postMessage: comment.postMessage,
           fromUserId: comment.fromUserId,
           fromName: comment.fromName,
           message: comment.message,
           commentedAt: comment.commentedAt,
-          rawPayload: { source: 'polling', comment: comment.raw },
+          rawPayload: {
+            source: 'polling',
+            comment: comment.raw,
+            postMessage: comment.postMessage,
+          },
         });
         if (row && !existing) {
           this.logger.log(
