@@ -11,6 +11,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { MetaGraphClient } from './meta/meta-graph.client';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { PageCommentsService } from './page-comments.service';
+import { buildPublicCommentAck } from './public-comment-ack';
 
 /**
  * Temporary Dev-mode fallback: Meta often does not deliver live `feed`
@@ -63,18 +64,6 @@ export class PageCommentsPollerService implements OnModuleInit {
     );
     if (!Number.isFinite(raw) || raw < 10_000) return 60_000;
     return Math.floor(raw);
-  }
-
-  private fixedReply(
-    businessName?: string | null,
-    businessReply?: string | null,
-  ) {
-    const fromBusiness = businessReply?.trim();
-    if (fromBusiness) return fromBusiness;
-    const fromEnv = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
-    if (fromEnv) return fromEnv;
-    const shop = businessName?.trim() || 'المتجر';
-    return `أهلاً بيك! تعليقك وصل لـ ${shop}. هنبعتلك التفاصيل في رسالة خاصة قريب 💬`;
   }
 
   async syncFacebookComments() {
@@ -175,11 +164,6 @@ export class PageCommentsPollerService implements OnModuleInit {
         continue;
       }
 
-      const replyText = this.fixedReply(
-        account.business?.name,
-        account.business?.aiAgent?.commentFixedReply,
-      );
-
       for (const comment of result.comments) {
         let row = await this.prisma.pageComment.findUnique({
           where: { commentId: comment.commentId },
@@ -224,8 +208,15 @@ export class PageCommentsPollerService implements OnModuleInit {
           }
         }
 
-        // 2) Public comment reply
+        // 2) Public comment reply — unique text per commentId so Meta
+        // does not hide identical back-to-back page replies as spam.
         if (!row.publicRepliedAt) {
+          const replyText = buildPublicCommentAck({
+            businessName: account.business?.name,
+            businessReply: account.business?.aiAgent?.commentFixedReply,
+            envReply: this.config.get<string>('META_COMMENT_FIXED_REPLY'),
+            salt: row.commentId,
+          });
           const reply = await this.graph.replyToComment(
             row.commentId,
             token,

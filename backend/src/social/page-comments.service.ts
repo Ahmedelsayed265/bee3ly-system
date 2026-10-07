@@ -18,6 +18,7 @@ import type {
 import { MetaGraphClient } from './meta/meta-graph.client';
 import { MetaOauthService } from './meta/meta-oauth.service';
 import { MetaOutboundService } from './meta/meta-outbound.service';
+import { buildPublicCommentAck } from './public-comment-ack';
 
 export type CreatePageCommentFromWebhookInput = {
   pageId: string;
@@ -185,14 +186,15 @@ export class PageCommentsService {
     const commentText =
       row.message?.trim() || `(تعليق على المنشور ${row.postId})`;
     const postContext = await this.resolvePostContext(row);
-    const content = this.formatCommentWithPostContext(commentText, postContext);
 
     if (!alreadySeeded) {
+      // Inbox stays like before: customer comment only, then AI reply.
+      // Post caption is passed to the AI call only (not stored as a bubble).
       const msg = await this.prisma.message.create({
         data: {
           conversationId: conversation.id,
           role: MessageRole.CUSTOMER,
-          content,
+          content: commentText,
           meta: {
             source: 'page_comment',
             pageCommentId: row.commentId,
@@ -221,8 +223,7 @@ export class PageCommentsService {
     // ------------------------------------------------------------------
     // Trigger AI for the newly-seeded comment conversation so the
     // merchant gets an AI-generated reply in the inbox exactly like
-    // a normal inbound DM. Post caption/body is included in `content`
-    // so the model knows what the customer commented on.
+    // a normal inbound DM. Post context is AI-only for this first turn.
     // ------------------------------------------------------------------
     if (conversation.mode !== 'HUMAN' && !conversation.needsHuman) {
       void this.runAiForCommentConversation({
@@ -231,7 +232,8 @@ export class PageCommentsService {
         customerId: row.customerId,
         channel: conversation.channel as ChannelType,
         seededMessageId,
-        customerMessage: content,
+        customerMessage: commentText,
+        postContext,
       }).catch((e) =>
         this.logger.warn(
           `AI run for comment ${row.commentId} failed: ${e instanceof Error ? e.message : 'unknown'}`,
@@ -293,14 +295,15 @@ export class PageCommentsService {
 
     // ------------------------------------------------------------------
     // Public reply: merchant/agent-configurable canned ack.
-    // Public threads are visible to all Facebook/Instagram users so the
-    // merchant (not the AI) should own this exact wording via the
-    // `commentFixedReply` agent setting or env override.
+    // Wording is varied per commentId so Meta does not hide duplicate
+    // identical page replies as spam.
     // ------------------------------------------------------------------
-    const publicReplyText = this.publicCommentAck(
-      account.business?.name,
-      account.business?.aiAgent?.commentFixedReply,
-    );
+    const publicReplyText = buildPublicCommentAck({
+      businessName: account.business?.name,
+      businessReply: account.business?.aiAgent?.commentFixedReply,
+      envReply: this.config.get<string>('META_COMMENT_FIXED_REPLY'),
+      salt: row.commentId,
+    });
 
     if (!row.publicRepliedAt) {
       const reply = await this.graph.replyToInstagramComment(
@@ -489,45 +492,28 @@ export class PageCommentsService {
     return null;
   }
 
-  /** Build customer/AI message that includes the parent post. */
-  private formatCommentWithPostContext(
-    commentText: string,
-    post: {
-      text: string | null;
-      permalink: string | null;
-      mediaType: string | null;
-    },
-  ) {
+  /** Internal AI memory only — never shown as the customer bubble. */
+  private formatPostContextForAi(post: {
+    text: string | null;
+    permalink: string | null;
+    mediaType: string | null;
+  }): string | null {
     const postBody = post.text?.trim();
     if (postBody) {
       return [
-        'تعليق على المنشور التالي:',
-        postBody,
+        'Context: the customer commented on this page/Instagram post.',
+        'Use it to answer; do not repeat the post unless asked.',
         '',
-        `تعليق العميل: ${commentText}`,
+        postBody,
       ].join('\n');
     }
 
-    const mediaHint = post.mediaType ? ` (نوع المحتوى: ${post.mediaType})` : '';
-    const linkHint = post.permalink ? `\nرابط المنشور: ${post.permalink}` : '';
-    return [
-      `تعليق على منشور${mediaHint}${linkHint}`,
-      '',
-      `تعليق العميل: ${commentText}`,
-    ].join('\n');
-  }
-
-  /** Acknowledgment shown on a public comment — merchant-owned wording. */
-  private publicCommentAck(
-    businessName?: string | null,
-    businessReply?: string | null,
-  ) {
-    const fromBusiness = businessReply?.trim();
-    if (fromBusiness) return fromBusiness;
-    const fromEnv = this.config.get<string>('META_COMMENT_FIXED_REPLY')?.trim();
-    if (fromEnv) return fromEnv;
-    const shop = businessName?.trim() || 'المتجر';
-    return `أهلاً بيك! تعليقك وصل لـ ${shop}. هنبعتلك التفاصيل في رسالة خاصة قريب 💬`;
+    const bits: string[] = [
+      'Context: the customer commented on a page/Instagram post with no text caption.',
+    ];
+    if (post.mediaType) bits.push(`Media type: ${post.mediaType}`);
+    if (post.permalink) bits.push(`Permalink: ${post.permalink}`);
+    return bits.length > 1 ? bits.join('\n') : bits[0];
   }
 
   private async channelForComment(pageId: string) {
@@ -553,6 +539,11 @@ export class PageCommentsService {
     channel: ChannelType;
     seededMessageId: string | null;
     customerMessage: string;
+    postContext?: {
+      text: string | null;
+      permalink: string | null;
+      mediaType: string | null;
+    };
   }) {
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: input.conversationId },
@@ -571,7 +562,11 @@ export class PageCommentsService {
     );
     const [historyRows, agentRow, customer] = await Promise.all([
       this.prisma.message.findMany({
-        where: { conversationId: input.conversationId },
+        where: {
+          conversationId: input.conversationId,
+          // Keep inbox/history clean — no SYSTEM post blobs in the thread.
+          role: { not: MessageRole.SYSTEM },
+        },
         orderBy: { createdAt: 'asc' },
         take: 40,
         select: { role: true, content: true, createdAt: true },
@@ -590,6 +585,24 @@ export class PageCommentsService {
         select: { name: true, phone: true, externalId: true },
       }),
     ]);
+
+    const history = historyRows.map((m) => ({
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt.toISOString(),
+    }));
+
+    // Ephemeral post memory for this AI turn only — never written to inbox.
+    const postMemory = input.postContext
+      ? this.formatPostContextForAi(input.postContext)
+      : null;
+    if (postMemory) {
+      history.unshift({
+        role: 'SYSTEM',
+        content: postMemory,
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     const payload: AiEngineInboundPayload = {
       businessId: input.businessId,
@@ -617,11 +630,7 @@ export class PageCommentsService {
         phone: customer?.phone ?? null,
         externalId: customer?.externalId ?? null,
       },
-      history: historyRows.map((m) => ({
-        role: m.role,
-        content: m.content,
-        createdAt: m.createdAt.toISOString(),
-      })),
+      history,
       agent: agentRow
         ? {
             primaryGoal: agentRow.primaryGoal,

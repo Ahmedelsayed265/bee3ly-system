@@ -85,7 +85,7 @@ export function ConversationList({
               </span>
             </div>
             <p className="truncate text-[11px]">
-              {c.messages[0]?.content ??
+              {c.messages.find((m) => m.role !== 'SYSTEM')?.content ??
                 labelOrRaw(t, 'channel_', c.channel, 'channel_FACEBOOK')}
             </p>
             <p className="text-muted mt-0.5 truncate text-[10px]">

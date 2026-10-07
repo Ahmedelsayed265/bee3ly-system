@@ -22,6 +22,7 @@ type Message = {
   meta?: {
     quickReplies?: QuickReply[];
     attachments?: Array<{ type: string; url: string }>;
+    hiddenFromInbox?: boolean;
   } | null;
 };
 
@@ -210,7 +211,11 @@ export function ConversationThread({
       ) : null}
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-3 py-4 pb-6 sm:px-4 sm:pb-8">
-        {messages.map((m) => (
+        {messages
+          .filter(
+            (m) => m.role !== 'SYSTEM' && m.meta?.hiddenFromInbox !== true,
+          )
+          .map((m) => (
           <MessageBubble
             key={m.id}
             role={m.role}
