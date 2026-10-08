@@ -9,6 +9,14 @@ export type MetaPage = {
   connected_instagram_account?: { id: string };
 };
 
+type AdAccountRow = {
+  id: string;
+  name: string;
+  account_status?: number;
+  currency?: string;
+  timezone_name?: string;
+};
+
 function resolveIgAccountId(page: {
   instagram_business_account?: { id: string } | null;
   connected_instagram_account?: { id: string } | null;
@@ -33,45 +41,93 @@ export class MetaGraphClient {
   }
 
   async listAdAccounts(userAccessToken: string) {
-    const url = new URL(`${this.base()}/me/adaccounts`);
-    url.searchParams.set(
-      'fields',
-      'id,name,account_status,currency,timezone_name',
+    const fields = 'id,name,account_status,currency,timezone_name';
+    const direct = await this.readAdAccountPage(
+      'me/adaccounts',
+      fields,
+      userAccessToken,
     );
-    url.searchParams.set('access_token', userAccessToken);
-    const res = await fetch(url);
-    const text = await res.text();
-    if (!res.ok) {
-      this.logger.warn(`List ad accounts failed: ${text.slice(0, 300)}`);
-      if (text.includes('"code":190') || text.includes('"code": 190')) {
-        throw new Error(text.slice(0, 400));
-      }
-      return [] as Array<{
-        id: string;
-        name: string;
-        account_status?: number;
-        currency?: string;
-        timezone_name?: string;
-      }>;
+    const businesses = await this.readIdNamePage(
+      'me/businesses',
+      userAccessToken,
+    );
+    const owned: AdAccountRow[] = [];
+    for (const business of businesses) {
+      owned.push(
+        ...(await this.readAdAccountPage(
+          `${business.id}/owned_ad_accounts`,
+          fields,
+          userAccessToken,
+        )),
+        ...(await this.readAdAccountPage(
+          `${business.id}/client_ad_accounts`,
+          fields,
+          userAccessToken,
+        )),
+      );
     }
-    const json = (await res.json()) as {
-      data?: Array<{
+    const byId = new Map<string, AdAccountRow>();
+    for (const account of [...direct, ...owned]) {
+      byId.set(account.id, account);
+    }
+    return [...byId.values()];
+  }
+
+  private async readAdAccountPage(
+    path: string,
+    fields: string,
+    userAccessToken: string,
+  ) {
+    const json = await this.graphGet(path, userAccessToken, { fields });
+    const rows =
+      (json.data as Array<{
         id?: string;
         name?: string;
         account_status?: number;
         currency?: string;
         timezone_name?: string;
-      }>;
-    };
-    return (json.data ?? [])
+      }>) ?? [];
+    return rows
       .filter((row) => typeof row.id === 'string')
       .map((row) => ({
         id: row.id as string,
-        name: row.name ?? row.id ?? 'Ad account',
+        name: row.name ?? (row.id as string),
         account_status: row.account_status,
         currency: row.currency,
         timezone_name: row.timezone_name,
       }));
+  }
+
+  private async readIdNamePage(path: string, userAccessToken: string) {
+    const json = await this.graphGet(path, userAccessToken, {
+      fields: 'id,name',
+    });
+    const rows = (json.data as Array<{ id?: string }>) ?? [];
+    return rows.filter(
+      (row): row is { id: string } => typeof row.id === 'string',
+    );
+  }
+
+  private async graphGet(
+    path: string,
+    userAccessToken: string,
+    query: Record<string, string>,
+  ) {
+    const url = new URL(`${this.base()}/${path.replace(/^\//, '')}`);
+    for (const [key, value] of Object.entries(query)) {
+      url.searchParams.set(key, value);
+    }
+    url.searchParams.set('access_token', userAccessToken);
+    const res = await fetch(url);
+    const text = await res.text();
+    if (!res.ok) {
+      this.logger.warn(`Graph ${path} failed: ${text.slice(0, 300)}`);
+      if (text.includes('"code":190') || text.includes('"code": 190')) {
+        throw new Error(text.slice(0, 400));
+      }
+      return { data: [] };
+    }
+    return JSON.parse(text) as { data?: unknown[] };
   }
 
   async exchangeCode(code: string) {
