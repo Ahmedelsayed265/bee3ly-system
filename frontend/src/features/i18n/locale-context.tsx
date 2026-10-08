@@ -34,7 +34,9 @@ function applyDocumentLocale(locale: Locale) {
   const dir = locale === 'ar' ? 'rtl' : 'ltr';
   document.documentElement.lang = locale;
   document.documentElement.dir = dir;
-  document.title = messages[locale].appTitle;
+  if (!document.documentElement.dataset.pageTitle) {
+    document.title = messages[locale].appTitle;
+  }
 }
 
 export function LocaleProvider({ children }: { children: ReactNode }) {

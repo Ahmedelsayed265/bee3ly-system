@@ -214,6 +214,7 @@ export function useSocialSettings() {
     adAccountId,
     setAdAccountId,
     metaAds: socialQuery.data?.metaAds ?? null,
+    connection: socialQuery.data?.connection ?? null,
     pendingLoading: pendingQuery.isLoading,
     pendingError: pendingQuery.isError,
     facebook,

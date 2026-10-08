@@ -1,4 +1,5 @@
 import { MetaPagesSkeleton } from '@/components/ui/skeleton-blocks';
+import { HelpLink } from '@/features/help/help-link';
 import { useLocale } from '@/features/i18n/locale-context';
 
 type MetaPage = {
@@ -34,6 +35,15 @@ export function MetaPagePicker({
 
   return (
     <div className="border-border space-y-2 border-t pt-3">
+      {!isLoading && !adAccounts.length ? (
+        <div className="bg-page space-y-2 rounded-xl px-3 py-2 text-xs leading-6">
+          <p>{t('noAdAccountHint')}</p>
+          <p className="flex flex-wrap gap-3">
+            <HelpLink slug="create-ad-account" labelKey="helpCreateAdAccount" />
+            <HelpLink slug="ads-permissions" labelKey="helpAdsPermissions" />
+          </p>
+        </div>
+      ) : null}
       {adAccounts.length ? (
         <label className="block text-xs">
           <span className="text-muted mb-1 block font-semibold">

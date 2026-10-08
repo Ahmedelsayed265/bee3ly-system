@@ -6,6 +6,8 @@ import { LoginPage } from '@/pages/login-page';
 import { RegisterPage } from '@/pages/register-page';
 import { ResetPasswordPage } from '@/pages/reset-password-page';
 import { ContactPage } from '@/pages/contact-page';
+import { HelpArticlePage } from '@/pages/help-article-page';
+import { HelpPage } from '@/pages/help-page';
 import { PrivacyPolicyPage } from '@/pages/privacy-policy-page';
 import { TermsPage } from '@/pages/terms-page';
 import { WelcomePage } from '@/pages/welcome-page';
@@ -20,6 +22,8 @@ export const router = createBrowserRouter([
   { path: paths.privacyPolicy, element: <PrivacyPolicyPage /> },
   { path: paths.terms, element: <TermsPage /> },
   { path: paths.contact, element: <ContactPage /> },
+  { path: paths.help, element: <HelpPage /> },
+  { path: '/help/:slug', element: <HelpArticlePage /> },
   {
     element: <GuestRoute />,
     children: [

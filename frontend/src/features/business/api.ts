@@ -501,6 +501,13 @@ export async function fetchSocial() {
       currency: string | null;
       needsReconnect: boolean;
     };
+    connection?: {
+      facebook: { state: 'connected' | 'missing' | 'reconnect' };
+      instagram: { state: 'connected' | 'missing' | 'reconnect' };
+      whatsapp: { state: 'connected' | 'missing' | 'reconnect' };
+      adAccount: { state: 'connected' | 'missing' | 'reconnect' };
+      adsPermissions: { state: 'connected' | 'missing' | 'reconnect' };
+    };
   }>('/social');
   return data;
 }

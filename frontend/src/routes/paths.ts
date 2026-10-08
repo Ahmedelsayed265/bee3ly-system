@@ -4,6 +4,7 @@ export const paths = {
   privacyPolicy: '/privacy',
   terms: '/terms',
   contact: '/contact',
+  help: '/help',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',

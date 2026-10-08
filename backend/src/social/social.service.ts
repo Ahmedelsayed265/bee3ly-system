@@ -16,6 +16,7 @@ import {
   type WhatsAppEmbeddedCompleteInput,
 } from './meta/whatsapp-embedded.service';
 import { TikTokOauthService } from './tiktok/tiktok-oauth.service';
+import { buildConnectionChecklist } from './connection-status';
 import { TikTokWebhookService } from './tiktok/tiktok-webhook.service';
 
 /**
@@ -183,6 +184,11 @@ export class SocialService implements OnModuleInit {
           Boolean(business?.metaAdsNeedsReconnect) ||
           (facebookConnected && !business?.metaAdAccountId),
       },
+      connection: buildConnectionChecklist({
+        accounts,
+        metaAdAccountId: business?.metaAdAccountId ?? null,
+        metaAdsNeedsReconnect: Boolean(business?.metaAdsNeedsReconnect),
+      }),
       metaConfigured: Boolean(this.config.get('META_APP_ID')),
       oauthUrl: this.metaOauth.buildOAuthUrl(businessId, userId),
       connectLabel: 'Connect Facebook & Instagram',

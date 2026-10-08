@@ -5,8 +5,13 @@ import {
   WhatsAppIcon,
 } from '@/components/brand/channel-icons';
 import { Button } from '@/components/ui/button';
+import { HelpLink } from '@/features/help/help-link';
 import { useLocale } from '@/features/i18n/locale-context';
 import { ChannelCard } from '@/features/settings/components/channel-card';
+import {
+  ConnectionChecklist,
+  type ChecklistState,
+} from '@/features/settings/components/connection-checklist';
 import { MetaPagePicker } from '@/features/settings/components/meta-page-picker';
 import type { ChannelId, SocialAccount } from '@/features/settings/types';
 
@@ -21,6 +26,13 @@ type SocialChannelsSectionProps = {
   adAccountId?: string;
   onAdAccountChange?: (id: string) => void;
   metaAdsNeedsReconnect?: boolean;
+  connection?: {
+    facebook: { state: ChecklistState };
+    instagram: { state: ChecklistState };
+    whatsapp: { state: ChecklistState };
+    adAccount: { state: ChecklistState };
+    adsPermissions: { state: ChecklistState };
+  } | null;
   pendingLoading: boolean;
   pendingError: boolean;
   facebook?: SocialAccount;
@@ -49,6 +61,7 @@ export function SocialChannelsSection({
   adAccountId,
   onAdAccountChange,
   metaAdsNeedsReconnect,
+  connection,
   pendingLoading,
   pendingError,
   facebook,
@@ -83,6 +96,63 @@ export function SocialChannelsSection({
         {!metaReady ? (
           <p className="text-muted mt-2 text-xs">{t('metaNotConfigured')}</p>
         ) : null}
+        {connection ? (
+          <ConnectionChecklist
+            rows={[
+              {
+                key: 'facebook',
+                labelKey: 'checklistFacebook',
+                state: connection.facebook.state,
+                article: 'connect-facebook',
+                onAction: onConnectMeta,
+                actionLabel:
+                  connection.facebook.state === 'reconnect'
+                    ? t('channelReconnect')
+                    : t('channelConnect'),
+                actionDisabled: metaBusy || !metaReady,
+              },
+              {
+                key: 'instagram',
+                labelKey: 'checklistInstagram',
+                state: connection.instagram.state,
+                article: 'instagram-professional',
+                onAction: onConnectMeta,
+                actionLabel: t('channelConnect'),
+                actionDisabled: metaBusy || !metaReady,
+              },
+              {
+                key: 'whatsapp',
+                labelKey: 'checklistWhatsapp',
+                state: connection.whatsapp.state,
+                article: 'connect-whatsapp',
+                onAction: onConnectWhatsApp,
+                actionLabel: t('channelConnectWhatsAppNumber'),
+                actionDisabled: whatsappBusy || !whatsappEmbeddedReady,
+              },
+              {
+                key: 'adAccount',
+                labelKey: 'checklistAdAccount',
+                state: connection.adAccount.state,
+                article: 'create-ad-account',
+                onAction: onConnectMeta,
+                actionLabel:
+                  connection.adAccount.state === 'missing'
+                    ? t('selectAdAccount')
+                    : t('channelReconnect'),
+                actionDisabled: metaBusy || !metaReady,
+              },
+              {
+                key: 'adsPermissions',
+                labelKey: 'checklistAdsPermissions',
+                state: connection.adsPermissions.state,
+                article: 'ads-permissions',
+                onAction: onConnectMeta,
+                actionLabel: t('channelReconnect'),
+                actionDisabled: metaBusy || !metaReady,
+              },
+            ]}
+          />
+        ) : null}
         {metaAdsNeedsReconnect ? (
           <p className="mt-2 text-xs font-semibold text-amber-700">
             {t('reconnectMetaAds')}
@@ -101,9 +171,12 @@ export function SocialChannelsSection({
           account={pendingId ? undefined : facebook}
           action={
             pendingId ? (
-              <p className="text-brand text-xs font-semibold">
-                {t('selectFacebookPage')}
-              </p>
+              <div className="space-y-1">
+                <p className="text-brand text-xs font-semibold">
+                  {t('selectFacebookPage')}
+                </p>
+                <HelpLink slug="connect-facebook" />
+              </div>
             ) : (
               <>
                 <Button
@@ -115,6 +188,7 @@ export function SocialChannelsSection({
                     ? t('channelReconnect')
                     : t('channelConnect')}
                 </Button>
+                <HelpLink slug="connect-facebook" />
                 {facebook && facebook.status !== 'DISCONNECTED' ? (
                   <Button
                     size="sm"
@@ -165,6 +239,7 @@ export function SocialChannelsSection({
                   ? t('channelReconnect')
                   : t('channelConnect')}
               </Button>
+              <HelpLink slug="instagram-professional" />
               {instagram && instagram.status !== 'DISCONNECTED' ? (
                 <Button
                   size="sm"
@@ -204,6 +279,7 @@ export function SocialChannelsSection({
                   ? t('channelReconnect')
                   : t('channelConnectWhatsAppNumber')}
               </Button>
+              <HelpLink slug="connect-whatsapp" />
               {whatsappLinked ? (
                 <Button
                   size="sm"
