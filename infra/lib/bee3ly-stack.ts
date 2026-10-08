@@ -399,6 +399,10 @@ export class Bee3lyStack extends cdk.Stack {
             META_REDIRECT_URI: 'https://api.bee3ly.net/social/meta/callback',
             META_OAUTH_EXTRA_SCOPES:
               'instagram_basic,instagram_manage_messages,instagram_manage_comments,ads_management,ads_read',
+            META_GRAPH_VERSION: 'v21.0',
+            // Dev can create paused Meta ads. Prod stays off until launch is intentional.
+            META_ADS_PUBLISH_ENABLED: envName === 'prod' ? 'false' : 'true',
+            META_ADS_MOCK: 'false',
             META_WHATSAPP_EMBEDDED_CONFIG_ID: '986448077802892',
             // Meta Cloud API test number — binds on boot when true (dev only).
             WHATSAPP_BIND_TEST_NUMBER: envName === 'prod' ? 'false' : 'true',
