@@ -57,13 +57,6 @@ export function CampaignReadyStep({
         >
           {t('campaignAssistedLaunch')}
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => onRequestLaunch('SIMULATED')}
-          disabled={isLaunching}
-        >
-          {t('campaignSimulate')}
-        </Button>
         <Button variant="ghost" onClick={onReset}>
           {t('campaignNew')}
         </Button>

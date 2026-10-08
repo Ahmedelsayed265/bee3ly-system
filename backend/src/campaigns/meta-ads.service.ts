@@ -87,13 +87,14 @@ export class MetaAdsService {
         mapObjective(campaign.objective).objective === 'OUTCOME_SALES'
           ? 'No Meta pixel is connected, so this paused ad asks people to message the page instead of tracking purchases.'
           : null;
-      const audienceNote =
+      const audienceNote = dedupeNote(
         salesNote && !audience.note?.includes(salesNote)
           ? [audience.note, salesNote].filter(Boolean).join(' ')
-          : (audience.note ?? '');
+          : (audience.note ?? ''),
+      );
       campaign = await this.save(campaign.id, {
         metaAudienceIds: audience.ids,
-        audienceNote: audienceNote || null,
+        audienceNote,
         publishStep: 'audiences',
       });
 
@@ -119,6 +120,7 @@ export class MetaAdsService {
           campaign_id: campaign.metaCampaignId,
           daily_budget: dailyBudgetMinor(campaign.budget, currency),
           is_adset_budget_sharing_enabled: false,
+          bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
           billing_event: mapped.billingEvent,
           optimization_goal: mapped.optimizationGoal,
           destination_type: mapped.messaging
@@ -487,6 +489,19 @@ export class MetaAdsService {
   ) {
     return this.prisma.campaign.update({ where: { id }, data });
   }
+}
+
+function dedupeNote(note: string) {
+  const seen = new Set<string>();
+  const unique = note
+    .split(/(?<=\.)\s+/)
+    .map((part) => part.trim())
+    .filter((part) => {
+      if (!part || seen.has(part)) return false;
+      seen.add(part);
+      return true;
+    });
+  return unique.join(' ') || null;
 }
 
 export type { CampaignObjective };

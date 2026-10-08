@@ -141,13 +141,6 @@ export function CampaignDetail({
               >
                 {t('campaignAssistedLaunch')}
               </Button>
-              <Button
-                variant="outline"
-                disabled={isBusy}
-                onClick={() => onStatus('SIMULATED')}
-              >
-                {t('campaignSimulate')}
-              </Button>
             </>
           ) : null}
           {canActivate ? (

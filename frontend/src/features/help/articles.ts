@@ -416,7 +416,7 @@ export const helpArticles: HelpArticle[] = [
       },
       {
         title: 'الإعلان مش ظاهر في ميتا',
-        body: 'اقرأ موضوع «الإعلان مش ظاهر في ميتا». الغالب الزر كان محاكاة، أو التأكيد متضغطش، أو الحساب المفتوح في مدير الإعلانات غير الحساب المختار في Bee3ly.',
+        body: 'اقرأ موضوع «الإعلان مش ظاهر في ميتا». الغالب التأكيد متضغطش، أو الحساب المفتوح في مدير الإعلانات غير الحساب المختار في Bee3ly.',
       },
     ],
     problems: [
@@ -457,7 +457,7 @@ export const helpArticles: HelpArticle[] = [
     steps: [
       {
         title: 'اضغط الزر اللي بيبعت لميتا',
-        body: 'محاكاة فقط بتحفظ الحملة جوه Bee3ly ومش بتعمل إعلان. اضغط إطلاق بمساعدة. هتطلع رسالة اسمها تأكيد الإجراء. اضغط تأكيد. لو قفلت الرسالة، مفيش إعلان.',
+        body: 'اضغط إطلاق الحملة. هتطلع رسالة اسمها تأكيد الإجراء. اضغط تأكيد. لو قفلت الرسالة، مفيش إعلان.',
       },
       {
         title: 'خلّي الحساب واحد هنا وهناك',
@@ -483,7 +483,7 @@ export const helpArticles: HelpArticle[] = [
     problems: [
       {
         title: 'الشروط اتقبلت والخطأ لسه موجود',
-        body: 'الموافقة اتحفظت على حساب، وBee3ly لسه مختار حساب تاني. وحّد الرقم في الاتنين، وبعدين إطلاق بمساعدة ثم تأكيد.',
+        body: 'الموافقة اتحفظت على حساب، وBee3ly لسه مختار حساب تاني. وحّد الرقم في الاتنين، وبعدين إطلاق الحملة ثم تأكيد.',
       },
       {
         title: 'مين اللي بيدفع؟',
@@ -521,7 +521,7 @@ export const helpArticles: HelpArticle[] = [
       steps: [
         {
           title: 'Press the button that sends the ad to Meta',
-          body: 'Simulation only saves the campaign inside Bee3ly. It does not create an ad. Press Assisted launch. A box asks you to confirm. Press Confirm. If you close the box, nothing is created.',
+          body: 'Press Launch campaign. A box asks you to confirm. Press Confirm. If you close the box, nothing is created.',
         },
         {
           title: 'Use one account in both places',
@@ -547,7 +547,7 @@ export const helpArticles: HelpArticle[] = [
       problems: [
         {
           title: 'You accepted the terms and the error is still there',
-          body: 'The acceptance was saved on one account, and Bee3ly still has another account selected. Make the number the same in both places, then press Assisted launch and Confirm.',
+          body: 'The acceptance was saved on one account, and Bee3ly still has another account selected. Make the number the same in both places, then press Launch campaign and Confirm.',
         },
         {
           title: 'Who gets charged?',
