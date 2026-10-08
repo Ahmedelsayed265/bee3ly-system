@@ -130,7 +130,8 @@ export function extractMetaAdId(raw: unknown): string | null {
     (message.referral as Record<string, unknown> | undefined) ??
     (root.referral as Record<string, unknown> | undefined);
   if (!referral) return null;
-  const adId = referral.ad_id ?? referral.source_id ?? referral.ads_context_data;
+  const adId =
+    referral.ad_id ?? referral.source_id ?? referral.ads_context_data;
   if (typeof adId === 'string' && adId.trim()) return adId.trim();
   if (adId && typeof adId === 'object') {
     const nested = (adId as Record<string, unknown>).ad_id;
@@ -155,7 +156,9 @@ export function metaUserMessage(error: unknown) {
     const json = JSON.parse(text) as {
       error?: { error_user_msg?: string; message?: string };
     };
-    return json.error?.error_user_msg || json.error?.message || text.slice(0, 400);
+    return (
+      json.error?.error_user_msg || json.error?.message || text.slice(0, 400)
+    );
   } catch {
     return text.slice(0, 400);
   }

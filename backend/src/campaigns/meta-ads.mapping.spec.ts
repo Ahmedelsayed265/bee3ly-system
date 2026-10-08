@@ -31,9 +31,9 @@ describe('meta ads mapping', () => {
   });
 
   it('reads ad_id from a messaging referral', () => {
-    expect(
-      extractMetaAdId({ message: { referral: { ad_id: '2381' } } }),
-    ).toBe('2381');
+    expect(extractMetaAdId({ message: { referral: { ad_id: '2381' } } })).toBe(
+      '2381',
+    );
   });
 
   it('recognizes the custom audience terms error', () => {

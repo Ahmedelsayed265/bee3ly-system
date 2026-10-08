@@ -53,13 +53,13 @@ export class MetaAdsSyncService {
             create: {
               campaignId: campaign.id,
               date,
-              spend: new Prisma.Decimal(String(item.spend ?? '0')),
+              spend: new Prisma.Decimal(scalarText(item.spend, '0')),
               impressions: Number(item.impressions ?? 0),
               clicks: Number(item.clicks ?? 0),
               actions: (item.actions as Prisma.InputJsonValue) ?? undefined,
             },
             update: {
-              spend: new Prisma.Decimal(String(item.spend ?? '0')),
+              spend: new Prisma.Decimal(scalarText(item.spend, '0')),
               impressions: Number(item.impressions ?? 0),
               clicks: Number(item.clicks ?? 0),
               actions: (item.actions as Prisma.InputJsonValue) ?? undefined,
@@ -94,7 +94,7 @@ export class MetaAdsSyncService {
         const json = await this.graph.get(campaign.metaAdId, token, {
           fields: 'effective_status,ad_review_feedback',
         });
-        const effective = String(json.effective_status ?? '');
+        const effective = scalarText(json.effective_status, '');
         const status = mapEffective(effective, campaign.status);
         await this.prisma.campaign.update({
           where: { id: campaign.id },
@@ -119,7 +119,17 @@ export class MetaAdsSyncService {
   }
 }
 
-function mapEffective(effective: string, current: CampaignStatus): CampaignStatus {
+function scalarText(value: unknown, fallback: string) {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  return fallback;
+}
+
+function mapEffective(
+  effective: string,
+  current: CampaignStatus,
+): CampaignStatus {
   if (effective === 'ACTIVE') return CampaignStatus.ACTIVE;
   if (effective === 'PAUSED' || effective === 'CAMPAIGN_PAUSED') {
     return CampaignStatus.PAUSED_ON_META;

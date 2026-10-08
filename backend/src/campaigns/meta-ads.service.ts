@@ -39,7 +39,11 @@ export class MetaAdsService {
     const business = await this.prisma.business.findUniqueOrThrow({
       where: { id: businessId },
     });
-    if (!this.enabled() || !business.metaAdAccountId || !business.metaAdsTokenEnc) {
+    if (
+      !this.enabled() ||
+      !business.metaAdAccountId ||
+      !business.metaAdsTokenEnc
+    ) {
       return null;
     }
 
@@ -256,14 +260,20 @@ export class MetaAdsService {
                 name: `${campaign.name} lookalike EG 1%`,
                 subtype: 'LOOKALIKE',
                 origin_audience_id: audienceId,
-                lookalike_spec: { country: 'EG', ratio: 0.01, type: 'similarity' },
+                lookalike_spec: {
+                  country: 'EG',
+                  ratio: 0.01,
+                  type: 'similarity',
+                },
               },
             );
             ids.push(String(lookalike.id));
           }
         }
       } else if (wants.has('CUSTOMERS') || wants.has('SIMILAR')) {
-        notes.push('No buyer phone numbers yet — buyer/lookalike audience skipped.');
+        notes.push(
+          'No buyer phone numbers yet — buyer/lookalike audience skipped.',
+        );
       }
     }
 
@@ -297,7 +307,11 @@ export class MetaAdsService {
                       filter: {
                         operator: 'and',
                         filters: [
-                          { field: 'event', operator: 'eq', value: 'page_engaged' },
+                          {
+                            field: 'event',
+                            operator: 'eq',
+                            value: 'page_engaged',
+                          },
                         ],
                       },
                     },
@@ -311,9 +325,7 @@ export class MetaAdsService {
             'No phone numbers for people who messaged — using page engagement audience.',
           );
         } catch (error) {
-          notes.push(
-            `Audience not available: ${metaUserMessage(error)}`,
-          );
+          notes.push(`Audience not available: ${metaUserMessage(error)}`);
         }
       }
     }
@@ -336,7 +348,11 @@ export class MetaAdsService {
                     filter: {
                       operator: 'and',
                       filters: [
-                        { field: 'event', operator: 'eq', value: 'page_engaged' },
+                        {
+                          field: 'event',
+                          operator: 'eq',
+                          value: 'page_engaged',
+                        },
                       ],
                     },
                   },

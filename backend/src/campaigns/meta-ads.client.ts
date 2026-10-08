@@ -71,6 +71,12 @@ export class MetaAdsClient implements MetaAdsHttp {
   }
 }
 
+function mockLabel(value: unknown) {
+  if (typeof value === 'string' || typeof value === 'number')
+    return String(value);
+  return '';
+}
+
 function isRateLimitBody(text: string) {
   return /"code"\s*:\s*(4|17|32|613|80004)\b/.test(text);
 }
@@ -102,10 +108,11 @@ function mockResponse(
   if (method === 'GET') {
     return { effective_status: 'PAUSED', id: path };
   }
-  const key = `${path}:${body?.name ?? body?.status ?? 'create'}`;
+  const key = `${path}:${mockLabel(body?.name) || mockLabel(body?.status) || 'create'}`;
   const existing = mockIds.get(key);
   const id = existing ?? `mock_${mockIds.size + 1}`;
   mockIds.set(key, id);
-  if (path.endsWith('/adimages')) return { images: { bytes: { hash: 'mockhash' } } };
+  if (path.endsWith('/adimages'))
+    return { images: { bytes: { hash: 'mockhash' } } };
   return { id };
 }

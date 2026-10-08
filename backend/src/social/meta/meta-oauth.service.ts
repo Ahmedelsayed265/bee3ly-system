@@ -417,7 +417,9 @@ export class MetaOauthService {
         }>) ?? [];
       const chosen = accounts.find((account) => account.id === adAccountId);
       if (!chosen) {
-        throw new BadRequestException('Ad account not found in pending session');
+        throw new BadRequestException(
+          'Ad account not found in pending session',
+        );
       }
       await this.prisma.business.update({
         where: { id: businessId },

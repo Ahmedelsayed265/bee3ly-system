@@ -16,12 +16,14 @@ import { CampaignStatus } from '@prisma/client';
 import { MetaAdsService } from './meta-ads.service';
 
 describe('MetaAdsService publish idempotency', () => {
-  function setup(existingIds: Partial<{
-    metaCampaignId: string;
-    metaAdsetId: string;
-    metaAdId: string;
-    metaCreativeId: string;
-  }> = {}) {
+  function setup(
+    existingIds: Partial<{
+      metaCampaignId: string;
+      metaAdsetId: string;
+      metaAdId: string;
+      metaCreativeId: string;
+    }> = {},
+  ) {
     const posts: string[] = [];
     const campaign: Record<string, unknown> = {
       id: 'camp-1',
@@ -50,37 +52,40 @@ describe('MetaAdsService publish idempotency', () => {
     };
     const prisma = {
       business: {
-        findUniqueOrThrow: async () => ({
+        findUniqueOrThrow: () => ({
           id: 'biz-1',
           metaAdAccountId: 'act_99',
           metaAdAccountCurrency: 'EGP',
           metaAdsTokenEnc: 'enc',
         }),
-        update: async () => ({}),
+        update: () => ({}),
       },
       campaign: {
-        findFirstOrThrow: async () => campaign,
-        update: async ({ data }: { data: Record<string, unknown> }) => {
+        findFirstOrThrow: () => campaign,
+        update: ({ data }: { data: Record<string, unknown> }) => {
           Object.assign(campaign, data);
           return campaign;
         },
       },
       socialAccount: {
-        findFirst: async () => ({ externalId: 'page-1' }),
+        findFirst: () => ({ externalId: 'page-1' }),
       },
-      order: { findMany: async () => [] },
-      customer: { findMany: async () => [] },
+      order: { findMany: () => [] },
+      customer: { findMany: () => [] },
     };
     const graph = {
-      post: async (path: string) => {
+      post: (path: string) => {
         posts.push(path);
         return { id: `id-${posts.length}` };
       },
-      get: async () => ({}),
+      get: () => ({}),
     };
     const service = new MetaAdsService(
       prisma as never,
-      { get: (key: string) => (key === 'META_ADS_PUBLISH_ENABLED' ? 'true' : undefined) } as never,
+      {
+        get: (key: string) =>
+          key === 'META_ADS_PUBLISH_ENABLED' ? 'true' : undefined,
+      } as never,
       { decrypt: () => 'token' } as never,
       graph as never,
     );
@@ -114,7 +119,7 @@ describe('MetaAdsService publish idempotency', () => {
   it('keeps the campaign id when a later step fails', async () => {
     const { service, posts, campaign } = setup();
     const original = service['graph'].post.bind(service['graph']);
-    service['graph'].post = async (path: string) => {
+    service['graph'].post = (path: string) => {
       if (path.endsWith('/adsets')) {
         posts.push(path);
         throw new Error(
@@ -132,9 +137,9 @@ describe('MetaAdsService publish idempotency', () => {
 
   it('returns null when the publish flag is off', async () => {
     const { service } = setup();
-    (
-      service as unknown as { config: { get: () => string } }
-    ).config = { get: () => 'false' };
+    (service as unknown as { config: { get: () => string } }).config = {
+      get: () => 'false',
+    };
     await expect(service.publish('biz-1', 'camp-1')).resolves.toBeNull();
   });
 });
