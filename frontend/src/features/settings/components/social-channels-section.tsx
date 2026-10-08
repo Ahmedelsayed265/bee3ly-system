@@ -15,13 +15,6 @@ import { paths } from '@/routes/paths';
 type SocialChannelsSectionProps = {
   pendingId: string | null;
   pendingPages: Array<{ id: string; name: string; hasInstagram: boolean }>;
-  pendingAdAccounts?: Array<{
-    id: string;
-    name: string;
-    currency: string | null;
-  }>;
-  adAccountId?: string;
-  onAdAccountChange?: (id: string) => void;
   metaAdsNeedsReconnect?: boolean;
   pendingLoading: boolean;
   pendingError: boolean;
@@ -47,9 +40,6 @@ type SocialChannelsSectionProps = {
 export function SocialChannelsSection({
   pendingId,
   pendingPages,
-  pendingAdAccounts = [],
-  adAccountId,
-  onAdAccountChange,
   metaAdsNeedsReconnect,
   pendingLoading,
   pendingError,
@@ -148,9 +138,6 @@ export function SocialChannelsSection({
             pendingId ? (
               <MetaPagePicker
                 pages={pendingPages}
-                adAccounts={pendingAdAccounts}
-                adAccountId={adAccountId}
-                onAdAccountChange={onAdAccountChange}
                 isLoading={pendingLoading}
                 isError={pendingError}
                 isPending={isSelectingPage}

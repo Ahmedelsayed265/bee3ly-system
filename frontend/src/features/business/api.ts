@@ -556,6 +556,28 @@ export async function fetchMetaPending(pendingId: string) {
   return data;
 }
 
+export async function fetchMetaAdAccounts() {
+  const { data } = await api.get<{
+    accounts: Array<{
+      id: string;
+      name: string;
+      currency: string | null;
+    }>;
+    selectedId: string | null;
+    needsReconnect: boolean;
+  }>('/social/meta/ad-accounts');
+  return data;
+}
+
+export async function selectMetaAdAccount(adAccountId: string) {
+  const { data } = await api.post<{
+    selectedId: string;
+    name: string;
+    currency: string | null;
+  }>('/social/meta/ad-account', { adAccountId });
+  return data;
+}
+
 export async function selectMetaPage(
   pendingId: string,
   pageId: string,

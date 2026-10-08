@@ -30,6 +30,11 @@ class ConnectDemoDto {
   displayName?: string;
 }
 
+class SelectAdAccountDto {
+  @IsString()
+  adAccountId!: string;
+}
+
 class SelectPageDto {
   @IsString()
   pendingId!: string;
@@ -138,6 +143,21 @@ export class SocialController {
   @UseGuards(JwtAuthGuard)
   getPending(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.social.getPending(user.id, id);
+  }
+
+  @Get('meta/ad-accounts')
+  @UseGuards(JwtAuthGuard)
+  listAdAccounts(@CurrentUser() user: AuthUser) {
+    return this.social.listAdAccounts(user.id);
+  }
+
+  @Post('meta/ad-account')
+  @UseGuards(JwtAuthGuard)
+  selectAdAccount(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: SelectAdAccountDto,
+  ) {
+    return this.social.selectAdAccount(user.id, dto.adAccountId);
   }
 
   @Post('meta/select-page')

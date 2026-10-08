@@ -928,6 +928,7 @@
   "selectFacebookPage": "اختار صفحة الفيسبوك",
   "selectFacebookPageHint": "اختار الصفحة اللي عايز Bee3ly يرد منها على العملاء.",
   "selectAdAccount": "حساب الإعلانات",
+  "campaignAdAccountHint": "الإعلان هيتصرف من الحساب ده. تقدر تغيّره قبل الإطلاق.",
   "reconnectMetaAds": "أعد ربط ميتا لتفعيل الإعلانات",
   "linkStatusTitle": "حالة الربط",
   "linkStatusOk": "متصل",

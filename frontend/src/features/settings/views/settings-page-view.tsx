@@ -75,9 +75,6 @@ export function SettingsPageView() {
         <SocialChannelsSection
           pendingId={social.pendingId}
           pendingPages={social.pendingPages}
-          pendingAdAccounts={social.pendingAdAccounts}
-          adAccountId={social.adAccountId}
-          onAdAccountChange={social.setAdAccountId}
           metaAdsNeedsReconnect={Boolean(social.metaAds?.needsReconnect)}
           pendingLoading={social.pendingLoading}
           pendingError={social.pendingError}

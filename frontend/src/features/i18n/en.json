@@ -928,6 +928,7 @@
   "selectFacebookPage": "Select your Facebook Page",
   "selectFacebookPageHint": "Choose the Page Bee3ly should use to talk to customers.",
   "selectAdAccount": "Ad account",
+  "campaignAdAccountHint": "Ads spend from this account. You can change it before launch.",
   "reconnectMetaAds": "Reconnect Meta to enable ads",
   "linkStatusTitle": "Connection status",
   "linkStatusOk": "Connected",

@@ -285,6 +285,14 @@ export class SocialService implements OnModuleInit {
     return this.metaOauth.getPending(userId, pendingId);
   }
 
+  listAdAccounts(userId: string) {
+    return this.metaOauth.listAdAccounts(userId);
+  }
+
+  selectAdAccount(userId: string, adAccountId: string) {
+    return this.metaOauth.selectAdAccount(userId, adAccountId);
+  }
+
   selectPage(
     userId: string,
     pendingId: string,

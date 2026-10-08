@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -31,7 +31,6 @@ export function useSocialSettings() {
 
   const socialQuery = useQuery({ queryKey: ['social'], queryFn: fetchSocial });
 
-  const [pickedAdAccountId, setAdAccountId] = useState<string | null>(null);
   const pendingId = searchParams.get('metaPending');
   const pendingQuery = useQuery({
     queryKey: ['meta-pending', pendingId],
@@ -53,9 +52,6 @@ export function useSocialSettings() {
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams, t]);
-
-  const adAccountId =
-    pickedAdAccountId ?? pendingQuery.data?.adAccounts?.[0]?.id ?? '';
 
   const disconnectMut = useMutation({
     mutationFn: disconnectSocial,
@@ -162,7 +158,7 @@ export function useSocialSettings() {
 
   const selectPageMut = useMutation({
     mutationFn: ({ pageId }: { pageId: string }) =>
-      selectMetaPage(pendingId!, pageId, adAccountId || undefined),
+      selectMetaPage(pendingId!, pageId),
     onSuccess: async (data) => {
       toast.success(
         data.whatsapp
@@ -210,9 +206,6 @@ export function useSocialSettings() {
   return {
     pendingId,
     pendingPages: pendingQuery.data?.pages ?? [],
-    pendingAdAccounts: pendingQuery.data?.adAccounts ?? [],
-    adAccountId,
-    setAdAccountId,
     metaAds: socialQuery.data?.metaAds ?? null,
     pendingLoading: pendingQuery.isLoading,
     pendingError: pendingQuery.isError,

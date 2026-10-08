@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { fetchCampaign } from '@/features/business/api';
+import { CampaignAdAccount } from '@/features/campaigns/components/campaign-ad-account';
 import { CampaignDetail } from '@/features/campaigns/components/campaign-detail';
 import { CampaignList } from '@/features/campaigns/components/campaign-list';
 import { CampaignWizard } from '@/features/campaigns/components/campaign-wizard';
@@ -76,6 +77,8 @@ export function CampaignsPageView() {
           <Button onClick={openComposer}>{t('campaignNew')}</Button>
         )}
       </div>
+
+      <CampaignAdAccount />
 
       {creating ? (
         <div className="grid w-full items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">

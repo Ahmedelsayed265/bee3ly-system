@@ -407,32 +407,34 @@ export class MetaOauthService {
       );
     }
 
-    if (adAccountId) {
-      const accounts =
-        (pending.adAccountsJson as Array<{
-          id: string;
-          name?: string;
-          currency?: string;
-          timezone_name?: string;
-        }>) ?? [];
-      const chosen = accounts.find((account) => account.id === adAccountId);
-      if (!chosen) {
-        throw new BadRequestException(
-          'Ad account not found in pending session',
-        );
-      }
-      await this.prisma.business.update({
-        where: { id: businessId },
-        data: {
-          metaAdAccountId: chosen.id,
-          metaAdAccountName: chosen.name ?? chosen.id,
-          metaAdAccountCurrency: chosen.currency ?? null,
-          metaAdAccountTimezone: chosen.timezone_name ?? null,
-          metaAdsTokenEnc: pending.userAccessTokenEnc,
-          metaAdsNeedsReconnect: false,
-        },
-      });
+    const accounts =
+      (pending.adAccountsJson as Array<{
+        id: string;
+        name?: string;
+        currency?: string;
+        timezone_name?: string;
+      }>) ?? [];
+    const chosen = adAccountId
+      ? accounts.find((account) => account.id === adAccountId)
+      : undefined;
+    if (adAccountId && !chosen) {
+      throw new BadRequestException('Ad account not found in pending session');
     }
+    await this.prisma.business.update({
+      where: { id: businessId },
+      data: {
+        metaAdsTokenEnc: pending.userAccessTokenEnc,
+        metaAdsNeedsReconnect: false,
+        ...(chosen
+          ? {
+              metaAdAccountId: chosen.id,
+              metaAdAccountName: chosen.name ?? chosen.id,
+              metaAdAccountCurrency: chosen.currency ?? null,
+              metaAdAccountTimezone: chosen.timezone_name ?? null,
+            }
+          : {}),
+      },
+    });
 
     await this.prisma.pendingMetaConnection.delete({
       where: { id: pending.id },
@@ -460,6 +462,80 @@ export class MetaOauthService {
         : wa
           ? 'Facebook Page & WhatsApp connected'
           : 'Facebook Page connected (no Instagram on this Page). In Meta App add Instagram Graph API with Facebook Login, then set META_OAUTH_EXTRA_SCOPES=instagram_basic and reconnect.',
+    };
+  }
+
+  async listAdAccounts(userId: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        metaAdsTokenEnc: true,
+        metaAdAccountId: true,
+        metaAdsNeedsReconnect: true,
+      },
+    });
+    if (!business?.metaAdsTokenEnc) {
+      return {
+        accounts: [],
+        selectedId: business?.metaAdAccountId ?? null,
+        needsReconnect: true,
+      };
+    }
+    try {
+      const token = this.decrypt(business.metaAdsTokenEnc);
+      const accounts = await this.graph.listAdAccounts(token);
+      return {
+        accounts: accounts.map((account) => ({
+          id: account.id,
+          name: account.name,
+          currency: account.currency ?? null,
+          timezone: account.timezone_name ?? null,
+        })),
+        selectedId: business.metaAdAccountId,
+        needsReconnect: false,
+      };
+    } catch (error) {
+      const text = error instanceof Error ? error.message : '';
+      if (text.includes('"code":190') || text.includes('"code": 190')) {
+        await this.prisma.business.update({
+          where: { id: businessId },
+          data: { metaAdsNeedsReconnect: true },
+        });
+      }
+      return {
+        accounts: [],
+        selectedId: business.metaAdAccountId,
+        needsReconnect: true,
+      };
+    }
+  }
+
+  async selectAdAccount(userId: string, adAccountId: string) {
+    const listed = await this.listAdAccounts(userId);
+    const chosen = listed.accounts.find(
+      (account) => account.id === adAccountId,
+    );
+    if (!chosen) {
+      throw new BadRequestException(
+        'Ad account is not available for this login',
+      );
+    }
+    const businessId = await this.access.requireBusinessId(userId);
+    await this.prisma.business.update({
+      where: { id: businessId },
+      data: {
+        metaAdAccountId: chosen.id,
+        metaAdAccountName: chosen.name,
+        metaAdAccountCurrency: chosen.currency,
+        metaAdAccountTimezone: chosen.timezone,
+        metaAdsNeedsReconnect: false,
+      },
+    });
+    return {
+      selectedId: chosen.id,
+      name: chosen.name,
+      currency: chosen.currency,
     };
   }
 
