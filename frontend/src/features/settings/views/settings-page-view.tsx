@@ -79,7 +79,6 @@ export function SettingsPageView() {
           adAccountId={social.adAccountId}
           onAdAccountChange={social.setAdAccountId}
           metaAdsNeedsReconnect={Boolean(social.metaAds?.needsReconnect)}
-          connection={social.connection}
           pendingLoading={social.pendingLoading}
           pendingError={social.pendingError}
           facebook={social.facebook}

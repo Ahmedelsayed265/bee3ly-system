@@ -1,3 +1,4 @@
+import { CircleHelp } from 'lucide-react';
 import {
   FacebookIcon,
   InstagramIcon,
@@ -7,10 +8,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/features/i18n/locale-context';
 import { ChannelCard } from '@/features/settings/components/channel-card';
-import {
-  ConnectionChecklist,
-  type ChecklistState,
-} from '@/features/settings/components/connection-checklist';
 import { MetaPagePicker } from '@/features/settings/components/meta-page-picker';
 import type { ChannelId, SocialAccount } from '@/features/settings/types';
 import { paths } from '@/routes/paths';
@@ -26,13 +23,6 @@ type SocialChannelsSectionProps = {
   adAccountId?: string;
   onAdAccountChange?: (id: string) => void;
   metaAdsNeedsReconnect?: boolean;
-  connection?: {
-    facebook: { state: ChecklistState };
-    instagram: { state: ChecklistState };
-    whatsapp: { state: ChecklistState };
-    adAccount: { state: ChecklistState };
-    adsPermissions: { state: ChecklistState };
-  } | null;
   pendingLoading: boolean;
   pendingError: boolean;
   facebook?: SocialAccount;
@@ -61,7 +51,6 @@ export function SocialChannelsSection({
   adAccountId,
   onAdAccountChange,
   metaAdsNeedsReconnect,
-  connection,
   pendingLoading,
   pendingError,
   facebook,
@@ -90,73 +79,24 @@ export function SocialChannelsSection({
 
   return (
     <section className="w-full space-y-4">
-      <div>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <div>
           <h2 className="text-ink text-base font-bold">{t('channelsTitle')}</h2>
-          <a
-            href={paths.help}
-            target="_blank"
-            rel="noreferrer"
-            className="border-border text-muted hover:border-brand/40 hover:text-brand inline-flex h-6 items-center rounded-md border px-1.5 text-[11px] font-medium"
-          >
-            help ?
-          </a>
+          <p className="text-muted mt-1 text-sm">{t('socialAccountsHint')}</p>
         </div>
-        <p className="text-muted mt-1 text-sm">{t('socialAccountsHint')}</p>
+        <a
+          href={paths.help}
+          target="_blank"
+          rel="noreferrer"
+          className="border-border bg-surface text-ink hover:border-brand/40 hover:bg-lavender focus-visible:ring-brand/40 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <CircleHelp className="text-brand h-4 w-4" strokeWidth={2.25} />
+          مساعدة
+        </a>
+      </div>
+      <div>
         {!metaReady ? (
           <p className="text-muted mt-2 text-xs">{t('metaNotConfigured')}</p>
-        ) : null}
-        {connection ? (
-          <ConnectionChecklist
-            rows={[
-              {
-                key: 'facebook',
-                labelKey: 'checklistFacebook',
-                state: connection.facebook.state,
-                onAction: onConnectMeta,
-                actionLabel:
-                  connection.facebook.state === 'reconnect'
-                    ? t('channelReconnect')
-                    : t('channelConnect'),
-                actionDisabled: metaBusy || !metaReady,
-              },
-              {
-                key: 'instagram',
-                labelKey: 'checklistInstagram',
-                state: connection.instagram.state,
-                onAction: onConnectMeta,
-                actionLabel: t('channelConnect'),
-                actionDisabled: metaBusy || !metaReady,
-              },
-              {
-                key: 'whatsapp',
-                labelKey: 'checklistWhatsapp',
-                state: connection.whatsapp.state,
-                onAction: onConnectWhatsApp,
-                actionLabel: t('channelConnectWhatsAppNumber'),
-                actionDisabled: whatsappBusy || !whatsappEmbeddedReady,
-              },
-              {
-                key: 'adAccount',
-                labelKey: 'checklistAdAccount',
-                state: connection.adAccount.state,
-                onAction: onConnectMeta,
-                actionLabel:
-                  connection.adAccount.state === 'missing'
-                    ? t('selectAdAccount')
-                    : t('channelReconnect'),
-                actionDisabled: metaBusy || !metaReady,
-              },
-              {
-                key: 'adsPermissions',
-                labelKey: 'checklistAdsPermissions',
-                state: connection.adsPermissions.state,
-                onAction: onConnectMeta,
-                actionLabel: t('channelReconnect'),
-                actionDisabled: metaBusy || !metaReady,
-              },
-            ]}
-          />
         ) : null}
         {metaAdsNeedsReconnect ? (
           <p className="mt-2 text-xs font-semibold text-amber-700">
