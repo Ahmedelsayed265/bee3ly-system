@@ -87,10 +87,13 @@ export class MetaAdsService {
         mapObjective(campaign.objective).objective === 'OUTCOME_SALES'
           ? 'No Meta pixel is connected, so this paused ad asks people to message the page instead of tracking purchases.'
           : null;
+      const audienceNote =
+        salesNote && !audience.note?.includes(salesNote)
+          ? [audience.note, salesNote].filter(Boolean).join(' ')
+          : (audience.note ?? '');
       campaign = await this.save(campaign.id, {
         metaAudienceIds: audience.ids,
-        audienceNote:
-          [audience.note, salesNote].filter(Boolean).join(' ') || null,
+        audienceNote: audienceNote || null,
         publishStep: 'audiences',
       });
 
@@ -101,6 +104,7 @@ export class MetaAdsService {
           objective: mapped.objective,
           special_ad_categories: [],
           status: 'PAUSED',
+          is_adset_budget_sharing_enabled: false,
         });
         campaign = await this.save(campaign.id, {
           metaCampaignId: String(created.id),

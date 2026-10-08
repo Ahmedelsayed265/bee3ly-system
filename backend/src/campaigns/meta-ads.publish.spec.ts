@@ -104,6 +104,7 @@ describe('MetaAdsService publish idempotency', () => {
       'act_99/adcreatives',
       'act_99/ads',
     ]);
+    expect(first.bodies[0].is_adset_budget_sharing_enabled).toBe(false);
     expect(first.bodies[1].is_adset_budget_sharing_enabled).toBe(false);
     expect(first.campaign.metaCampaignId).toBe('id-1');
     expect(first.campaign.metaAdId).toBe('id-4');
