@@ -135,6 +135,37 @@ describe('MetaAdsService publish idempotency', () => {
     expect(posts).toEqual(['act_99/campaigns', 'act_99/adsets']);
   });
 
+  it('creates a paused ad when custom audience terms are not accepted', async () => {
+    const { service, posts, campaign } = setup();
+    campaign.audiences = ['CUSTOMERS'];
+    service['prisma'].order.findMany = () => [
+      { customer: { phone: '01000000000' } },
+    ];
+    const original = service['graph'].post.bind(service['graph']);
+    service['graph'].post = (path: string) => {
+      if (String(path).includes('customaudiences')) {
+        posts.push(path);
+        throw new Error(
+          '{"error":{"message":"Custom Audience terms not accepted"}}',
+        );
+      }
+      return original(path, 'token', {});
+    };
+
+    const created = await service.publish('biz-1', 'camp-1');
+
+    expect(created?.status).toBe(CampaignStatus.PAUSED_ON_META);
+    expect(campaign.metaAudienceIds).toEqual([]);
+    expect(String(campaign.audienceNote)).toContain('Custom Audience terms');
+    expect(posts).toEqual([
+      'act_99/customaudiences',
+      'act_99/campaigns',
+      'act_99/adsets',
+      'act_99/adcreatives',
+      'act_99/ads',
+    ]);
+  });
+
   it('returns null when the publish flag is off', async () => {
     const { service } = setup();
     (service as unknown as { config: { get: () => string } }).config = {

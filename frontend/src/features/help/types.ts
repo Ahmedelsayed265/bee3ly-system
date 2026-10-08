@@ -12,9 +12,7 @@ export type HelpProblem = {
   body: string;
 };
 
-export type HelpArticle = {
-  slug: string;
-  category: HelpCategory;
+export type HelpArticleCopy = {
   title: string;
   keywords: string[];
   /** Short "what you will do and how long". */
@@ -24,13 +22,28 @@ export type HelpArticle = {
   success: string;
   steps: HelpStep[];
   problems: HelpProblem[];
-  /** ISO date. Review when Meta changes its screens. */
-  lastUpdated: string;
 };
 
-export const HELP_CATEGORIES: Array<{ id: HelpCategory; title: string }> = [
-  { id: 'start', title: 'ابدأ من هنا' },
-  { id: 'channels', title: 'ربط الصفحات والمحادثات' },
-  { id: 'ads', title: 'حساب الإعلانات' },
-  { id: 'problems', title: 'لو حاجة وقفت' },
+export type HelpArticle = HelpArticleCopy & {
+  slug: string;
+  category: HelpCategory;
+  /** ISO date. Review when Meta changes its screens. */
+  lastUpdated: string;
+  /** English copy. Arabic stays on the article itself. */
+  en?: HelpArticleCopy;
+};
+
+export const HELP_CATEGORIES: Array<{
+  id: HelpCategory;
+  title: string;
+  titleEn: string;
+}> = [
+  { id: 'start', title: 'ابدأ من هنا', titleEn: 'Start here' },
+  {
+    id: 'channels',
+    title: 'ربط الصفحات والمحادثات',
+    titleEn: 'Pages and conversations',
+  },
+  { id: 'ads', title: 'حساب الإعلانات', titleEn: 'Ad account' },
+  { id: 'problems', title: 'لو حاجة وقفت', titleEn: 'When something stops' },
 ];

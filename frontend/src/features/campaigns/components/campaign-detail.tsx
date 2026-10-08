@@ -6,6 +6,7 @@ import { CampaignAudienceBadges } from '@/features/campaigns/components/campaign
 import { CampaignObjectiveBadges } from '@/features/campaigns/components/campaign-objective-badges';
 import { campaignGoalsList } from '@/features/campaigns/constants';
 import { CampaignScorecard } from '@/features/campaigns/components/campaign-scorecard';
+import { HelpLink } from '@/features/help/help-link';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
@@ -106,7 +107,10 @@ export function CampaignDetail({
           </div>
           <p className="text-muted text-xs">{t('campaignPublishNotice')}</p>
           {campaign.metaErrorUserMsg ? (
-            <p className="text-danger text-xs">{campaign.metaErrorUserMsg}</p>
+            <p className="text-danger text-xs">
+              {campaign.metaErrorUserMsg}{' '}
+              <HelpLink slug="ad-not-created" labelKey="helpAdNotCreated" />
+            </p>
           ) : null}
           {campaign.audienceNote ? (
             <p className="text-muted text-xs">{campaign.audienceNote}</p>

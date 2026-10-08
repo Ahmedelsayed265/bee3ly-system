@@ -17,3 +17,18 @@ test('search matches title and keywords', () => {
 test('unknown word returns nothing', () => {
   assert.deepEqual(filterArticles(helpArticles, 'xyzzy-no-such-topic'), []);
 });
+
+test('ad publish problems are searchable in Arabic and English', () => {
+  const article = helpArticles.find((item) => item.slug === 'ad-not-created');
+  assert.ok(article?.en?.title);
+  assert.ok(
+    filterArticles(helpArticles, 'شروط').some(
+      (item) => item.slug === 'ad-not-created',
+    ),
+  );
+  assert.ok(
+    filterArticles(helpArticles, 'custom audience').some(
+      (item) => item.slug === 'ad-not-created',
+    ),
+  );
+});

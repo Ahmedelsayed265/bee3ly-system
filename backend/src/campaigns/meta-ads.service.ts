@@ -83,14 +83,19 @@ export class MetaAdsService {
         act,
         page.externalId,
       );
+      const salesNote =
+        mapObjective(campaign.objective).objective === 'OUTCOME_SALES'
+          ? 'No Meta pixel is connected, so this paused ad asks people to message the page instead of tracking purchases.'
+          : null;
       campaign = await this.save(campaign.id, {
         metaAudienceIds: audience.ids,
-        audienceNote: audience.note,
+        audienceNote:
+          [audience.note, salesNote].filter(Boolean).join(' ') || null,
         publishStep: 'audiences',
       });
 
+      const mapped = this.deliveryObjective(campaign);
       if (!campaign.metaCampaignId) {
-        const mapped = mapObjective(campaign.objective);
         const created = await this.graph.post(`act_${act}/campaigns`, token, {
           name: campaign.name,
           objective: mapped.objective,
@@ -104,7 +109,6 @@ export class MetaAdsService {
       }
 
       if (!campaign.metaAdsetId) {
-        const mapped = mapObjective(campaign.objective);
         const currency = business.metaAdAccountCurrency || campaign.currency;
         const created = await this.graph.post(`act_${act}/adsets`, token, {
           name: `${campaign.name} · set`,
@@ -118,7 +122,13 @@ export class MetaAdsService {
           promoted_object: { page_id: page.externalId },
           targeting: {
             geo_locations: { countries: ['EG'] },
-            custom_audiences: campaign.metaAudienceIds.map((id) => ({ id })),
+            ...(campaign.metaAudienceIds.length
+              ? {
+                  custom_audiences: campaign.metaAudienceIds.map((id) => ({
+                    id,
+                  })),
+                }
+              : {}),
           },
           start_time: campaign.startDate?.toISOString(),
           end_time: campaign.endDate?.toISOString(),
@@ -215,6 +225,14 @@ export class MetaAdsService {
     });
   }
 
+  /** Sales needs a pixel. This creative asks for a message, so use that instead. */
+  private deliveryObjective(campaign: Campaign) {
+    const mapped = mapObjective(campaign.objective);
+    if (mapped.objective === 'OUTCOME_SALES')
+      return mapObjective('MORE_MESSAGES');
+    return mapped;
+  }
+
   private async ensureAudiences(
     campaign: Campaign,
     token: string,
@@ -246,8 +264,12 @@ export class MetaAdsService {
           `${campaign.name} buyers`,
           hashes,
         );
-        ids.push(audienceId);
-        if (wants.has('SIMILAR')) {
+        if (!audienceId) {
+          this.noteTerms(notes);
+        } else {
+          ids.push(audienceId);
+        }
+        if (audienceId && wants.has('SIMILAR')) {
           if (hashes.length < LOOKALIKE_MIN) {
             notes.push(
               `Lookalike skipped: buyer audience has ${hashes.length} people (need ${LOOKALIKE_MIN}).`,
@@ -281,14 +303,14 @@ export class MetaAdsService {
       const phones = await this.messagedWithoutOrder(campaign.businessId);
       const hashes = hashPhones(phones);
       if (hashes.length) {
-        ids.push(
-          await this.customerFile(
-            token,
-            act,
-            `${campaign.name} messaged`,
-            hashes,
-          ),
+        const audienceId = await this.customerFile(
+          token,
+          act,
+          `${campaign.name} messaged`,
+          hashes,
         );
+        if (audienceId) ids.push(audienceId);
+        else this.noteTerms(notes);
       } else {
         try {
           const engagement = await this.graph.post(
@@ -370,22 +392,37 @@ export class MetaAdsService {
     return { ids, note: notes.filter(Boolean).join(' ') || null };
   }
 
+  private noteTerms(notes: string[]) {
+    const note =
+      'Customer lists were skipped because Custom Audience terms are not accepted. The ad targets Egypt only.';
+    if (!notes.includes(note)) notes.push(note);
+  }
+
   private async customerFile(
     token: string,
     act: string,
     name: string,
     hashes: string[],
   ) {
-    const created = await this.graph.post(`act_${act}/customaudiences`, token, {
-      name,
-      subtype: 'CUSTOM',
-      customer_file_source: 'USER_PROVIDED_ONLY',
-    });
-    const id = String(created.id);
-    await this.graph.post(`${id}/users`, token, {
-      payload: { schema: ['PHONE'], data: hashes.map((hash) => [hash]) },
-    });
-    return id;
+    try {
+      const created = await this.graph.post(
+        `act_${act}/customaudiences`,
+        token,
+        {
+          name,
+          subtype: 'CUSTOM',
+          customer_file_source: 'USER_PROVIDED_ONLY',
+        },
+      );
+      const id = String(created.id);
+      await this.graph.post(`${id}/users`, token, {
+        payload: { schema: ['PHONE'], data: hashes.map((hash) => [hash]) },
+      });
+      return id;
+    } catch (error) {
+      if (isCustomAudienceTermsError(error)) return null;
+      throw error;
+    }
   }
 
   private async buyerPhones(businessId: string) {

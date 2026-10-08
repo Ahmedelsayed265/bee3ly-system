@@ -936,6 +936,8 @@
   "linkStatusReconnect": "Needs reconnect",
   "helpStuck": "Need help?",
   "helpCenter": "Help center",
+  "helpIndexLead": "Short steps to connect your pages and get a paused ad into Meta.",
+  "helpAdNotCreated": "The ad is not showing in Meta?",
   "noAdAccountHint": "Meta did not return any ad accounts. Either none exists yet, or Bee3ly cannot see it.",
   "helpCreateAdAccount": "How to create an ad account",
   "helpAdsPermissions": "How to grant ads permissions",

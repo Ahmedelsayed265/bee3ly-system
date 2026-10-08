@@ -936,6 +936,8 @@
   "linkStatusReconnect": "محتاج إعادة ربط",
   "helpStuck": "مش عارف؟",
   "helpCenter": "مركز المساعدة",
+  "helpIndexLead": "خطوات قصيرة عشان تربط صفحاتك، وتطلع الإعلان المتوقف في ميتا.",
+  "helpAdNotCreated": "الإعلان مش ظاهر في ميتا؟",
   "noAdAccountHint": "ميتا مرجعش حسابات إعلانات. يا الحساب لسه متعملش، يا Bee3ly معندوش صلاحية يشوفه.",
   "helpCreateAdAccount": "إزاي أعمل حساب إعلانات",
   "helpAdsPermissions": "إزاي أدي صلاحيات الإعلانات",

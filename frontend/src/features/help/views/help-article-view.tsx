@@ -1,14 +1,16 @@
 import { Link, useParams } from 'react-router-dom';
-import { findHelpArticle } from '@/features/help/articles';
+import { findHelpArticle, localizeArticle } from '@/features/help/articles';
 import { HelpShell } from '@/features/help/help-shell';
+import { HelpText } from '@/features/help/help-text';
 import { usePageMeta } from '@/features/help/use-page-meta';
 import { useLocale } from '@/features/i18n/locale-context';
 import { paths } from '@/routes/paths';
 
 export function HelpArticleView() {
   const { slug } = useParams();
-  const { t } = useLocale();
-  const article = findHelpArticle(slug ?? '');
+  const { t, locale } = useLocale();
+  const found = findHelpArticle(slug ?? '');
+  const article = found ? localizeArticle(found, locale) : null;
   usePageMeta(
     article ? `${article.title} — Bee3ly` : t('helpMissingArticle'),
     article?.intro ?? t('helpMissingArticle'),
@@ -40,7 +42,9 @@ export function HelpArticleView() {
         <h2 className="text-ink text-lg font-bold">{t('helpBefore')}</h2>
         <ul className="mt-2 list-disc space-y-1 ps-5 text-sm leading-7">
           {article.before.map((item) => (
-            <li key={item}>{item}</li>
+            <li key={item}>
+              <HelpText text={item} locale={locale} />
+            </li>
           ))}
         </ul>
       </section>
@@ -55,7 +59,9 @@ export function HelpArticleView() {
               </span>
               <div>
                 <h3 className="text-ink font-semibold">{step.title}</h3>
-                <p className="text-muted mt-1 text-sm leading-7">{step.body}</p>
+                <p className="text-muted mt-1 text-sm leading-7">
+                  <HelpText text={step.body} locale={locale} />
+                </p>
                 {step.screenshot ? (
                   <p className="text-muted border-border mt-2 rounded-xl border border-dashed px-3 py-2 text-xs">
                     {step.screenshot}
@@ -69,7 +75,9 @@ export function HelpArticleView() {
 
       <section className="border-border bg-surface mt-8 rounded-2xl border p-4">
         <h2 className="text-ink text-base font-bold">{t('helpWorked')}</h2>
-        <p className="text-muted mt-2 text-sm leading-7">{article.success}</p>
+        <p className="text-muted mt-2 text-sm leading-7">
+          <HelpText text={article.success} locale={locale} />
+        </p>
       </section>
 
       <section className="mt-8">
@@ -79,7 +87,7 @@ export function HelpArticleView() {
             <li key={problem.title}>
               <h3 className="text-ink font-semibold">{problem.title}</h3>
               <p className="text-muted mt-1 text-sm leading-7">
-                {problem.body}
+                <HelpText text={problem.body} locale={locale} />
               </p>
             </li>
           ))}
