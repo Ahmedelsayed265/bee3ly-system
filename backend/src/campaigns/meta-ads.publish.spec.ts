@@ -107,6 +107,9 @@ describe('MetaAdsService publish idempotency', () => {
     expect(first.bodies[0].is_adset_budget_sharing_enabled).toBe(false);
     expect(first.bodies[1].is_adset_budget_sharing_enabled).toBe(false);
     expect(first.bodies[1].bid_strategy).toBe('LOWEST_COST_WITHOUT_CAP');
+    expect(first.bodies[1].targeting).toMatchObject({
+      targeting_automation: { advantage_audience: 0 },
+    });
     expect(first.campaign.metaCampaignId).toBe('id-1');
     expect(first.campaign.metaAdId).toBe('id-4');
 

@@ -129,6 +129,7 @@ export class MetaAdsService {
           promoted_object: { page_id: page.externalId },
           targeting: {
             geo_locations: { countries: ['EG'] },
+            targeting_automation: { advantage_audience: 0 },
             ...(campaign.metaAudienceIds.length
               ? {
                   custom_audiences: campaign.metaAudienceIds.map((id) => ({
