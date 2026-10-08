@@ -5,7 +5,6 @@ import {
   WhatsAppIcon,
 } from '@/components/brand/channel-icons';
 import { Button } from '@/components/ui/button';
-import { HelpLink } from '@/features/help/help-link';
 import { useLocale } from '@/features/i18n/locale-context';
 import { ChannelCard } from '@/features/settings/components/channel-card';
 import {
@@ -14,6 +13,7 @@ import {
 } from '@/features/settings/components/connection-checklist';
 import { MetaPagePicker } from '@/features/settings/components/meta-page-picker';
 import type { ChannelId, SocialAccount } from '@/features/settings/types';
+import { paths } from '@/routes/paths';
 
 type SocialChannelsSectionProps = {
   pendingId: string | null;
@@ -91,7 +91,17 @@ export function SocialChannelsSection({
   return (
     <section className="w-full space-y-4">
       <div>
-        <h2 className="text-ink text-base font-bold">{t('channelsTitle')}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-ink text-base font-bold">{t('channelsTitle')}</h2>
+          <a
+            href={paths.help}
+            target="_blank"
+            rel="noreferrer"
+            className="border-border text-muted hover:border-brand/40 hover:text-brand inline-flex h-6 items-center rounded-md border px-1.5 text-[11px] font-medium"
+          >
+            help ?
+          </a>
+        </div>
         <p className="text-muted mt-1 text-sm">{t('socialAccountsHint')}</p>
         {!metaReady ? (
           <p className="text-muted mt-2 text-xs">{t('metaNotConfigured')}</p>
@@ -103,7 +113,6 @@ export function SocialChannelsSection({
                 key: 'facebook',
                 labelKey: 'checklistFacebook',
                 state: connection.facebook.state,
-                article: 'connect-facebook',
                 onAction: onConnectMeta,
                 actionLabel:
                   connection.facebook.state === 'reconnect'
@@ -115,7 +124,6 @@ export function SocialChannelsSection({
                 key: 'instagram',
                 labelKey: 'checklistInstagram',
                 state: connection.instagram.state,
-                article: 'instagram-professional',
                 onAction: onConnectMeta,
                 actionLabel: t('channelConnect'),
                 actionDisabled: metaBusy || !metaReady,
@@ -124,7 +132,6 @@ export function SocialChannelsSection({
                 key: 'whatsapp',
                 labelKey: 'checklistWhatsapp',
                 state: connection.whatsapp.state,
-                article: 'connect-whatsapp',
                 onAction: onConnectWhatsApp,
                 actionLabel: t('channelConnectWhatsAppNumber'),
                 actionDisabled: whatsappBusy || !whatsappEmbeddedReady,
@@ -133,7 +140,6 @@ export function SocialChannelsSection({
                 key: 'adAccount',
                 labelKey: 'checklistAdAccount',
                 state: connection.adAccount.state,
-                article: 'create-ad-account',
                 onAction: onConnectMeta,
                 actionLabel:
                   connection.adAccount.state === 'missing'
@@ -145,7 +151,6 @@ export function SocialChannelsSection({
                 key: 'adsPermissions',
                 labelKey: 'checklistAdsPermissions',
                 state: connection.adsPermissions.state,
-                article: 'ads-permissions',
                 onAction: onConnectMeta,
                 actionLabel: t('channelReconnect'),
                 actionDisabled: metaBusy || !metaReady,
@@ -171,12 +176,9 @@ export function SocialChannelsSection({
           account={pendingId ? undefined : facebook}
           action={
             pendingId ? (
-              <div className="space-y-1">
-                <p className="text-brand text-xs font-semibold">
-                  {t('selectFacebookPage')}
-                </p>
-                <HelpLink slug="connect-facebook" />
-              </div>
+              <p className="text-brand text-xs font-semibold">
+                {t('selectFacebookPage')}
+              </p>
             ) : (
               <>
                 <Button
@@ -188,7 +190,6 @@ export function SocialChannelsSection({
                     ? t('channelReconnect')
                     : t('channelConnect')}
                 </Button>
-                <HelpLink slug="connect-facebook" />
                 {facebook && facebook.status !== 'DISCONNECTED' ? (
                   <Button
                     size="sm"
@@ -239,7 +240,6 @@ export function SocialChannelsSection({
                   ? t('channelReconnect')
                   : t('channelConnect')}
               </Button>
-              <HelpLink slug="instagram-professional" />
               {instagram && instagram.status !== 'DISCONNECTED' ? (
                 <Button
                   size="sm"
@@ -279,7 +279,6 @@ export function SocialChannelsSection({
                   ? t('channelReconnect')
                   : t('channelConnectWhatsAppNumber')}
               </Button>
-              <HelpLink slug="connect-whatsapp" />
               {whatsappLinked ? (
                 <Button
                   size="sm"

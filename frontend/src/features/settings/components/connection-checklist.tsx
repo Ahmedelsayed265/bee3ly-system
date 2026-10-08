@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { HelpLink } from '@/features/help/help-link';
 import { useLocale } from '@/features/i18n/locale-context';
 import type { MessageKey } from '@/features/i18n/messages';
 
@@ -9,7 +8,6 @@ type Row = {
   key: string;
   labelKey: MessageKey;
   state: ChecklistState;
-  article: string;
   onAction?: () => void;
   actionLabel?: string;
   actionDisabled?: boolean;
@@ -28,12 +26,9 @@ export function ConnectionChecklist({ rows }: { rows: Row[] }) {
       className="border-border bg-surface rounded-2xl border p-4"
       aria-labelledby="link-status-title"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="link-status-title" className="text-ink text-base font-bold">
-          {t('linkStatusTitle')}
-        </h2>
-        <HelpLink slug="connect-overview" labelKey="helpCenter" />
-      </div>
+      <h2 id="link-status-title" className="text-ink text-base font-bold">
+        {t('linkStatusTitle')}
+      </h2>
       <ul className="mt-3 space-y-3">
         {rows.map((row) => (
           <li
@@ -50,7 +45,6 @@ export function ConnectionChecklist({ rows }: { rows: Row[] }) {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <HelpLink slug={row.article} labelKey="helpStuck" />
               {row.state !== 'connected' && row.onAction ? (
                 <Button
                   size="sm"
