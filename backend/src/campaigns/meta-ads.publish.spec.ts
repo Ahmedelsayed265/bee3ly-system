@@ -25,6 +25,7 @@ describe('MetaAdsService publish idempotency', () => {
     }> = {},
   ) {
     const posts: string[] = [];
+    const bodies: Array<Record<string, unknown>> = [];
     const campaign: Record<string, unknown> = {
       id: 'camp-1',
       businessId: 'biz-1',
@@ -74,8 +75,9 @@ describe('MetaAdsService publish idempotency', () => {
       customer: { findMany: () => [] },
     };
     const graph = {
-      post: (path: string) => {
+      post: (path: string, _token: string, body: Record<string, unknown>) => {
         posts.push(path);
+        bodies.push(body ?? {});
         return { id: `id-${posts.length}` };
       },
       get: () => ({}),
@@ -89,7 +91,7 @@ describe('MetaAdsService publish idempotency', () => {
       { decrypt: () => 'token' } as never,
       graph as never,
     );
-    return { service, posts, campaign };
+    return { service, posts, bodies, campaign };
   }
 
   it('creates campaign, ad set, creative, and ad paused, then reuses saved ids', async () => {
@@ -102,6 +104,7 @@ describe('MetaAdsService publish idempotency', () => {
       'act_99/adcreatives',
       'act_99/ads',
     ]);
+    expect(first.bodies[1].is_adset_budget_sharing_enabled).toBe(false);
     expect(first.campaign.metaCampaignId).toBe('id-1');
     expect(first.campaign.metaAdId).toBe('id-4');
 

@@ -114,6 +114,7 @@ export class MetaAdsService {
           name: `${campaign.name} · set`,
           campaign_id: campaign.metaCampaignId,
           daily_budget: dailyBudgetMinor(campaign.budget, currency),
+          is_adset_budget_sharing_enabled: false,
           billing_event: mapped.billingEvent,
           optimization_goal: mapped.optimizationGoal,
           destination_type: mapped.messaging
