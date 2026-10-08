@@ -51,6 +51,9 @@ export class MetaOauthService {
       'pages_read_engagement',
       'pages_manage_engagement',
       'business_management',
+      // Marketing API — Ready for testing on app roles until Advanced Access.
+      'ads_management',
+      'ads_read',
     ];
     const extra = (this.config.get<string>('META_OAUTH_EXTRA_SCOPES') ?? '')
       .split(',')
@@ -63,7 +66,9 @@ export class MetaOauthService {
     const scopes = [...new Set([...baseScopes, ...waScopes, ...extra])].join(
       ',',
     );
-    return `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}&auth_type=rerequest`;
+    const version =
+      this.config.get<string>('META_GRAPH_VERSION')?.trim() || 'v21.0';
+    return `https://www.facebook.com/${version}/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}&scope=${scopes}&auth_type=rerequest`;
   }
 
   async handleCallback(code?: string, state?: string) {
@@ -112,6 +117,28 @@ export class MetaOauthService {
       SocialPlatform.FACEBOOK,
     );
 
+    let adAccounts: Array<{
+      id: string;
+      name: string;
+      account_status?: number;
+      currency?: string;
+      timezone_name?: string;
+    }> = [];
+    try {
+      adAccounts = await this.graph.listAdAccounts(token.access_token);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : '';
+      if (text.includes('"code":190') || text.includes('"code": 190')) {
+        await this.prisma.business.update({
+          where: { id: businessId },
+          data: { metaAdsNeedsReconnect: true },
+        });
+      }
+      this.logger.warn(
+        `Ad account list failed business=${businessId}: ${text.slice(0, 180)}`,
+      );
+    }
+
     const pending = await this.prisma.pendingMetaConnection.create({
       data: {
         businessId,
@@ -123,6 +150,7 @@ export class MetaOauthService {
           access_token: p.access_token,
           instagram_business_account: p.instagram_business_account ?? null,
         })),
+        adAccountsJson: adAccounts,
         expiresAt: new Date(Date.now() + 15 * 60 * 1000),
       },
     });
@@ -180,10 +208,30 @@ export class MetaOauthService {
       name: p.name,
       hasInstagram: Boolean(p.instagram_business_account?.id),
     }));
-    return { pendingId: pending.id, pages };
+    const adAccounts = (
+      (pending.adAccountsJson as Array<{
+        id: string;
+        name: string;
+        currency?: string;
+        timezone_name?: string;
+        account_status?: number;
+      }>) ?? []
+    ).map((account) => ({
+      id: account.id,
+      name: account.name,
+      currency: account.currency ?? null,
+      timezone: account.timezone_name ?? null,
+      accountStatus: account.account_status ?? null,
+    }));
+    return { pendingId: pending.id, pages, adAccounts };
   }
 
-  async selectPage(userId: string, pendingId: string, pageId: string) {
+  async selectPage(
+    userId: string,
+    pendingId: string,
+    pageId: string,
+    adAccountId?: string,
+  ) {
     const businessId = await this.access.requireBusinessId(userId);
     const pending = await this.prisma.pendingMetaConnection.findFirst({
       where: { id: pendingId, businessId, userId },
@@ -357,6 +405,31 @@ export class MetaOauthService {
       this.logger.warn(
         `WhatsApp discovery after page select failed: ${err instanceof Error ? err.message : String(err)}`,
       );
+    }
+
+    if (adAccountId) {
+      const accounts =
+        (pending.adAccountsJson as Array<{
+          id: string;
+          name?: string;
+          currency?: string;
+          timezone_name?: string;
+        }>) ?? [];
+      const chosen = accounts.find((account) => account.id === adAccountId);
+      if (!chosen) {
+        throw new BadRequestException('Ad account not found in pending session');
+      }
+      await this.prisma.business.update({
+        where: { id: businessId },
+        data: {
+          metaAdAccountId: chosen.id,
+          metaAdAccountName: chosen.name ?? chosen.id,
+          metaAdAccountCurrency: chosen.currency ?? null,
+          metaAdAccountTimezone: chosen.timezone_name ?? null,
+          metaAdsTokenEnc: pending.userAccessTokenEnc,
+          metaAdsNeedsReconnect: false,
+        },
+      });
     }
 
     await this.prisma.pendingMetaConnection.delete({

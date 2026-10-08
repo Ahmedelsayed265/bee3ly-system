@@ -63,4 +63,9 @@ export class CampaignsController {
   ) {
     return this.campaigns.launch(user.id, id, dto.status);
   }
+
+  @Patch(':id/activate')
+  activate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.campaigns.activate(user.id, id);
+  }
 }

@@ -7,8 +7,13 @@ type MetaPage = {
   hasInstagram: boolean;
 };
 
+type AdAccount = { id: string; name: string; currency: string | null };
+
 type MetaPagePickerProps = {
   pages: MetaPage[];
+  adAccounts?: AdAccount[];
+  adAccountId?: string;
+  onAdAccountChange?: (id: string) => void;
   isLoading: boolean;
   isError: boolean;
   isPending: boolean;
@@ -17,6 +22,9 @@ type MetaPagePickerProps = {
 
 export function MetaPagePicker({
   pages,
+  adAccounts = [],
+  adAccountId,
+  onAdAccountChange,
   isLoading,
   isError,
   isPending,
@@ -26,6 +34,26 @@ export function MetaPagePicker({
 
   return (
     <div className="border-border space-y-2 border-t pt-3">
+      {adAccounts.length ? (
+        <label className="block text-xs">
+          <span className="text-muted mb-1 block font-semibold">
+            {t('selectAdAccount')}
+          </span>
+          <select
+            className="border-border bg-page w-full rounded-xl border px-3 py-2 text-sm"
+            value={adAccountId ?? ''}
+            onChange={(event) => onAdAccountChange?.(event.target.value)}
+          >
+            <option value="">{t('selectAdAccount')}</option>
+            {adAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({account.id}
+                {account.currency ? ` · ${account.currency}` : ''})
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       {pages.map((p) => (
         <button
           key={p.id}

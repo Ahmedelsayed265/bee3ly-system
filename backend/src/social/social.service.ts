@@ -159,8 +159,30 @@ export class SocialService implements OnModuleInit {
         connectedAt: true,
       },
     });
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        metaAdAccountId: true,
+        metaAdAccountName: true,
+        metaAdAccountCurrency: true,
+        metaAdsNeedsReconnect: true,
+      },
+    });
+    const facebookConnected = accounts.some(
+      (account) =>
+        account.platform === 'FACEBOOK' && account.status === 'CONNECTED',
+    );
     return {
       accounts,
+      metaAds: {
+        connected: Boolean(business?.metaAdAccountId),
+        adAccountId: business?.metaAdAccountId ?? null,
+        name: business?.metaAdAccountName ?? null,
+        currency: business?.metaAdAccountCurrency ?? null,
+        needsReconnect:
+          Boolean(business?.metaAdsNeedsReconnect) ||
+          (facebookConnected && !business?.metaAdAccountId),
+      },
       metaConfigured: Boolean(this.config.get('META_APP_ID')),
       oauthUrl: this.metaOauth.buildOAuthUrl(businessId, userId),
       connectLabel: 'Connect Facebook & Instagram',
@@ -257,8 +279,13 @@ export class SocialService implements OnModuleInit {
     return this.metaOauth.getPending(userId, pendingId);
   }
 
-  selectPage(userId: string, pendingId: string, pageId: string) {
-    return this.metaOauth.selectPage(userId, pendingId, pageId);
+  selectPage(
+    userId: string,
+    pendingId: string,
+    pageId: string,
+    adAccountId?: string,
+  ) {
+    return this.metaOauth.selectPage(userId, pendingId, pageId, adAccountId);
   }
 
   startConnect(userId: string) {

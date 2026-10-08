@@ -494,6 +494,13 @@ export async function fetchSocial() {
       configId: string | null;
     };
     tiktokConfigured?: boolean;
+    metaAds?: {
+      connected: boolean;
+      adAccountId: string | null;
+      name: string | null;
+      currency: string | null;
+      needsReconnect: boolean;
+    };
   }>('/social');
   return data;
 }
@@ -533,11 +540,20 @@ export async function fetchMetaPending(pendingId: string) {
   const { data } = await api.get<{
     pendingId: string;
     pages: Array<{ id: string; name: string; hasInstagram: boolean }>;
+    adAccounts?: Array<{
+      id: string;
+      name: string;
+      currency: string | null;
+    }>;
   }>(`/social/meta/pending/${pendingId}`);
   return data;
 }
 
-export async function selectMetaPage(pendingId: string, pageId: string) {
+export async function selectMetaPage(
+  pendingId: string,
+  pageId: string,
+  adAccountId?: string,
+) {
   const { data } = await api.post<{
     facebook: { id: string; displayName: string | null; status: string };
     instagram: {
@@ -551,7 +567,7 @@ export async function selectMetaPage(pendingId: string, pageId: string) {
       status: string;
     } | null;
     notice: string;
-  }>('/social/meta/select-page', { pendingId, pageId });
+  }>('/social/meta/select-page', { pendingId, pageId, adAccountId });
   return data;
 }
 
@@ -672,6 +688,14 @@ export type Campaign = {
   returnedRevenueEgp?: number;
   headline?: MetricHeadline;
   metrics?: MeasuredMetric[];
+  metaErrorUserMsg?: string | null;
+  audienceNote?: string | null;
+  insights?: Array<{
+    date: string;
+    spend: string | number;
+    impressions: number;
+    clicks: number;
+  }>;
 };
 
 export async function fetchCampaigns(page = 1, limit = 10) {
@@ -778,5 +802,14 @@ export async function launchCampaign(
     published: boolean;
     notice: string;
   }>(`/campaigns/${id}/launch`, { status });
+  return data;
+}
+
+export async function activateCampaign(id: string) {
+  const { data } = await api.patch<{
+    campaign: Campaign;
+    published: boolean;
+    notice: string;
+  }>(`/campaigns/${id}/activate`);
   return data;
 }

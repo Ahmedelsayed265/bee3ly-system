@@ -22,6 +22,7 @@ import { analyzeCampaignMetrics } from './campaign-analysis';
 import { normalizeCampaignObjectives } from './campaign-objectives';
 import { CampaignAiBrainsService } from './campaign-ai-brains.service';
 import { CreateCampaignDto, DraftAdCopyDto } from './dto/campaign.dto';
+import { MetaAdsService } from './meta-ads.service';
 
 @Injectable()
 export class CampaignsService {
@@ -36,6 +37,7 @@ export class CampaignsService {
     private readonly campaignBrains: CampaignAiBrainsService,
     private readonly entitlements: EntitlementsService,
     private readonly usage: UsageService,
+    private readonly metaAds: MetaAdsService,
   ) {}
 
   async list(userId: string, page = 1, limit = 10) {
@@ -64,6 +66,9 @@ export class CampaignsService {
     const businessId = await this.access.requireBusinessId(userId);
     const campaign = await this.prisma.campaign.findFirst({
       where: { id, businessId },
+      include: {
+        insights: { orderBy: { date: 'desc' }, take: 14 },
+      },
     });
     if (!campaign) throw new NotFoundException('Campaign not found');
     const chains = await this.attribution.chains(businessId);
@@ -192,6 +197,17 @@ export class CampaignsService {
     };
   }
 
+  async activate(userId: string, id: string) {
+    const businessId = await this.access.requireBusinessId(userId);
+    const campaign = await this.metaAds.setDelivery(businessId, id, 'ACTIVE');
+    const chains = await this.attribution.chains(businessId);
+    return {
+      campaign: this.withMetrics(campaign, chains.forCampaign(campaign.id)),
+      published: true,
+      notice: 'Activated on Meta. It can spend now.',
+    };
+  }
+
   async launch(
     userId: string,
     id: string,
@@ -202,6 +218,43 @@ export class CampaignsService {
       where: { id, businessId },
     });
     if (!existing) throw new NotFoundException('Campaign not found');
+
+    if (
+      this.metaAds.enabled() &&
+      (status === CampaignStatus.ASSISTED_LAUNCH ||
+        status === CampaignStatus.ACTIVE)
+    ) {
+      const published = await this.metaAds.publish(businessId, id);
+      if (published) {
+        const chains = await this.attribution.chains(businessId);
+        return {
+          campaign: this.withMetrics(
+            published,
+            chains.forCampaign(published.id),
+          ),
+          published: published.status !== CampaignStatus.FAILED,
+          notice:
+            published.status === CampaignStatus.FAILED
+              ? (published.metaErrorUserMsg ??
+                'Meta publish failed. Retry uses the IDs already saved.')
+              : 'Created on Meta as PAUSED. Activate when you want it to spend.',
+        };
+      }
+    }
+
+    if (
+      this.metaAds.enabled() &&
+      status === CampaignStatus.PAUSED &&
+      existing.metaCampaignId
+    ) {
+      const paused = await this.metaAds.setDelivery(businessId, id, 'PAUSED');
+      const chains = await this.attribution.chains(businessId);
+      return {
+        campaign: this.withMetrics(paused, chains.forCampaign(paused.id)),
+        published: true,
+        notice: 'Paused on Meta.',
+      };
+    }
 
     // Never pretend a real Meta ad was published
     const safeStatus =

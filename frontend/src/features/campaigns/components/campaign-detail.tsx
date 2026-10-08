@@ -17,19 +17,25 @@ type CampaignDetailProps = {
   campaign: Campaign;
   isBusy: boolean;
   onStatus: (status: CampaignStatusAction) => void;
+  onActivate: () => void;
 };
 
 export function CampaignDetail({
   campaign,
   isBusy,
   onStatus,
+  onActivate,
 }: CampaignDetailProps) {
   const { t } = useLocale();
   const running =
     campaign.status === 'ASSISTED_LAUNCH' ||
     campaign.status === 'SIMULATED' ||
     campaign.status === 'ACTIVE';
-  const canLaunch = campaign.status === 'READY' || campaign.status === 'DRAFT';
+  const canLaunch =
+    campaign.status === 'READY' ||
+    campaign.status === 'DRAFT' ||
+    campaign.status === 'FAILED';
+  const canActivate = campaign.status === 'PAUSED_ON_META';
   const query = `campaignId=${campaign.id}&campaign=${encodeURIComponent(campaign.name)}`;
 
   const facts = [
@@ -99,6 +105,26 @@ export function CampaignDetail({
             </dd>
           </div>
           <p className="text-muted text-xs">{t('campaignPublishNotice')}</p>
+          {campaign.metaErrorUserMsg ? (
+            <p className="text-danger text-xs">{campaign.metaErrorUserMsg}</p>
+          ) : null}
+          {campaign.audienceNote ? (
+            <p className="text-muted text-xs">{campaign.audienceNote}</p>
+          ) : null}
+          {campaign.insights?.length ? (
+            <div>
+              <dt className="text-muted text-xs">{t('campaignInsights')}</dt>
+              <dd className="mt-2 space-y-1 text-xs">
+                {campaign.insights.map((row) => (
+                  <p key={row.date}>
+                    {String(row.date).slice(0, 10)} · {t('campaignInsightSpend')}{' '}
+                    {row.spend} · {t('campaignInsightImpressions')}{' '}
+                    {row.impressions} · {t('campaignInsightClicks')} {row.clicks}
+                  </p>
+                ))}
+              </dd>
+            </div>
+          ) : null}
         </dl>
 
         <div className="flex flex-wrap gap-2">
@@ -118,6 +144,11 @@ export function CampaignDetail({
                 {t('campaignSimulate')}
               </Button>
             </>
+          ) : null}
+          {canActivate ? (
+            <Button disabled={isBusy} onClick={onActivate}>
+              {t('campaignActivate')}
+            </Button>
           ) : null}
           {running ? (
             <Button

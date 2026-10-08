@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
+  activateCampaign,
   createCampaign,
   fetchCampaigns,
   launchCampaign,
@@ -82,6 +83,16 @@ export function useCampaigns() {
     },
   });
 
+  const activateMut = useMutation({
+    mutationFn: (id: string) => activateCampaign(id),
+    onSuccess: async (data) => {
+      setNotice(data.notice);
+      setCreated(data.campaign);
+      await qc.invalidateQueries({ queryKey: ['campaigns'] });
+      await qc.invalidateQueries({ queryKey: ['campaign'] });
+    },
+  });
+
   const resetWizard = () => {
     setStep(0);
     setOffer('');
@@ -137,8 +148,9 @@ export function useCampaigns() {
     pendingLaunch,
     setPendingLaunch,
     isCreating: createMut.isPending,
-    isLaunching: launchMut.isPending,
+    isLaunching: launchMut.isPending || activateMut.isPending,
     launch: launchMut.mutate,
+    activate: activateMut.mutate,
     generate,
     resetWizard,
   };

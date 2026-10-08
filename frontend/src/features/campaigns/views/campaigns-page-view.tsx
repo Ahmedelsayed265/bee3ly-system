@@ -149,6 +149,7 @@ export function CampaignsPageView() {
                 status,
               })
             }
+            onActivate={() => campaigns.activate(detailQuery.data.id)}
           />
         ) : detailQuery.isLoading ? (
           <CampaignDetailSkeleton />

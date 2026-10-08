@@ -23,12 +23,55 @@ function resolveIgAccountId(page: {
 @Injectable()
 export class MetaGraphClient {
   private readonly logger = new Logger(MetaGraphClient.name);
-  private readonly version = 'v21.0';
 
   constructor(private readonly config: ConfigService) {}
 
   private base() {
-    return `https://graph.facebook.com/${this.version}`;
+    const version =
+      this.config.get<string>('META_GRAPH_VERSION')?.trim() || 'v21.0';
+    return `https://graph.facebook.com/${version}`;
+  }
+
+  async listAdAccounts(userAccessToken: string) {
+    const url = new URL(`${this.base()}/me/adaccounts`);
+    url.searchParams.set(
+      'fields',
+      'id,name,account_status,currency,timezone_name',
+    );
+    url.searchParams.set('access_token', userAccessToken);
+    const res = await fetch(url);
+    const text = await res.text();
+    if (!res.ok) {
+      this.logger.warn(`List ad accounts failed: ${text.slice(0, 300)}`);
+      if (text.includes('"code":190') || text.includes('"code": 190')) {
+        throw new Error(text.slice(0, 400));
+      }
+      return [] as Array<{
+        id: string;
+        name: string;
+        account_status?: number;
+        currency?: string;
+        timezone_name?: string;
+      }>;
+    }
+    const json = (await res.json()) as {
+      data?: Array<{
+        id?: string;
+        name?: string;
+        account_status?: number;
+        currency?: string;
+        timezone_name?: string;
+      }>;
+    };
+    return (json.data ?? [])
+      .filter((row) => typeof row.id === 'string')
+      .map((row) => ({
+        id: row.id as string,
+        name: row.name ?? row.id ?? 'Ad account',
+        account_status: row.account_status,
+        currency: row.currency,
+        timezone_name: row.timezone_name,
+      }));
   }
 
   async exchangeCode(code: string) {
@@ -97,7 +140,9 @@ export class MetaGraphClient {
       'https://www.facebook.com/connect/login_success.html',
     );
 
-    const apiVersions = ['v25.0', this.version];
+    const graphVersion =
+      this.config.get<string>('META_GRAPH_VERSION')?.trim() || 'v21.0';
+    const apiVersions = ['v25.0', graphVersion];
     let lastBody = '';
 
     for (const graphVersion of apiVersions) {

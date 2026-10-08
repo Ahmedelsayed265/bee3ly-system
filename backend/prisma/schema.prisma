@@ -157,6 +157,12 @@ enum CampaignStatus {
   ACTIVE
   PAUSED
   ARCHIVED
+  PUBLISHING
+  PAUSED_ON_META
+  FAILED
+  IN_REVIEW
+  REJECTED
+  COMPLETED
 }
 
 enum ConversionStage {
@@ -252,6 +258,13 @@ model Business {
   /// Shared option catalogs for product variants: [{ id, name, values }]
   variantDictionary     Json           @default("[]")
   onboardingCompletedAt DateTime?
+  /// Meta Ads account chosen after OAuth (act_…).
+  metaAdAccountId       String?
+  metaAdAccountName     String?
+  metaAdAccountCurrency String?
+  metaAdAccountTimezone String?
+  metaAdsTokenEnc       String?
+  metaAdsNeedsReconnect Boolean        @default(false)
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
 
@@ -488,6 +501,7 @@ model PendingMetaConnection {
   userId           String
   userAccessTokenEnc String
   pagesJson        Json
+  adAccountsJson   Json     @default("[]")
   expiresAt        DateTime
   createdAt        DateTime @default(now())
 
@@ -592,16 +606,48 @@ model Campaign {
   channel             String?
   startDate           DateTime?
   endDate             DateTime?
+  metaCampaignId      String?
+  metaAdsetId         String?
+  metaAdId            String?
+  metaCreativeId      String?
+  metaImageHash       String?
+  metaAudienceIds     String[]          @default([])
+  publishStep         String?
+  metaError           String?
+  metaErrorUserMsg    String?
+  effectiveStatus     String?
+  audienceNote        String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
-  business      Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business      Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
   conversations Conversation[]
   leads         Lead[]
   orders        Order[]
+  insights      CampaignInsight[]
+
+  @@index([metaAdId])
 
   @@index([businessId, createdAt])
   @@map("campaigns")
+}
+
+model CampaignInsight {
+  id           String   @id @default(uuid())
+  campaignId   String
+  date         DateTime @db.Date
+  spend        Decimal  @default(0) @db.Decimal(12, 2)
+  impressions  Int      @default(0)
+  clicks       Int      @default(0)
+  actions      Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@map("campaign_insights")
 }
 
 model Subscription {

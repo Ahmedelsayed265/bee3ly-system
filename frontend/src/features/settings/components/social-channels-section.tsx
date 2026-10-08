@@ -13,6 +13,10 @@ import type { ChannelId, SocialAccount } from '@/features/settings/types';
 type SocialChannelsSectionProps = {
   pendingId: string | null;
   pendingPages: Array<{ id: string; name: string; hasInstagram: boolean }>;
+  pendingAdAccounts?: Array<{ id: string; name: string; currency: string | null }>;
+  adAccountId?: string;
+  onAdAccountChange?: (id: string) => void;
+  metaAdsNeedsReconnect?: boolean;
   pendingLoading: boolean;
   pendingError: boolean;
   facebook?: SocialAccount;
@@ -37,6 +41,10 @@ type SocialChannelsSectionProps = {
 export function SocialChannelsSection({
   pendingId,
   pendingPages,
+  pendingAdAccounts = [],
+  adAccountId,
+  onAdAccountChange,
+  metaAdsNeedsReconnect,
   pendingLoading,
   pendingError,
   facebook,
@@ -70,6 +78,11 @@ export function SocialChannelsSection({
         <p className="text-muted mt-1 text-sm">{t('socialAccountsHint')}</p>
         {!metaReady ? (
           <p className="text-muted mt-2 text-xs">{t('metaNotConfigured')}</p>
+        ) : null}
+        {metaAdsNeedsReconnect ? (
+          <p className="mt-2 text-xs font-semibold text-amber-700">
+            {t('reconnectMetaAds')}
+          </p>
         ) : null}
       </div>
 
@@ -116,6 +129,9 @@ export function SocialChannelsSection({
             pendingId ? (
               <MetaPagePicker
                 pages={pendingPages}
+                adAccounts={pendingAdAccounts}
+                adAccountId={adAccountId}
+                onAdAccountChange={onAdAccountChange}
                 isLoading={pendingLoading}
                 isError={pendingError}
                 isPending={isSelectingPage}

@@ -9,6 +9,7 @@ import { isBillingLimit } from '../billing/billing.http';
 import { EntitlementsService } from '../billing/entitlements.service';
 import { trivialReply } from '../billing/trivial-message';
 import { UsageService } from '../billing/usage.service';
+import { extractMetaAdId } from '../campaigns/meta-ads.mapping';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { AiEngineAdapter } from './ai-engine.adapter';
@@ -156,6 +157,14 @@ export class InboundMessageService {
       }
     }
 
+    const metaAdId = extractMetaAdId(event.raw);
+    const attributed = metaAdId
+      ? await this.prisma.campaign.findFirst({
+          where: { businessId, metaAdId },
+          select: { id: true },
+        })
+      : null;
+
     let conversation = await this.prisma.conversation.findFirst({
       where: {
         businessId,
@@ -173,6 +182,7 @@ export class InboundMessageService {
           businessId,
           customerId: customer.id,
           channel,
+          ...(attributed ? { campaignId: attributed.id } : {}),
         },
       });
       await this.usage.recordConversation(businessId, conversation.id);
@@ -203,7 +213,12 @@ export class InboundMessageService {
 
     await this.prisma.conversation.update({
       where: { id: conversation.id },
-      data: { lastMessageAt: new Date() },
+      data: {
+        lastMessageAt: new Date(),
+        ...(!conversation.campaignId && attributed
+          ? { campaignId: attributed.id }
+          : {}),
+      },
     });
 
     // ------------------------------------------------------------------

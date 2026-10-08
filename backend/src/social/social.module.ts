@@ -55,6 +55,7 @@ import { SocialService } from './social.service';
     PageCommentsPollerService,
     MerchantTokenService,
     AiEngineAdapter,
+    MetaOauthService,
   ],
 })
 export class SocialModule {}

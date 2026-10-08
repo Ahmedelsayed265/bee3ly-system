@@ -36,6 +36,10 @@ class SelectPageDto {
 
   @IsString()
   pageId!: string;
+
+  @IsOptional()
+  @IsString()
+  adAccountId?: string;
 }
 
 class WhatsAppEmbeddedCompleteDto {
@@ -139,7 +143,12 @@ export class SocialController {
   @Post('meta/select-page')
   @UseGuards(JwtAuthGuard)
   selectPage(@CurrentUser() user: AuthUser, @Body() dto: SelectPageDto) {
-    return this.social.selectPage(user.id, dto.pendingId, dto.pageId);
+    return this.social.selectPage(
+      user.id,
+      dto.pendingId,
+      dto.pageId,
+      dto.adAccountId,
+    );
   }
 
   @Get('whatsapp/embedded-config')
