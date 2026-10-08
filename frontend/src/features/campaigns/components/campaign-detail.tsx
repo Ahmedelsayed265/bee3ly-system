@@ -117,9 +117,10 @@ export function CampaignDetail({
               <dd className="mt-2 space-y-1 text-xs">
                 {campaign.insights.map((row) => (
                   <p key={row.date}>
-                    {String(row.date).slice(0, 10)} · {t('campaignInsightSpend')}{' '}
-                    {row.spend} · {t('campaignInsightImpressions')}{' '}
-                    {row.impressions} · {t('campaignInsightClicks')} {row.clicks}
+                    {String(row.date).slice(0, 10)} ·{' '}
+                    {t('campaignInsightSpend')} {row.spend} ·{' '}
+                    {t('campaignInsightImpressions')} {row.impressions} ·{' '}
+                    {t('campaignInsightClicks')} {row.clicks}
                   </p>
                 ))}
               </dd>

@@ -13,7 +13,11 @@ import type { ChannelId, SocialAccount } from '@/features/settings/types';
 type SocialChannelsSectionProps = {
   pendingId: string | null;
   pendingPages: Array<{ id: string; name: string; hasInstagram: boolean }>;
-  pendingAdAccounts?: Array<{ id: string; name: string; currency: string | null }>;
+  pendingAdAccounts?: Array<{
+    id: string;
+    name: string;
+    currency: string | null;
+  }>;
   adAccountId?: string;
   onAdAccountChange?: (id: string) => void;
   metaAdsNeedsReconnect?: boolean;

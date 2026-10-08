@@ -31,7 +31,7 @@ export function useSocialSettings() {
 
   const socialQuery = useQuery({ queryKey: ['social'], queryFn: fetchSocial });
 
-  const [adAccountId, setAdAccountId] = useState('');
+  const [pickedAdAccountId, setAdAccountId] = useState<string | null>(null);
   const pendingId = searchParams.get('metaPending');
   const pendingQuery = useQuery({
     queryKey: ['meta-pending', pendingId],
@@ -54,10 +54,8 @@ export function useSocialSettings() {
     }
   }, [searchParams, setSearchParams, t]);
 
-  useEffect(() => {
-    const first = pendingQuery.data?.adAccounts?.[0]?.id;
-    if (first) setAdAccountId((current) => current || first);
-  }, [pendingQuery.data?.adAccounts]);
+  const adAccountId =
+    pickedAdAccountId ?? pendingQuery.data?.adAccounts?.[0]?.id ?? '';
 
   const disconnectMut = useMutation({
     mutationFn: disconnectSocial,
