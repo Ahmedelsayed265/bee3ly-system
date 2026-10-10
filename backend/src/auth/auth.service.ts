@@ -226,11 +226,30 @@ export class AuthService {
   }
 
   async me(user: AuthUser) {
+    const freshUser = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+        isPlatformAdmin: true,
+      },
+    });
+
     let membership = await this.prisma.teamMember.findFirst({
       where: { userId: user.id },
       include: { business: true },
       orderBy: { createdAt: 'asc' },
     });
+
+    if (!membership && freshUser.isPlatformAdmin) {
+      return {
+        user: freshUser,
+        business: null,
+        role: 'PLATFORM_ADMIN',
+      };
+    }
 
     if (!membership) {
       const business = await this.prisma.business.create({
@@ -250,11 +269,6 @@ export class AuthService {
       await this.prisma.aIAgent.create({ data: { businessId: business.id } });
       await this.subscriptions.ensure(business.id);
     }
-
-    const freshUser = await this.prisma.user.findUniqueOrThrow({
-      where: { id: user.id },
-      select: { id: true, email: true, name: true, createdAt: true },
-    });
 
     return {
       user: freshUser,

@@ -18,6 +18,20 @@ export function ProtectedRoute() {
   return <Outlet />;
 }
 
+export function AdminRoute() {
+  const { isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoadingSkeleton />;
+  }
+
+  if (!user?.isPlatformAdmin) {
+    return <Navigate to={paths.app} replace />;
+  }
+
+  return <Outlet />;
+}
+
 /** Public auth pages — redirect signed-in users into the app. */
 export function GuestRoute() {
   const { isAuthenticated, isLoading } = useAuth();

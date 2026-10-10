@@ -2,8 +2,10 @@ import type { MessageKey } from '@/features/i18n/messages';
 import { paths } from '@/routes/paths';
 import type { LucideIcon } from 'lucide-react';
 import {
+  Activity,
   BookOpen,
   Brain,
+  Building2,
   CreditCard,
   Home,
   MessageCircle,
@@ -21,6 +23,14 @@ export type DashboardNavItem = {
   icon: LucideIcon;
   end?: boolean;
 };
+
+export const adminNavItems: DashboardNavItem[] = [
+  { to: paths.app, labelKey: 'adminOverview', icon: Home, end: true },
+  { to: paths.adminBusiness, labelKey: 'adminBusinesses', icon: Building2 },
+  { to: paths.adminSubscriptions, labelKey: 'adminSubscriptions', icon: CreditCard },
+  { to: paths.adminUsage, labelKey: 'adminUsage', icon: Activity },
+  { to: paths.adminUsers, labelKey: 'adminUsers', icon: Users },
+];
 
 export const dashboardNavItems: DashboardNavItem[] = [
   { to: paths.app, labelKey: 'navHome', icon: Home, end: true },

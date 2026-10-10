@@ -26,6 +26,11 @@ import { WebhookService } from './webhook.service';
     PaymobProvider,
     TapProvider,
   ],
-  exports: [SubscriptionService, UsageService, EntitlementsService],
+  exports: [
+    SubscriptionService,
+    UsageService,
+    EntitlementsService,
+    BillingMetricsService,
+  ],
 })
 export class BillingModule {}

@@ -6,6 +6,7 @@ export type User = {
   email: string;
   name: string;
   createdAt: string;
+  isPlatformAdmin?: boolean;
 };
 
 export type AuthResponse = {
@@ -15,7 +16,7 @@ export type AuthResponse = {
 
 export type MeResponse = {
   user: User;
-  business: Business;
+  business: Business | null;
   role: string;
 };
 

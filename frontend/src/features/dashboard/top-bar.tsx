@@ -5,6 +5,7 @@ import {
   markNotificationRead,
 } from '@/features/business/api';
 import { topBarIconButtonClass } from '@/features/dashboard/top-bar-icon-button';
+import { useAuth } from '@/features/auth/auth-context';
 import { useLocale } from '@/features/i18n/locale-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
@@ -37,6 +38,8 @@ function panelGeometry(trigger: DOMRect, dir: 'rtl' | 'ltr') {
 
 export function DashboardTopBar({ onMenuOpen }: DashboardTopBarProps) {
   const { t, dir } = useLocale();
+  const { user } = useAuth();
+  const isAdmin = Boolean(user?.isPlatformAdmin);
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -51,6 +54,7 @@ export function DashboardTopBar({ onMenuOpen }: DashboardTopBarProps) {
   const notifQuery = useQuery({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
+    enabled: !isAdmin,
   });
 
   const markReadMut = useMutation({
@@ -195,7 +199,12 @@ export function DashboardTopBar({ onMenuOpen }: DashboardTopBarProps) {
           <Bee3lyLogo markClassName="h-8 w-8" withWordmark={false} />
         </Link>
       </div>
-      <label className="relative hidden min-w-0 flex-1 sm:block sm:max-w-xl">
+      <label
+        className={cn(
+          'relative hidden min-w-0 flex-1 sm:max-w-xl',
+          isAdmin ? 'sm:hidden' : 'sm:block',
+        )}
+      >
         <Search className="text-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2" />
         <input
           type="search"
@@ -211,22 +220,24 @@ export function DashboardTopBar({ onMenuOpen }: DashboardTopBarProps) {
           iconButtonClass={topBarIconButtonClass}
         />
 
-        <button
-          ref={triggerRef}
-          type="button"
-          className={cn(topBarIconButtonClass, 'relative')}
-          aria-label={t('notifications')}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <Bell className="h-4 w-4" />
-          {unread > 0 ? (
-            <span className="bg-danger absolute -inset-e-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white">
-              {unread}
-            </span>
-          ) : null}
-        </button>
-        {notificationsPanel}
+        {isAdmin ? null : (
+          <button
+            ref={triggerRef}
+            type="button"
+            className={cn(topBarIconButtonClass, 'relative')}
+            aria-label={t('notifications')}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <Bell className="h-4 w-4" />
+            {unread > 0 ? (
+              <span className="bg-danger absolute -inset-e-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white">
+                {unread}
+              </span>
+            ) : null}
+          </button>
+        )}
+        {isAdmin ? null : notificationsPanel}
       </div>
     </header>
   );

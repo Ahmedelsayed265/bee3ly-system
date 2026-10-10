@@ -47,7 +47,10 @@ export function useLoginForm() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await login({ email: values.email, password: values.password });
+      await login({
+        email: values.email,
+        password: values.password,
+      });
       toast.success(t('loginSuccess'));
       navigate(paths.app, { replace: true });
     } catch {

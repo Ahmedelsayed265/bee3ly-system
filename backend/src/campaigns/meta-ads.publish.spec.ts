@@ -146,9 +146,9 @@ describe('MetaAdsService publish idempotency', () => {
   it('creates a paused ad when custom audience terms are not accepted', async () => {
     const { service, posts, campaign } = setup();
     campaign.audiences = ['CUSTOMERS'];
-    service['prisma'].order.findMany = () => [
+    service['prisma'].order.findMany = (() => [
       { customer: { phone: '01000000000' } },
-    ];
+    ]) as unknown as typeof service['prisma']['order']['findMany'];
     const original = service['graph'].post.bind(service['graph']);
     service['graph'].post = (path: string) => {
       if (String(path).includes('customaudiences')) {

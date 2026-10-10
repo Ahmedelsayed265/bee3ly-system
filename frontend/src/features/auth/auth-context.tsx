@@ -22,7 +22,10 @@ type AuthContextValue = {
   business: Business | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (input: { email: string; password: string }) => Promise<void>;
+  login: (input: {
+    email: string;
+    password: string;
+  }) => Promise<{ user: User }>;
   register: (input: {
     name: string;
     email: string;
@@ -62,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (input: { email: string; password: string }) => {
       await loginRequest(input);
-      await hydrateSession();
+      return hydrateSession();
     },
     [hydrateSession],
   );

@@ -1,11 +1,10 @@
 import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
-import { dashboardNavItems } from '@/features/dashboard/nav-items';
+import { adminNavItems, dashboardNavItems } from '@/features/dashboard/nav-items';
 import { useAuth } from '@/features/auth/auth-context';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';
 import { LogOut } from 'lucide-react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { paths } from '@/routes/paths';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -28,6 +27,7 @@ export function DashboardSidebarPanel({
   const { t } = useLocale();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const items = user?.isPlatformAdmin ? adminNavItems : dashboardNavItems;
 
   const handleLogout = async () => {
     onNavigate?.();
@@ -44,7 +44,7 @@ export function DashboardSidebarPanel({
       ) : null}
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {dashboardNavItems.map(({ to, labelKey, icon: Icon, end }) => (
+        {items.map(({ to, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -77,11 +77,7 @@ export function DashboardSidebarPanel({
 
       <div className="border-border shrink-0 border-t px-3 py-3">
         <div className="hover:bg-lavender flex items-center gap-2 rounded-xl px-2 py-2">
-          <Link
-            to={paths.profile}
-            onClick={() => onNavigate?.()}
-            className="flex min-w-0 flex-1 items-center gap-2.5"
-          >
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <span className="bg-brand inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white">
               {initials(user?.name ?? '')}
             </span>
@@ -90,10 +86,10 @@ export function DashboardSidebarPanel({
                 {user?.name}
               </span>
               <span className="text-muted mt-0.5 block truncate text-[11px]">
-                {t('roleOwner')}
+                {user?.isPlatformAdmin ? t('adminPlatform') : t('roleOwner')}
               </span>
             </span>
-          </Link>
+          </div>
           <button
             type="button"
             onClick={handleLogout}

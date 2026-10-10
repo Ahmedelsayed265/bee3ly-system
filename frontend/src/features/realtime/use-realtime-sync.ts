@@ -16,11 +16,11 @@ type ConversationUpdatedPayload = {
  * Mount once under AuthProvider when the user is authenticated.
  */
 export function useRealtimeSync() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || user?.isPlatformAdmin) {
       disconnectRealtime();
       return;
     }
@@ -52,7 +52,7 @@ export function useRealtimeSync() {
       current?.off('notification:created', onNotificationCreated);
       disconnectRealtime();
     };
-  }, [isAuthenticated, queryClient]);
+  }, [isAuthenticated, queryClient, user?.isPlatformAdmin]);
 }
 
 export function RealtimeSync() {
