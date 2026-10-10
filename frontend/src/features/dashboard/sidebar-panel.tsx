@@ -1,5 +1,8 @@
 import { Bee3lyLogo } from '@/components/brand/bee3ly-logo';
-import { adminNavItems, dashboardNavItems } from '@/features/dashboard/nav-items';
+import {
+  adminNavItems,
+  dashboardNavItems,
+} from '@/features/dashboard/nav-items';
 import { useAuth } from '@/features/auth/auth-context';
 import { useLocale } from '@/features/i18n/locale-context';
 import { cn } from '@/lib/utils';

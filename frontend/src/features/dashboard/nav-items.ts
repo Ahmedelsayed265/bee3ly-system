@@ -27,7 +27,11 @@ export type DashboardNavItem = {
 export const adminNavItems: DashboardNavItem[] = [
   { to: paths.app, labelKey: 'adminOverview', icon: Home, end: true },
   { to: paths.adminBusiness, labelKey: 'adminBusinesses', icon: Building2 },
-  { to: paths.adminSubscriptions, labelKey: 'adminSubscriptions', icon: CreditCard },
+  {
+    to: paths.adminSubscriptions,
+    labelKey: 'adminSubscriptions',
+    icon: CreditCard,
+  },
   { to: paths.adminUsage, labelKey: 'adminUsage', icon: Activity },
   { to: paths.adminUsers, labelKey: 'adminUsers', icon: Users },
 ];

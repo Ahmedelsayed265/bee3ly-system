@@ -46,14 +46,19 @@ function statusLabel(t: (key: MessageKey) => string, status: string | null) {
   return t(`adminStatus_${status}` as MessageKey);
 }
 
-function intervalLabel(t: (key: MessageKey) => string, interval: string | null) {
+function intervalLabel(
+  t: (key: MessageKey) => string,
+  interval: string | null,
+) {
   if (!interval) return '—';
   return t(`adminInterval_${interval}` as MessageKey);
 }
 
 function formatDay(locale: string, value: string | null) {
   if (!value) return '—';
-  return new Date(value).toLocaleDateString(locale === 'ar' ? 'ar-EG' : 'en-GB');
+  return new Date(value).toLocaleDateString(
+    locale === 'ar' ? 'ar-EG' : 'en-GB',
+  );
 }
 
 function MeterBar({ meter }: { meter: AdminMeter }) {
@@ -74,7 +79,10 @@ function MeterBar({ meter }: { meter: AdminMeter }) {
       </p>
       {meter.limit != null ? (
         <div className="bg-canvas mt-1 h-1.5 overflow-hidden rounded-full">
-          <div className={`${bar} h-full`} style={{ width: `${Math.max(ratio, meter.used ? 4 : 0)}%` }} />
+          <div
+            className={`${bar} h-full`}
+            style={{ width: `${Math.max(ratio, meter.used ? 4 : 0)}%` }}
+          />
         </div>
       ) : null}
     </div>
@@ -148,7 +156,8 @@ export function AdminOverviewPage() {
     1,
     ...(data?.sales.map((day) => day.revenueEgp) ?? [1]),
   );
-  const weekTotal = data?.sales.reduce((sum, day) => sum + day.revenueEgp, 0) ?? 0;
+  const weekTotal =
+    data?.sales.reduce((sum, day) => sum + day.revenueEgp, 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -214,11 +223,15 @@ export function AdminOverviewPage() {
                           ? 'bg-brand w-full rounded-t-lg'
                           : 'bg-canvas h-1 w-full rounded-full'
                       }
-                      style={day.revenueEgp ? { height: `${height}%` } : undefined}
+                      style={
+                        day.revenueEgp ? { height: `${height}%` } : undefined
+                      }
                       title={money(day.revenueEgp)}
                     />
                   </div>
-                  <span className="text-muted text-[10px]">{day.day.slice(5)}</span>
+                  <span className="text-muted text-[10px]">
+                    {day.day.slice(5)}
+                  </span>
                 </div>
               );
             })}
@@ -255,7 +268,9 @@ export function AdminOverviewPage() {
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-border bg-canvas/60 text-muted border-y text-xs font-semibold">
-                  <th className="px-4 py-3 text-start">{t('adminBusinesses')}</th>
+                  <th className="px-4 py-3 text-start">
+                    {t('adminBusinesses')}
+                  </th>
                   <th className="px-4 py-3 text-start">{t('adminPlan')}</th>
                   <th className="px-4 py-3 text-start">{t('adminStatus')}</th>
                   <th className="px-4 py-3 text-start">{t('adminOrders')}</th>
@@ -331,7 +346,9 @@ export function AdminBusinessesPage() {
                 <th className="px-4 py-3 text-start">{t('adminPlan')}</th>
                 <th className="px-4 py-3 text-start">{t('adminStatus')}</th>
                 <th className="px-4 py-3 text-start">{t('adminOrders')}</th>
-                <th className="px-4 py-3 text-start">{t('adminConversations')}</th>
+                <th className="px-4 py-3 text-start">
+                  {t('adminConversations')}
+                </th>
                 <th className="px-4 py-3 text-start">{t('adminProducts')}</th>
               </tr>
             </thead>
@@ -413,7 +430,9 @@ export function AdminUsersPage() {
                 <th className="px-4 py-3 text-start">{t('adminColName')}</th>
                 <th className="px-4 py-3 text-start">{t('adminColEmail')}</th>
                 <th className="px-4 py-3 text-start">{t('adminColRole')}</th>
-                <th className="px-4 py-3 text-start">{t('adminColBusiness')}</th>
+                <th className="px-4 py-3 text-start">
+                  {t('adminColBusiness')}
+                </th>
                 <th className="px-4 py-3 text-start whitespace-nowrap">
                   {t('adminJoined')}
                 </th>
@@ -484,7 +503,10 @@ export function AdminSubscriptionsPage() {
     ? [
         { label: t('adminMrr'), value: billingMoney(data.billing.mrr, 'USD') },
         { label: t('adminArr'), value: billingMoney(data.billing.arr, 'USD') },
-        { label: t('adminPaying'), value: String(data.billing.payingCustomers) },
+        {
+          label: t('adminPaying'),
+          value: String(data.billing.payingCustomers),
+        },
         { label: t('adminTrialing'), value: String(data.billing.trialing) },
         { label: t('adminCanceled'), value: String(data.billing.canceled) },
       ]
@@ -590,7 +612,9 @@ export function AdminUsagePage() {
               <tr className="border-border bg-canvas/60 text-muted border-b text-xs font-semibold">
                 <th className="px-4 py-3 text-start">{t('adminBusinesses')}</th>
                 <th className="px-4 py-3 text-start">{t('adminPlan')}</th>
-                <th className="px-4 py-3 text-start">{t('adminConversations')}</th>
+                <th className="px-4 py-3 text-start">
+                  {t('adminConversations')}
+                </th>
                 <th className="px-4 py-3 text-start">{t('adminWhatsapp')}</th>
                 <th className="px-4 py-3 text-start">{t('adminAiActions')}</th>
                 <th className="px-4 py-3 text-start">{t('adminOrders')}</th>
@@ -662,7 +686,10 @@ export function AdminBusinessPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to={paths.adminBusiness} className="text-brand text-sm font-semibold">
+        <Link
+          to={paths.adminBusiness}
+          className="text-brand text-sm font-semibold"
+        >
           {t('adminBack')}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{row.name}</h1>
@@ -673,7 +700,10 @@ export function AdminBusinessPage() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label={t('adminOrders')} value={String(row.orders)} />
-        <Stat label={t('adminConversations')} value={String(row.conversations)} />
+        <Stat
+          label={t('adminConversations')}
+          value={String(row.conversations)}
+        />
         <Stat label={t('adminProducts')} value={String(row.products)} />
         <Stat label={t('adminCampaigns')} value={String(row.campaigns)} />
       </div>
@@ -683,13 +713,17 @@ export function AdminBusinessPage() {
           <Detail
             label={t('adminAmount')}
             value={
-              row.amount == null
-                ? '—'
-                : billingMoney(row.amount, row.currency)
+              row.amount == null ? '—' : billingMoney(row.amount, row.currency)
             }
           />
-          <Detail label={t('adminPeriodEnd')} value={formatDay(locale, row.periodEnd)} />
-          <Detail label={t('adminTrialEnds')} value={formatDay(locale, row.trialEndsAt)} />
+          <Detail
+            label={t('adminPeriodEnd')}
+            value={formatDay(locale, row.periodEnd)}
+          />
+          <Detail
+            label={t('adminTrialEnds')}
+            value={formatDay(locale, row.trialEndsAt)}
+          />
           <Detail
             label={t('adminMessages')}
             value={`${row.messages.CUSTOMER ?? 0} ${t('adminCustomerMessages')} · ${row.messages.AI ?? 0} ${t('adminAiMessages')} · ${row.messages.HUMAN ?? 0} ${t('adminHumanMessages')}`}
@@ -699,7 +733,10 @@ export function AdminBusinessPage() {
       <section className="border-border bg-surface rounded-2xl border p-4">
         <h2 className="font-bold">{t('adminUsageMonth')}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <UsageStat label={t('adminConversations')} meter={row.usage.conversations} />
+          <UsageStat
+            label={t('adminConversations')}
+            meter={row.usage.conversations}
+          />
           <UsageStat label={t('adminWhatsapp')} meter={row.usage.whatsapp} />
           <UsageStat label={t('adminAiActions')} meter={row.usage.ai} />
           <UsageStat label={t('adminOrders')} meter={row.usage.orders} />
@@ -727,7 +764,10 @@ export function AdminBusinessPage() {
         <h2 className="font-bold">{t('adminMembers')}</h2>
         <ul className="mt-3 divide-y text-sm">
           {row.members.map((member) => (
-            <li key={member.email} className="flex items-center justify-between py-2">
+            <li
+              key={member.email}
+              className="flex items-center justify-between py-2"
+            >
               <span>
                 <span className="font-semibold">{member.name}</span>
                 <span className="text-muted block text-xs">{member.email}</span>
@@ -760,7 +800,10 @@ export function AdminBusinessPage() {
         <h2 className="font-bold">{t('adminRecentOrders')}</h2>
         <ul className="mt-3 divide-y text-sm">
           {row.recentOrders.map((order) => (
-            <li key={order.id} className="flex items-center justify-between py-2">
+            <li
+              key={order.id}
+              className="flex items-center justify-between py-2"
+            >
               <span>
                 #{order.orderNumber} · {order.customerName ?? '—'}
                 <span className="text-muted block text-xs">{order.status}</span>
@@ -818,7 +861,10 @@ function CountList({
           <li className="text-muted py-2">—</li>
         ) : (
           rows.map((row) => (
-            <li key={row.key} className="flex items-center justify-between py-2">
+            <li
+              key={row.key}
+              className="flex items-center justify-between py-2"
+            >
               <span>{row.label}</span>
               <span className="font-semibold">{row.count}</span>
             </li>
