@@ -464,7 +464,7 @@ export function AdminUsersPage() {
                       <span
                         className={
                           row.isPlatformAdmin
-                            ? 'bg-brand/15 text-brand rounded-full px-2 py-1 text-xs font-bold whitespace-nowrap'
+                            ? 'bg-brand/15 text-brand rounded-full px-4 text-xs font-bold whitespace-nowrap'
                             : 'bg-canvas text-ink rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap'
                         }
                       >
