@@ -7,11 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { BillingMetricsService } from '../billing/billing.metrics.service';
-import {
-  PLAN_LIMITS,
-  TRIAL_LIMITS,
-  usageLevel,
-} from '../billing/plans/limits';
+import { PLAN_LIMITS, TRIAL_LIMITS, usageLevel } from '../billing/plans/limits';
 import { monthKey, startOfUtcMonth } from '../billing/plans/period';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -163,9 +159,7 @@ export class AdminService implements OnModuleInit {
         orders: row._count.orders,
         createdAt: row.createdAt,
       })),
-      alerts: usage
-        .filter((row) => row.level >= 70)
-        .slice(0, 8),
+      alerts: usage.filter((row) => row.level >= 70).slice(0, 8),
     };
   }
 
@@ -474,6 +468,9 @@ export class AdminService implements OnModuleInit {
           ),
         };
       })
-      .sort((a, b) => b.level - a.level || b.conversations.used - a.conversations.used);
+      .sort(
+        (a, b) =>
+          b.level - a.level || b.conversations.used - a.conversations.used,
+      );
   }
 }

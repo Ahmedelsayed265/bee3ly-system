@@ -148,7 +148,7 @@ describe('MetaAdsService publish idempotency', () => {
     campaign.audiences = ['CUSTOMERS'];
     service['prisma'].order.findMany = (() => [
       { customer: { phone: '01000000000' } },
-    ]) as unknown as typeof service['prisma']['order']['findMany'];
+    ]) as unknown as (typeof service)['prisma']['order']['findMany'];
     const original = service['graph'].post.bind(service['graph']);
     service['graph'].post = (path: string) => {
       if (String(path).includes('customaudiences')) {
